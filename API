@@ -1,0 +1,5 @@
+
+
+    animator
+      exposed-modules:
+        Animator.Animation

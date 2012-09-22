@@ -1,0 +1,17 @@
+
+name: Animator
+version: 0.5
+cabal-version: >= 0.14
+build-type: Simple
+author: Hans Hoglund
+synopsis: Interactive 2-D animation for the Web
+
+library                    
+  build-depends: base
+  hs-source-dirs: src uhcjs
+  exposed-modules:
+    Animator.Animation
+    Language.UHC.Js.ECMA.Array
+
+
+
