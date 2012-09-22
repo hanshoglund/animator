@@ -31,7 +31,7 @@ data Transformation = Transformation
 -- rotate
 
 -- runAnimation :: Backend -> Animation -> IO ()
-
+animatorVersion = [0, 55]
 
 -- Paper.js backend
 

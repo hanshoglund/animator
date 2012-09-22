@@ -4,6 +4,8 @@
 
 module Main where              
 
+import Animator.Animation
+
 import qualified Data.Ord
 import qualified Data.Eq    
 import qualified Data.Monoid
@@ -27,7 +29,7 @@ import qualified Data.Function
 -- import qualified Data.Fixed
 
 -- import qualified Data.Int  
--- import qualified Data.Word
+import Data.Word
 import qualified Data.Char
 import qualified Data.Ratio
 import qualified Data.Complex
@@ -73,9 +75,8 @@ import qualified Data.List
 -- import qualified System.Mem
 -- import qualified System.Console.GetOpt
 
--- import Data.VectorSpace
-
 import qualified Unsafe.Coerce
+import Haste.Prim
 
 -- TODO containers
 -- TODO semigroups
@@ -88,17 +89,34 @@ import qualified Unsafe.Coerce
 bounds :: Bounded a => a -> (a, a)
 bounds x = (minBound, maxBound)
 
-putBounds :: (Bounded a, Show a) => a -> String -> IO ()
-putBounds x name = let (m, n) = bounds x
-    in putStrLn $ "<pre>" ++ name ++ " x => " ++ show m ++ " < x < " ++ show n ++ "</pre>"
+boundsText :: (Bounded a, Show a) => a -> String -> String
+boundsText x name = let (m, n) = bounds x
+    in name ++ " x => " ++ show m ++ " < x < " ++ show n
+
+
+type Document = JSAny
+
+foreign import ccall "objWrite" write :: Document -> JSString -> IO ()
+foreign import ccall "getDocument" getDocument :: IO Document
+
+
+putStrLn2 :: String -> IO ()
+putStrLn2 str = do
+    d <- getDocument
+    write d (toJSStr $ "<code>" ++ str ++ "</code><br/>\n")
+
 
 
 main = do   
-    putStrLn $ show (1::Integer) 
-    putStrLn $ "Hello Hans!"       
-    putStrLn $ "2 + 2 * 10 ==> " ++ show (2 + 2 * 10)
-    putBounds (undefined::Int)      "Int" 
-    putBounds (undefined::Char)     "Char" 
+    putStrLn2 $ show (1::Integer) 
+    putStrLn2 $ "Hello Hans!"       
+    putStrLn2 $ "2 + 2 * 10 ==> " ++ show (2 + 2 * 10)
+    putStrLn2 $ boundsText (undefined::Int)     "Int" 
+    putStrLn2 $ boundsText (undefined::Word8)   "Word8" 
+    putStrLn2 $ boundsText (undefined::Word16)  "Word16" 
+    putStrLn2 $ boundsText (undefined::Word32)  "Word32" 
+    putStrLn2 $ boundsText (undefined::Char)    "Char" 
+    putStrLn2 $ "Animator version is: " ++ show animatorVersion
     -- putStrLn $ "Hello " ++ ys ++ "!"
     -- putStrLn $ "The sum from Hs is: " ++ (show $ sum $ map (\x -> x^2) [0..1000])
     
