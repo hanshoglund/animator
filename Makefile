@@ -1,22 +1,23 @@
 
-# IMPORTS = $(shell ./libs.hs)
-# UHC 	 = uhc                                   
-# LIBS	 = 
-# COMPILER = ${UHC} ${IMPORTS} --import-path=$LIBS$ -tjs -O,2
+# PRE_COMPILER = uhc
+# COMPILER = uhc \
+# 	-tjs -O,2 --import-path src --import-path uhcjs
 
-# COMPILER = uhc -tjs -O,2 --import-path src --import-path uhcjs
 PRE_COMPILER = hastec \
 	--libinstall
 COMPILER = hastec \
 	--debug \
 	--out=main.js \
-	--with-js=lib/processing/processing.js,animator.js
+	--with-js=lib/processing/processing.js,lib/jquery/jquery.js,animator.js
 
-# BROWSER  = Google Chrome
-BROWSER  = Firefox
+BROWSER  = Google Chrome
+# BROWSER  = Firefox
 MAIN=main
  
-all: build post reload
+all: debug
+
+debug:   build post reload
+release: build post optimize reload
 
 pre:
 	$(PRE_COMPILER) \
@@ -41,7 +42,7 @@ build:
 	$(COMPILER) $(MAIN).hs \
 		src/Animator/Animation.hs   \
 		src/Animator/Random.hs; \
-    perl -pi -e 's/window.onload = (function.*);/animator_ready($$1);/g' main.js;
+    perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
 post:
 	rm -f `find . -d -name "*.core*"`
@@ -64,7 +65,7 @@ optimize:
 .PHONY reload:
 	sh reload.sh $(BROWSER)
 
-update-libraries: update-paperjs update-processing update-closure-library
+update-lib: update-paperjs update-processing update-closure-library update-domready update-jquery
 
 PAPERJS_URL=http://paperjs.org/downloads/paperjs-nightly.zip
 update-paperjs:
@@ -104,6 +105,14 @@ update-domready:
 	mkdir -p lib/domready; \
 	cd lib/domready; \
 	curl $(DOMREADY_URL) > domready.js; \
+	cd ..;
+
+JQUERY_URL=http://code.jquery.com/jquery-1.8.2.min.js
+update-jquery:
+	rm -rf lib/jquery; \
+	mkdir -p lib/jquery; \
+	cd lib/jquery; \
+	curl $(JQUERY_URL) > jquery.js; \
 	cd ..;
 
 
