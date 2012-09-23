@@ -40,7 +40,7 @@ pre:
 build:
 	$(COMPILER) $(MAIN).hs \
 		src/Animator/Animation.hs   \
-		src/Animator/Random.hs;
+		src/Animator/Random.hs; \
     perl -pi -e 's/window.onload = (function.*);/animator_ready($$1);/g' main.js;
 
 post:
