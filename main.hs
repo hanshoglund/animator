@@ -1,122 +1,154 @@
 
 {-# LANGUAGE 
-    NoMonomorphismRestriction #-}
+    NoMonomorphismRestriction,
+    TypeFamilies #-}
 
 module Main where              
 
+import Haste.Prim
+import Haste.Ajax
+import Haste.DOM
+import Haste.JSON
+
+import Data.VectorSpace
+import qualified Data.Set as Set
+
+import Animator.Random
 import Animator.Animation
 
-import qualified Data.Ord
-import qualified Data.Eq    
-import qualified Data.Monoid
--- import Data.Functor
-import qualified Control.Monad
--- import Control.Monad.Zip
-import qualified Control.Applicative
-import qualified Control.Arrow
-import qualified Data.Foldable
-import qualified Data.Traversable
 
--- import qualified Data.Binary
--- import qualified Control.Exception
--- import qualified Control.Concurrent
--- import qualified Control.Parallel
--- import qualified Control.DeepSeq
 
-import qualified Data.Maybe
-import qualified Data.Either
-import qualified Data.Function
--- import qualified Data.Fixed
+-- Primitives from Haste compiler
+{-
+    Boolean (Bool)
+    Number (Double, Float, Int, Int32, Word32)
+    String (JSString)
+    Object
+    Array
+    Function
 
--- import qualified Data.Int  
-import Data.Word
-import qualified Data.Char
-import qualified Data.Ratio
-import qualified Data.Complex
-import qualified Data.String
--- import qualified Data.Text
--- import qualified Data.Version
--- import qualified Data.Time
--- import qualified Data.Unique
--- import qualified Data.ByteString
 
--- import qualified Data.Tuple
-import qualified Data.List
--- import qualified Data.Sequence
--- import qualified Data.Set
--- import qualified Data.Map
--- import qualified Data.Tree
--- import qualified Data.Graph   
+data JSString
+instance IsString
+toJSStr :: String -> JSString
+fromJSStr :: String -> JSString
 
--- import Data.Functor.Compose
--- import Data.Functor.Constant
--- import Data.Functor.Identity
--- import Data.Functor.Product
--- import Data.Functor.Reverse
--- import Control.Monad.Trans.Class
--- import Control.Monad.Trans.Cont
--- import Control.Monad.Trans.Error
--- import Control.Monad.Trans.Identity
--- import Control.Monad.Trans.List
--- import Control.Monad.Trans.Maybe
--- import Control.Monad.Trans.Reader
--- import Control.Monad.Trans.Writer
--- import Control.Monad.Trans.State
+class NumberRep
+    ?
+instance Double
+instance Float
+instance Int
+instance Int32
+instance Word
+instance Word32
 
--- import qualified System.FilePath
--- import qualified System.Directory
--- import qualified System.Environment
--- import qualified System.Exit
--- import qualified System.Process
--- import qualified System.Time
--- import qualified System.TimeOut
--- import qualified System.Random
--- import qualified System.IO
--- import qualified System.Mem
--- import qualified System.Console.GetOpt
+class Showable
+    _show ::
+instance Showable Double
+instance Showable Float
+instance Showable Int
+instance Showable Int32
+instance Showable Word
+instance Showable Word32
+instance Showable Integer
+instance Showable String
+instance Showable JSString
+instance Showable Char
+instance Showable Bool
+instance Showable a => Showable (Maybe a)
 
-import qualified Unsafe.Coerce
-import Haste.Prim
+data JSON
+instance
+encode :: JSON -> JSString
+decode :: JSON -> JSString
 
--- TODO containers
--- TODO semigroups
--- TODO semigroupoids
--- TODO comonad
+
+newtype Elem = Elem JSAny
+type PropID = String
+type ElemID = String
+
+addChild :: Elem -> Elem -> IO ()
+addChildBefore :: Elem -> Elem -> Elem -> IO ()
+getChildBefore :: Elem -> IO (Maybe Elem)
+getLastChild :: Elem -> IO (Maybe Elem)
+getChildren :: Elem -> IO [Elem]
+setChildren :: Elem -> [Elem] -> IO ()
+newElem :: String -> IO Elem
+setProp :: Elem -> PropID -> String -> IO ()
+getProp :: Elem -> PropID -> IO String
+getStyle :: Elem -> PropID -> IO String
+setStyle :: Elem -> PropID -> String -> IO ()
+elemById :: ElemID -> IO (Maybe Elem)
+withElem :: ElemID -> (Elem -> IO a) -> IO a
+clearChildren :: Elem -> IO ()
+removeChild :: Elem -> Elem -> IO ()
 
 
 
-
-bounds :: Bounded a => a -> (a, a)
-bounds x = (minBound, maxBound)
-
-boundsText :: (Bounded a, Show a) => a -> String -> String
-boundsText x name = let (m, n) = bounds x
-    in name ++ " x => " ++ show m ++ " < x < " ++ show n
-
-
-type Document = JSAny
-
-foreign import ccall "objWrite" write :: Document -> JSString -> IO ()
-foreign import ccall "getDocument" getDocument :: IO Document
+data Method = GET | POST deriving Show
+type URL = String
+type Key = String
+type Val = String
+textRequest :: Method -> URL -> [(Key, Val)] -> (String -> IO ()) -> IO ()
+jsonRequest :: Method -> URL -> [(Key, Val)] -> (Maybe JSON -> IO ()) -> IO ()
+toQueryString :: [(JSString, JSString)] -> JSString
 
 
-putStrLn2 :: String -> IO ()
-putStrLn2 str = do
-    d <- getDocument
-    write d (toJSStr $ "<code>" ++ str ++ "</code><br/>\n")
+newtype JSFun a = JSFun (Ptr a)
+class Callback a where
+  constCallback :: IO () -> a
+instance Callback (IO ()) where
+instance Callback (a -> IO ()) where
+data Event
+evtName :: IsString s => Event a -> s
+setCallback :: Elem -> Event a -> a -> IO Bool
+setTimeout :: Int -> IO () -> IO ()
+-}
 
 
 
-main = do   
-    putStrLn2 $ show (1::Integer) 
-    putStrLn2 $ "Hello Hans!"       
-    putStrLn2 $ "2 + 2 * 10 ==> " ++ show (2 + 2 * 10)
-    putStrLn2 $ boundsText (undefined::Int)     "Int" 
-    putStrLn2 $ boundsText (undefined::Word8)   "Word8" 
-    putStrLn2 $ boundsText (undefined::Word16)  "Word16" 
-    putStrLn2 $ boundsText (undefined::Word32)  "Word32" 
-    putStrLn2 $ boundsText (undefined::Char)    "Char" 
-    putStrLn2 $ "Animator version is: " ++ show animatorVersion
-    -- putStrLn $ "Hello " ++ ys ++ "!"
-    -- putStrLn $ "The sum from Hs is: " ++ (show $ sum $ map (\x -> x^2) [0..1000])
+
+
+
+
+
+
+foreign import ccall "animator_log" animator_log :: JSString -> IO ()
+foreign import ccall "animator_write" animator_write :: JSString -> IO ()
+foreign import ccall "animator_alert" animator_alert :: JSString -> IO ()
+foreign import ccall "animator_processing" animator_processing :: IO JSAny
+foreign import ccall "animator_test_processing" animator_test_processing :: IO ()
+
+alert :: String -> IO ()
+alert str = animator_alert (toJSStr $ str)
+
+putLog :: String -> IO ()
+putLog str = animator_log (toJSStr $ str)
+
+putDoc :: String -> IO ()
+putDoc str = animator_write (toJSStr $ "<code>" ++ str ++ "</code><br/>")
+
+processing :: IO JSAny
+processing = animator_processing
+
+main = do
+    let p = R2 (10, 20)
+    let q = negateV p
+    putLog $ show p ++ " " ++ show q
+    putLog $ show $ Set.fromList [1,2]
+
+    -- putDoc $ "Animator version is: " ++ show animatorVersion
+    -- animator_test_processing
+    putLog $ "Animator version is: " ++ show animatorVersion
+    -- textRequest GET "http://localhost:5566/test.html" [] putDoc
+    -- let s = mkSeed 123781267362761
+    -- let [n] = randomRs (0, 10) s
+    -- putLog $ show (n::Int)
+    -- putLog $ "Hello Hans!"       
+    -- putLog $ "2 + 2 * 10 ==> " ++ show (2 + 2 * 10)
+    -- putLog $ boundsText (undefined::Int)     "Int" 
+    -- putLog $ boundsText (undefined::Word8)   "Word8" 
+    -- putLog $ boundsText (undefined::Word16)  "Word16" 
+    -- putLog $ boundsText (undefined::Word32)  "Word32" 
+    -- putLog $ boundsText (undefined::Char)    "Char" 
     

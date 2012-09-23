@@ -7,11 +7,9 @@ author: Hans Hoglund
 synopsis: Interactive 2-D animation for the Web
 
 library                    
-  build-depends: base
-  hs-source-dirs: src uhcjs
+  build-depends: base, vector-space
+  hs-source-dirs: src
   exposed-modules:
     Animator.Animation
-    Language.UHC.Js.ECMA.Array
-
 
 

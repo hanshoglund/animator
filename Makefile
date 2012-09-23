@@ -5,7 +5,12 @@
 # COMPILER = ${UHC} ${IMPORTS} --import-path=$LIBS$ -tjs -O,2
 
 # COMPILER = uhc -tjs -O,2 --import-path src --import-path uhcjs
-COMPILER = hastec --out=main.js --with-js=misc.js,lib/paperjs/lib/paper.js
+PRE_COMPILER = hastec \
+	--libinstall
+COMPILER = hastec \
+	--debug \
+	--out=main.js \
+	--with-js=lib/processing/processing.js,animator.js
 
 # BROWSER  = Google Chrome
 BROWSER  = Firefox
@@ -13,8 +18,30 @@ MAIN=main
  
 all: build post reload
 
+pre:
+	$(PRE_COMPILER) \
+		src/Animator/Animation.hs   \
+		src/Animator/Random.hs      \
+		src/Data/AdditiveGroup.hs   \
+		src/Data/AffineSpace.hs     \
+		src/Data/Basis.hs           \
+		src/Data/Cross.hs           \
+		src/Data/Derivative.hs      \
+		src/Data/LinearMap.hs       \
+		src/Data/List/NonEmpty.hs   \
+		src/Data/Maclaurin.hs       \
+		src/Data/MemoTrie.hs        \
+		src/Data/NumInstances.hs    \
+		src/Data/Semigroup.hs       \
+		src/Data/VectorSpace.hs     \
+		src/Data/Void.hs            \
+		src/Numeric/Natural.hs;
+
 build:
-	$(COMPILER) $(MAIN).hs src/Animator/Animation.hs
+	$(COMPILER) $(MAIN).hs \
+		src/Animator/Animation.hs   \
+		src/Animator/Random.hs;
+    perl -pi -e 's/window.onload = (function.*);/animator_ready($$1);/g' main.js;
 
 post:
 	rm -f `find . -d -name "*.core*"`
@@ -38,7 +65,7 @@ optimize:
 	sh reload.sh $(BROWSER)
 
 update-libraries: update-paperjs update-processing update-closure-library
-	
+
 PAPERJS_URL=http://paperjs.org/downloads/paperjs-nightly.zip
 update-paperjs:
 	rm -rf lib/paperjs; \
@@ -71,7 +98,20 @@ update-closure-library:
 	rm -f closure-library.zip; \
 	cd ..;
 
+DOMREADY_URL=http://domready.googlecode.com/files/domready.js
+update-domready:
+	rm -rf lib/domready; \
+	mkdir -p lib/domready; \
+	cd lib/domready; \
+	curl $(DOMREADY_URL) > domready.js; \
+	cd ..;
 
+
+server-start:
+	(python -m SimpleHTTPServer 5566 &) > /dev/null 2>&1
+
+server-stop:
+	killall python
 
 clean:
 	rm -f `find . -d -name "*.js*"`
