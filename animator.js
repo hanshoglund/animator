@@ -54,6 +54,27 @@ function animator_processing(_world) {
   return [1, _world, window.Processing];
 }
 
+function fib2(n) {
+  if (n < 2) return n;
+  return fib2(n - 1) + fib2(n - 2);
+}        
+
+function fib3(n){
+  var i;
+  var fibs = [0, 1];
+  for (i = 2; i <= n; ++i) { 
+    fibs[i] = fibs[i - 1] + fibs[i - 2];
+  }
+  return fibs[n];
+}
+
+function animator_fib2(n, _world) {
+  return [1, _world, fib2(n)];
+}
+function animator_fib3(n, _world) {
+  return [1, _world, fib3(n)];
+}
+
 // function animator_test_processing(_world) {
 //   function sketchProc(processing) {
 //     // Override draw function, by default it will be called 60 times per second
@@ -113,3 +134,4 @@ function animator_processing(_world) {
 //   return [1, Animator.functions];
 // }
 
+// -------------------- Generated code start --------------------

@@ -1,12 +1,18 @@
-
 {-# LANGUAGE 
     NoMonomorphismRestriction,
+    BangPatterns,
     TypeFamilies #-}
 
 module Main where              
 
 import Data.Word
 import Data.String
+
+import Control.Monad.ST
+import Data.Array.ST
+import Data.Array.Base
+import Control.Monad
+import Data.Bits
 
 import Haste.Prim
 import Haste.Ajax
@@ -34,59 +40,6 @@ foreign import ccall jsSetTimeout :: Int -> JSFun a -> IO ()
 mkCallback :: a -> JSFun a
 mkCallback = JSFun . toPtr
 
--- data Event a where
---   OnLoad      :: Event (IO ())
---   OnUnload    :: Event (IO ())
---   OnChange    :: Event (IO ())
---   OnFocus     :: Event (IO ())
---   OnBlur      :: Event (IO ())
---   OnMouseMove :: Event (IO ())
---   OnMouseOver :: Event (IO ())
---   OnMouseOut  :: Event (IO ())
---   OnClick     :: Event (Int -> IO ())
---   OnDblClick  :: Event (Int -> IO ())
---   OnMouseDown :: Event (Int -> IO ())
---   OnMouseUp   :: Event (Int -> IO ())
---   OnKeyPress  :: Event (Int -> IO ())
---   OnKeyUp     :: Event (Int -> IO ())
---   OnKeyDown   :: Event (Int -> IO ())
--- 
--- instance Eq (Event a) where
---   a == b = evtName a == (evtName b :: String)
--- 
--- instance Ord (Event a) where
---   compare a b = compare (evtName a) (evtName b :: String)
--- 
--- -- | The name of a given event.
--- evtName :: IsString s => Event a -> s
--- evtName evt =
---   case evt of
---     OnLoad      -> "load"
---     OnUnload    -> "unload"
---     OnClick     -> "click"
---     OnDblClick  -> "dblclick"
---     OnMouseDown -> "mousedown"
---     OnMouseUp   -> "mouseup"
---     OnMouseMove -> "mousemove"
---     OnMouseOver -> "mouseover"
---     OnMouseOut  -> "mouseout"
---     OnKeyPress  -> "keypress"
---     OnKeyUp     -> "keyup"
---     OnKeyDown   -> "keydown"
---     OnChange    -> "change"
---     OnFocus     -> "focus"
---     OnBlur      -> "blur"
--- 
--- -- | Set a callback for the given event.
--- setCallback :: Elem -> Event a -> a -> IO Bool
--- setCallback e evt f =
---   jsSetCB e (evtName evt) (mkCallback $! f)
-
--- | Wrapper for window.setTimeout; execute the given computation after a delay
---   given in milliseconds.
-setTimeout :: Int -> IO () -> IO ()
-setTimeout delay cb =
-  jsSetTimeout delay (mkCallback $! cb)
 
 
 
@@ -100,7 +53,39 @@ foreign import ccall "animator_log_prim" logWord32  :: Word32 -> IO ()
 foreign import ccall "animator_log_prim" logString  :: JSString -> IO ()
 
 
+foreign import ccall "animator_fib2" fib2  :: Double -> Double
+foreign import ccall "animator_fib3" fib3  :: Double -> Double
+
+fib 0 = 0
+fib 1 = 1
+fib n = fib (n - 1) + fib (n - 2)
+
+data Impl = Hs | JsRec | JsIter
+putFib Hs n = do
+    putLog $ "Running fib " ++ show n ++ " in Haskell"  
+    putLog . show $ fib  n
+putFib JsRec n = do
+    putLog $ "Running fib " ++ show n ++ " in JavaScript"
+    putLog . show $ fib2 n
+putFib JsIter n = do
+    putLog $ "Running fib " ++ show n ++ " in JavaScript"
+    putLog . show $ fib3 n
+
 main = do
+    putFib Hs 4
+    putFib Hs 20
+    putFib Hs 22
+    putFib Hs 25
+
+    putFib JsRec 4
+    putFib JsRec 20
+    putFib JsRec 22
+    putFib JsRec 25
+
+    putFib JsIter 4
+    putFib JsIter 20
+    putFib JsIter 22
+    putFib JsIter 25
     -- alert "This is a warning"
     -- putLog "This goes in the log"
     -- putDoc "This goes in the doc"          
@@ -121,101 +106,14 @@ main = do
     -- putLog "Now"
     -- setTimeout 1000 (putLog "Soon")
     -- setTimeout 2000 (putLog "Later")
-    
-    putLog $ "Some int   arithmetic: " ++ show ((100 `div` 3)::Int)
-    putLog $ "Some int   arithmetic: " ++ show ((100 `mod` 3)::Int)
-    putLog $ "Some float arithmetic: " ++ show ((100 / 3)::Double)
-    putLog $ "An int overflow: " ++ show ((maxBound + 1)::Int)
-    putLog $ "An int underflow: " ++ show ((minBound - 1)::Int)
-    putLog $ "An word overflow: " ++ show ((maxBound + 1)::Word)
-    putLog $ "An word underflow: " ++ show ((minBound - 1)::Word)
-
--- Primitives from Haste compiler
-{-
-    Boolean (Bool)
-    Number (Double, Float, Int, Int32, Word32)
-    String (JSString)
-    Object
-    Array
-    Function
-
-
-data JSString
-instance IsString
-toJSStr :: String -> JSString
-fromJSStr :: String -> JSString
-
-class NumberRep
-    ?
-instance Double
-instance Float
-instance Int
-instance Int32
-instance Word
-instance Word32
-
-class Showable
-    _show ::
-instance Showable Double
-instance Showable Float
-instance Showable Int
-instance Showable Int32
-instance Showable Word
-instance Showable Word32
-instance Showable Integer
-instance Showable String
-instance Showable JSString
-instance Showable Char
-instance Showable Bool
-instance Showable a => Showable (Maybe a)
-
-data JSON
-instance
-encode :: JSON -> JSString
-decode :: JSON -> JSString
-
-
-newtype Elem = Elem JSAny
-type PropID = String
-type ElemID = String
-
-addChild :: Elem -> Elem -> IO ()
-addChildBefore :: Elem -> Elem -> Elem -> IO ()
-getChildBefore :: Elem -> IO (Maybe Elem)
-getLastChild :: Elem -> IO (Maybe Elem)
-getChildren :: Elem -> IO [Elem]
-setChildren :: Elem -> [Elem] -> IO ()
-newElem :: String -> IO Elem
-setProp :: Elem -> PropID -> String -> IO ()
-getProp :: Elem -> PropID -> IO String
-getStyle :: Elem -> PropID -> IO String
-setStyle :: Elem -> PropID -> String -> IO ()
-elemById :: ElemID -> IO (Maybe Elem)
-withElem :: ElemID -> (Elem -> IO a) -> IO a
-clearChildren :: Elem -> IO ()
-removeChild :: Elem -> Elem -> IO ()
-
-
-
-data Method = GET | POST deriving Show
-type URL = String
-type Key = String
-type Val = String
-textRequest :: Method -> URL -> [(Key, Val)] -> (String -> IO ()) -> IO ()
-jsonRequest :: Method -> URL -> [(Key, Val)] -> (Maybe JSON -> IO ()) -> IO ()
-toQueryString :: [(JSString, JSString)] -> JSString
-
-
-newtype JSFun a = JSFun (Ptr a)
-class Callback a where
-  constCallback :: IO () -> a
-instance Callback (IO ()) where
-instance Callback (a -> IO ()) where
-data Event
-evtName :: IsString s => Event a -> s
-setCallback :: Elem -> Event a -> a -> IO Bool
-setTimeout :: Int -> IO () -> IO ()
--}
+    -- putLog $ show $ nthPrime 25000
+    -- putLog $ "Some int   arithmetic: " ++ show ((100 `div` 3)::Int)
+    -- putLog $ "Some int   arithmetic: " ++ show ((100 `mod` 3)::Int)
+    -- putLog $ "Some float arithmetic: " ++ show ((100 / 3)::Double)
+    -- putLog $ "An int overflow: " ++ show ((maxBound + 1)::Int)
+    -- putLog $ "An int underflow: " ++ show ((minBound - 1)::Int)
+    -- putLog $ "An word overflow: " ++ show ((maxBound + 1)::Word)
+    -- putLog $ "An word underflow: " ++ show ((minBound - 1)::Word)
 
 
 

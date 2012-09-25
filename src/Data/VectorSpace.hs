@@ -1,0 +1,1 @@
+/Users/hans/Downloads/vector-space-0.8.2/src/Data/VectorSpace.hs

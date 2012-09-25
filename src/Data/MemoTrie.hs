@@ -1,0 +1,1 @@
+/Users/hans/Downloads/MemoTrie-0.5/src/Data/MemoTrie.hs
