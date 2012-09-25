@@ -1,5 +1,103 @@
 
 
-    animator
-      exposed-modules:
-        Animator.Animation
+Prelude
+    Bool Maybe Either
+    Ordering Char Int Rat Double Complex
+    String (,) [,] JSON
+
+    Eq Ord Enum Bounded
+    Numeric classes and functions?
+
+    Foldable
+    Traversable
+
+    data Color (RGB vs HSB?, alpha)
+        blend :: BlendMode -> Color -> Color -> Color
+
+    Arithmetic, CMath, Random numbers
+    Vector-space
+    Affine transformations
+
+    data ClockTime
+    data CalendarDate
+
+
+-- FRP and Signals
+    data Time           -- monotonicaly increasing, value not (directly) available
+    newtype Rate = Time -- multiplier of time
+
+    data Future a
+    data Signal a
+    delay   :: Time -> Signal a -> Signal a
+
+    always  :: a -> Signal a
+    over    :: Signal (a -> b) -> Signal a -> Signal b
+    former  :: Signal a -> Signal b -> Signal a
+    latter  :: Signal a -> Signal b -> Signal b
+
+    Inputs
+        now :: Signal Time
+        online :: Signal Bool
+        focused :: Signal Bool
+        dimensions :: Signal R2
+        screenDimensions :: Signal R2
+        mousePosition :: Signal MousePos
+        mouseMoved :: Signal [()]
+        mouseClicked :: Signal [MouseButton]
+        mouseDragged :: Signal [MouseButton]
+        keyPressed :: Signal [Key]
+        keyReleased :: Signal [Key]
+        keyTyped :: Signal [Key]
+        
+    Outputs
+        cursorType :: Signal CursorType
+        cursorVisible :: Signal Bool
+        background :: Signal Color
+        name :: Signal String
+        status :: Signal String
+        log :: Signal [String]
+        alert :: Signal [String]
+
+
+Time transformations
+        speed :: Rate -> Animation -> Animation
+        instant
+        seq par 
+        loop reverse
+        stretch/compress/duration/split ?
+Physics
+    -- wrap ammo.js ?
+
+Network              
+    data Method = GET | POST
+    requestText :: Method -> URL -> [(String, String)] -> Future String
+    requestJson :: Method -> URL -> [(String, String)] -> Future JSON
+    
+
+Animation
+    data Animation
+    data Image
+    freeze :: Time -> Animation -> Image
+
+    2D primitives
+        arc      :: Animation
+        ellipse  :: Animation
+        quad     :: Animation
+        rect     :: Animation
+        triangle :: Animation
+
+        line    :: Animation
+        curve   :: Animation
+
+    2D composition
+        merge :: Signal TotalOrdering -> Animation -> Animation
+    2D transformations
+        translate :: Signal (R2 a) -> Animation -> Animation
+        scale :: Signal a -> Animation -> Animation
+        rotate :: Signal (Angle a) -> Animation -> Animation
+        shear          
+   Smart composition
+        -- alignment, centering, catenation, distribution
+        beside :: Angle -> Animation -> Animation -> Animation
+
+        
