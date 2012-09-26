@@ -11,5 +11,6 @@ library
   hs-source-dirs: src
   exposed-modules:
     Animator.Animation
+    Animator.Internal.Prelude
 
 

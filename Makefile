@@ -21,26 +21,27 @@ release: build post optimize reload
 
 pre:
 	$(PRE_COMPILER) \
+		src/Data/List/NonEmpty.hs   \
+		src/Data/Semigroup.hs       \
+		src/Data/Void.hs            \
+		src/Data/MemoTrie.hs        \
 		src/Data/AdditiveGroup.hs   \
 		src/Data/AffineSpace.hs     \
 		src/Data/Basis.hs           \
 		src/Data/Cross.hs           \
 		src/Data/Derivative.hs      \
 		src/Data/LinearMap.hs       \
-		src/Data/List/NonEmpty.hs   \
 		src/Data/Maclaurin.hs       \
-		src/Data/MemoTrie.hs        \
 		src/Data/NumInstances.hs    \
-		src/Data/Semigroup.hs       \
-		src/Data/VectorSpace.hs     \
-		src/Data/Void.hs            \
-		src/Numeric/Natural.hs;
+		src/Data/VectorSpace.hs     ;
 
 build:
-	$(COMPILER) $(MAIN).hs 				\
-		src/Animator/Animation.hs 		\
-		src/Animator/Internal/Prim.hs 	\
-		src/Animator/Internal/Prelude.hs;
+	$(COMPILER) \
+		src/Numeric/Natural.hs			 \
+		src/Animator/Animation.hs 		 \
+		src/Animator/Prelude.hs 		 \
+		src/Animator/Internal/Prim.hs 	 \
+		$(MAIN).hs 						 ;
     perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
 post:
@@ -63,6 +64,13 @@ optimize:
 
 .PHONY reload:
 	sh reload.sh $(BROWSER)
+
+haddock:
+	haddock \
+		--html --hoogle \
+		--title=Animator \
+		-o dist/doc `find src -name \*.hs`
+
 
 update-lib: update-paperjs update-processing update-closure-library update-domready update-jquery
 
