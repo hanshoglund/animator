@@ -7,12 +7,17 @@ module Animator.Prelude
 -- * Basic types
 -- ** Numeric values
 Bool,
-Int,
 Char,
+Int,
+Word,
 Double,
 
 -- ** Compound types
-String,
+IsString(..),
+String,    
+lines,
+unlines,
+unwords,
 
 -- ** Alternatives
 Maybe,
@@ -31,23 +36,55 @@ partitionEithers,
 
 
 -- * Basic classes
-Bounded,
-Enum,
-Eq,
-Ord,
-Show,
-Num,
-Real,
-Fractional,
-Floating,
+Eq(..),
+
+Ord(..),
+Ordering,
+comparing,
+
+TotalOrd(..),
+TotalOrdering,
+comparingTotal,
+
+Bounded(..),
+Enum(..),
+Show(..),
+Num(..),
+Real(..),
+Fractional(..),
+Floating(..),
+
+Semigroup(..),
+Monoid(..),
+Functor(..),
+Applicative(..),
+Monad(..),
 
 -- * Host types
 JsString,
 JsObject,
 JsArray,
+
+consoleLog,
+documentWrite,
+alert,
 )
 where
     
 import Animator.Internal.Prim
 import Data.Maybe
 import Data.Either
+import Data.Word
+import Data.String
+
+import Data.Ord
+import Data.Semigroup
+import Data.Monoid
+import Control.Applicative
+
+data TotalOrdering = GT | LT
+class Eq a => TotalOrd a where
+    compareTotal :: a -> a -> TotalOrdering
+    
+comparingTotal :: TotalOrd a => (b -> a) -> b -> b -> TotalOrdering
+comparingTotal = undefined

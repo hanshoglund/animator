@@ -8,8 +8,8 @@ Prelude
     Eq Ord Enum Bounded
     Numeric classes and functions?
 
-    Foldable
-    Traversable
+    Foldable?
+    Traversable?
 
     data Color (RGB vs HSB?, alpha)
         blend :: BlendMode -> Color -> Color -> Color
