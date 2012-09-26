@@ -75,17 +75,14 @@ main = do
     putFib Hs 4
     putFib Hs 20
     putFib Hs 22
-    putFib Hs 25
 
     putFib JsRec 4
     putFib JsRec 20
     putFib JsRec 22
-    putFib JsRec 25
 
     putFib JsIter 4
     putFib JsIter 20
     putFib JsIter 22
-    putFib JsIter 25
     -- alert "This is a warning"
     -- putLog "This goes in the log"
     -- putDoc "This goes in the doc"          

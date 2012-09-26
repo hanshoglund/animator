@@ -21,8 +21,6 @@ release: build post optimize reload
 
 pre:
 	$(PRE_COMPILER) \
-		src/Animator/Animation.hs   \
-		src/Animator/Random.hs      \
 		src/Data/AdditiveGroup.hs   \
 		src/Data/AffineSpace.hs     \
 		src/Data/Basis.hs           \
@@ -39,9 +37,10 @@ pre:
 		src/Numeric/Natural.hs;
 
 build:
-	$(COMPILER) $(MAIN).hs \
-		src/Animator/Animation.hs   \
-		src/Animator/Random.hs; \
+	$(COMPILER) $(MAIN).hs 				\
+		src/Animator/Animation.hs 		\
+		src/Animator/Internal/Prim.hs 	\
+		src/Animator/Internal/Prelude.hs;
     perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
 post:
