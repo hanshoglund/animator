@@ -73,7 +73,7 @@ clean:
 haddock:
 	haddock \
 		--html --hoogle \
-		--title=Animator \
+		--title="Animator: Purely functional animation for the Web" \
 		-o dist/doc `find src -name \*.hs`
 
 server-start:

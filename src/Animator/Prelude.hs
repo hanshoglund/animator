@@ -2,6 +2,10 @@
 {-# LANGUAGE DisambiguateRecordFields, TypeFamilies,
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving #-}
 
+-- | This module is impicitly imported into every Animator program.           
+--
+--   Haskell programmers can use this with the @NoImplicitPrelude@ extention, but it is not mandatory,
+--   the standard Haskell prelude works just as fine.
 module Animator.Prelude
 ( 
 -- * Basic types
@@ -26,7 +30,6 @@ maybe,
 isJust,
 isNothing,
 listToMaybe,
-maybe,
 maybeToList,
 
 either,
@@ -59,6 +62,7 @@ Monoid(..),
 Functor(..),
 Applicative(..),
 Monad(..),
+MonadFix(..),
 
 -- * Host language
 JsString,
@@ -66,15 +70,17 @@ JsObject,
 JsArray,
 
 -- *** Objects
+global,
 new,
-JsProperty(..),
--- **** Concrete version
-getStr,
-setStr,
-getInt,
-setInt,
+JsProp(..),
+-- -- **** Concrete version
+-- getString,
+-- setString,
+-- getInt,
+-- setInt,
 
 -- ** Basic I/O
+IO,
 consoleLog,
 documentWrite,
 alert,
@@ -82,15 +88,23 @@ alert,
 where
     
 import Animator.Internal.Prim
+
+import Data.Eq
+import Data.Ord
+import Data.Semigroup
+import Data.Monoid
+import Data.Functor
+import Control.Applicative
+import Control.Monad
+import Control.Monad.Fix
+
+import Data.Foldable
+import Data.Traversable
+
 import Data.Maybe
 import Data.Either
 import Data.Word
 import Data.String
-
-import Data.Ord
-import Data.Semigroup
-import Data.Monoid
-import Control.Applicative
 
 data TotalOrdering = GT | LT
 class Eq a => TotalOrd a where

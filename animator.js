@@ -19,40 +19,44 @@
       * Bool, Int, Word, Float, Double, Word32, JSString
       * Strings can be converted to String or JSON on Haskell side
 
- */           
+ */
+function animator_global(_)
+{
+    return [1, _, window];
+}           
 
-function animator_object_create(_world) {
-    return [1, _world, {}];
+function animator_object_create(_) {
+    return [1, _, {}];
 }          
-function animator_object_get(name, obj, _world) {
-    return [1, _world, obj[name]];
+function animator_object_get(name, obj, _) {
+    return [1, _, obj[name]];
 }          
-function animator_object_set(name, obj, value, _world) {
+function animator_object_set(name, obj, value, _) {
     obj[name] = value;
-    return [1, _world];
+    return [1, _];
 }          
 
 
 
-function animator_log_prim(obj, _world) {
+function animator_log_prim(obj, _) {
     // debugger;
     document.write(obj);
-    return [1, _world];
+    return [1, _];
 }
-function animator_log(text, _world) {
+function animator_log(text, _) {
     window.console.log(text);
-    return [1, _world];
+    return [1, _];
 }
-function animator_write(text, _world) {
+function animator_write(text, _) {
     document.write(text);
-    return [1, _world];
+    return [1, _];
 }
-function animator_alert(text, _world) {
+function animator_alert(text, _) {
     window.alert(text);
-    return [1, _world];
+    return [1, _];
 }     
-function animator_processing(_world) {
-  return [1, _world, window.Processing];
+function animator_processing(_) {
+  return [1, _, window.Processing];
 }
 
 function fib2(n) {
@@ -69,11 +73,11 @@ function fib3(n){
   return fibs[n];
 }
 
-function animator_fib2(n, _world) {
-  return [1, _world, fib2(n)];
+function animator_fib2(n, _) {
+  return [1, _, fib2(n)];
 }
-function animator_fib3(n, _world) {
-  return [1, _world, fib3(n)];
+function animator_fib3(n, _) {
+  return [1, _, fib3(n)];
 }
 
 
