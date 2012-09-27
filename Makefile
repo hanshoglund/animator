@@ -6,13 +6,12 @@
 PRE_COMPILER = hastec \
 	--libinstall
 COMPILER = hastec \
-	--debug \
+	-O2 \
 	--out=main.js \
 	--with-js=lib/processing/processing.js,lib/jquery/jquery.js,animator.js
 
 BROWSER  = Google Chrome
-# BROWSER  = Firefox
-MAIN=main
+MAIN	 = main
  
 all: debug
 
@@ -51,6 +50,9 @@ post:
 	rm -f `find . -d -name "*.clo*"`
 	rm -f `find . -d -name "*.jsmod*"`
 	rm -f `find . -d -name "*.o*"`
+	rm -rf Animator
+	rm -rf Numeric
+	rm -rf Data
  
 FILE=$(MAIN).js
 optimize:              
@@ -62,8 +64,11 @@ optimize:
 		rm $(FILE); \
 		mv $(FILE)_opt $(FILE);
 
-.PHONY reload:
+reload:
 	sh reload.sh $(BROWSER)
+
+clean:
+	rm -f `find . -d -name "*.js*"`
 
 haddock:
 	haddock \
@@ -71,6 +76,11 @@ haddock:
 		--title=Animator \
 		-o dist/doc `find src -name \*.hs`
 
+server-start:
+	(python -m SimpleHTTPServer 5566 &) > /dev/null 2>&1
+
+server-stop:
+	killall python
 
 update-lib: update-paperjs update-processing update-closure-library update-domready update-jquery
 
@@ -121,15 +131,3 @@ update-jquery:
 	cd lib/jquery; \
 	curl $(JQUERY_URL) > jquery.js; \
 	cd ..;
-
-
-server-start:
-	(python -m SimpleHTTPServer 5566 &) > /dev/null 2>&1
-
-server-stop:
-	killall python
-
-clean:
-	rm -f `find . -d -name "*.js*"`
-
-

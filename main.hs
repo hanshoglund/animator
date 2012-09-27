@@ -5,6 +5,7 @@
 module Main where              
 
 import Animator.Prelude
+import Animator.Internal.Prim
 
 -- -- Tests
 -- foreign import ccall "animator_log_prim" logBool    :: Bool   -> IO ()
@@ -33,22 +34,50 @@ logFib JsRec n = do
 logFib JsIter n = do
     consoleLog $ "Running fib " ++ show n ++ " in JavaScript"
     consoleLog . show $ fib3 n
+
+logMap n = 
+    let s = sum . map (*3) . map (^2) $ [1..n]
+        in consoleLog $ "The sum is " ++ show s ++ " in JavaScript"
+        
+
 -- 
 main = do
-    return ()
+    x <- new
+    setInt "foo" x 1
+    setInt "bar" x 2
+    setInt "baz" x 3
+    a <- get "foo" x
+    b <- get "bar" x
+    c <- get "baz" x
+    documentWrite $ show ((a,b,c) :: (Int,Int,Int))
+
+    y <- new
+    setStr "foo" y "foo"
+    setStr "bar" y "bar"
+    setStr "baz" y "baz"
+    a2 <- getStr "foo" y
+    b2 <- getStr "bar" y
+    c2 <- getStr "baz" y
+    documentWrite $ show ((a2,b2,c2) :: (String,String,String))
+
+    logMap 200
+    
     logFib Hs 4
     logFib Hs 20
     logFib Hs 22
-
+    logFib Hs 30
+    -- 
     logFib JsRec 4
     logFib JsRec 20
     logFib JsRec 22
-
+    logFib JsRec 30
+    -- 
     logFib JsIter 4
     logFib JsIter 20
     logFib JsIter 22   
-
-    alert "This is a warning"
+    logFib JsIter 30
+    -- 
+    -- alert "This is a warning"
     consoleLog "This goes in the log"
     documentWrite "This goes in the doc"          
 
@@ -86,7 +115,6 @@ main = do
 
 
 
--- main = do
 --     let p = R2 (10, 20)
 --     let q = negateV p
 --     consoleLog $ show p ++ " " ++ show q

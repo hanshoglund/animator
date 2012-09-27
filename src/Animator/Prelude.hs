@@ -60,11 +60,21 @@ Functor(..),
 Applicative(..),
 Monad(..),
 
--- * Host types
+-- * Host language
 JsString,
 JsObject,
 JsArray,
 
+-- *** Objects
+new,
+JsProperty(..),
+-- **** Concrete version
+getStr,
+setStr,
+getInt,
+setInt,
+
+-- ** Basic I/O
 consoleLog,
 documentWrite,
 alert,
