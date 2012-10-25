@@ -1,36 +1,36 @@
 
 {-# LANGUAGE DisambiguateRecordFields, TypeFamilies, MagicHash,
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
-    TypeSynonymInstances, FlexibleInstances #-}
+    TypeSynonymInstances, FlexibleInstances, ForeignFunctionInterface #-}
 
--- | Primitive imports form the host environment.
-module Animator.Internal.Prim
-(
-JsString,
-JsObject,
-JsArray,
+-------------------------------------------------------------------------------------
+-- | 
+-- Primitive imports form the host environment.
+-------------------------------------------------------------------------------------
 
--- ** Objects
-global,
-new,
--- getString,
--- setString,
--- getInt,
--- setInt,
-JsName,
-JsProp(..),
-JsElem(..),
+-- TODO Remove TypeSynonymInstances, FlexibleInstances?
+--      Required for String instance of JsProp, can we rethink this?
 
--- ** JSON
-HJ.JSON,
+module Animator.Internal.Prim (
+        JsString,
+        JsObject,
+        JsArray,
 
--- ** Utility
-alert,
-consoleLog,
-documentWrite,
-global,
-)
-where
+        -- ** Objects
+        global,
+        new,
+        JsName,
+        JsProp(..),
+        JsElem(..),
+
+        -- ** JSON
+        HJ.JSON,
+
+        -- ** Utility
+        windowAlert,
+        windowConsoleLog,
+        windowDocumentWrite,
+  ) where
 
 import Data.String (IsString(..))
 import qualified Haste.Prim as H
@@ -61,17 +61,16 @@ newtype JsArray  = JsArray { getJsArray :: H.JSAny }
 
 
 
+foreign import ccall "aPrimGlobal" global#    :: IO H.JSAny
+foreign import ccall "aPrimObj"    new#       :: IO H.JSAny
 
-foreign import ccall "animator_global"        global#    :: IO H.JSAny
-foreign import ccall "animator_object_create" new#       :: IO H.JSAny
+foreign import ccall "aPrimGet"    getInt#    :: H.JSString -> H.JSAny -> IO Int
+foreign import ccall "aPrimGet"    getString# :: H.JSString -> H.JSAny -> IO H.JSString
+foreign import ccall "aPrimGet"    getObj#    :: H.JSString -> H.JSAny -> IO H.JSAny
 
-foreign import ccall "animator_object_get"    getInt#    :: H.JSString -> H.JSAny -> IO Int
-foreign import ccall "animator_object_get"    getString# :: H.JSString -> H.JSAny -> IO H.JSString
-foreign import ccall "animator_object_get"    getObj#    :: H.JSString -> H.JSAny -> IO H.JSAny
-
-foreign import ccall "animator_object_set"    setInt#    :: H.JSString -> H.JSAny -> Int -> IO ()
-foreign import ccall "animator_object_set"    setString# :: H.JSString -> H.JSAny -> H.JSString -> IO ()
-foreign import ccall "animator_object_set"    setObj#    :: H.JSString -> H.JSAny -> H.JSAny -> IO ()
+foreign import ccall "aPrimSet"    setInt#    :: H.JSString -> H.JSAny -> Int -> IO ()
+foreign import ccall "aPrimSet"    setString# :: H.JSString -> H.JSAny -> H.JSString -> IO ()
+foreign import ccall "aPrimSet"    setObj#    :: H.JSString -> H.JSAny -> H.JSAny -> IO ()
 
 -- | Returns the JavaScript global object.
 global :: IO JsObject
@@ -83,30 +82,6 @@ new = new# >>= (return . JsObject)
 
 type JsName = String
 
-getString :: JsName -> JsObject -> IO String
-getString name obj = 
-    getString# (H.toJSStr name) (getJsObject obj) >>= (return . H.fromJSStr)
-
-setString :: JsName -> JsObject -> String -> IO ()
-setString name obj value = 
-    setString# (H.toJSStr name) (getJsObject obj) (H.toJSStr value)
-
-getInt :: JsName -> JsObject -> IO Int
-getInt name obj = 
-    getInt# (H.toJSStr name) (getJsObject obj) >>= return
-
-setInt :: JsName -> JsObject -> Int -> IO ()
-setInt name obj value = 
-    setInt# (H.toJSStr name) (getJsObject obj) value
-
-getObj :: JsName -> JsObject -> IO JsObject
-getObj name obj = 
-    getObj# (H.toJSStr name) (getJsObject obj) >>= (return . JsObject)
-
-setObj :: JsName -> JsObject -> JsObject -> IO ()
-setObj name obj value = 
-    setObj# (H.toJSStr name) (getJsObject obj) (getJsObject value)
-
 -- | Class of types that can be properties of a JsObject.
 class JsProp a where
     get     :: JsName -> JsObject -> IO a
@@ -115,16 +90,16 @@ class JsProp a where
     update n o f = get n o >>= set n o . f
 
 instance JsProp String where
-    get = getString
-    set = setString
+    get name obj = getString# (H.toJSStr name) (getJsObject obj) >>= (return . H.fromJSStr)
+    set name obj value = setString# (H.toJSStr name) (getJsObject obj) (H.toJSStr value)
 
 instance JsProp Int where
-    get = getInt
-    set = setInt
+    get name obj = getInt# (H.toJSStr name) (getJsObject obj) >>= return
+    set name obj value = setInt# (H.toJSStr name) (getJsObject obj) value
 
 instance JsProp JsObject where
-    get = getObj
-    set = setObj
+    get name obj = getObj# (H.toJSStr name) (getJsObject obj) >>= (return . JsObject)
+    set name obj value = setObj# (H.toJSStr name) (getJsObject obj) (getJsObject value)
 
 -- | Class of types that can be elemnts in a JsArray.
 class JsElem a where
@@ -159,13 +134,13 @@ foreign import ccall "animator_log"   consoleLog#       :: H.JSString -> IO ()
 foreign import ccall "animator_alert" alert#            :: H.JSString -> IO ()
 
 -- | Like @window.alert@ in JavaScript, i.e. displays a modal window with the given text.
-alert :: String -> IO ()
-alert str  = alert# (H.toJSStr $ str)
+windowAlert :: String -> IO ()
+windowAlert str  = alert# (H.toJSStr $ str)
 
 -- | Like @window.console.log@ in JavaScript, i.e. posts a line to the web console.
-consoleLog :: String -> IO ()
-consoleLog str = consoleLog# (H.toJSStr $ str)
+windowConsoleLog :: String -> IO ()
+windowConsoleLog str = consoleLog# (H.toJSStr $ str)
 
 -- | Like @window.document.write@ in JavaScript, i.e. appends the given content at the end of the `body` element.
-documentWrite :: String -> IO ()
-documentWrite str = documentWrite# (H.toJSStr $ "<code>" ++ str ++ "</code><br/>")
+windowDocumentWrite :: String -> IO ()
+windowDocumentWrite str = documentWrite# (H.toJSStr $ "<code>" ++ str ++ "</code><br/>")

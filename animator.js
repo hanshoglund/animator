@@ -20,18 +20,16 @@
       * Strings can be converted to String or JSON on Haskell side
 
  */
-function animator_global(_)
-{
+function aPrimGlobal(_) {
     return [1, _, window];
 }           
-
-function animator_object_create(_) {
+function aPrimObj(_) {
     return [1, _, {}];
 }          
-function animator_object_get(name, obj, _) {
+function aPrimGet(name, obj, _) {
     return [1, _, obj[name]];
 }          
-function animator_object_set(name, obj, value, _) {
+function aPrimSet(name, obj, value, _) {
     obj[name] = value;
     return [1, _];
 }          

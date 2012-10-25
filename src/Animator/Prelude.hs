@@ -2,90 +2,102 @@
 {-# LANGUAGE DisambiguateRecordFields, TypeFamilies,
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving #-}
 
--- | This module is impicitly imported into every Animator program.           
+-------------------------------------------------------------------------------------
+-- |
+-- Module      : Animator.Prelude
+-- Copyright   : (c) Hans Hoglund 2012
 --
---   Haskell programmers can use this with the @NoImplicitPrelude@ extention, but it is not mandatory,
---   the standard Haskell prelude works just as fine.
-module Animator.Prelude
-( 
--- * Basic types
--- ** Numeric values
-Bool,
-Char,
-Int,
-Word,
-Double,
+-- License     : BSD-style
+--
+-- Maintainer  : hans@hanshoglunds.se
+-- Stability   : experimental
+-- Portability : GHC
+-- 
+-- This module is impicitly imported into every Animator program.           
+--
+-- Haskell programmers can use this with the @NoImplicitPrelude@ extention, but it is
+-- not mandatory, the standard Haskell prelude works just as fine.
+--
+-------------------------------------------------------------------------------------
 
--- ** Compound types
-IsString(..),
-String,    
-lines,
-unlines,
-unwords,
+module Animator.Prelude ( 
+        -- * Basic types
+        -- ** Numeric values
+        Bool,
+        Char,
+        Int,
+        Word,
+        Double,
 
--- ** Alternatives
-Maybe,
-Either,
-maybe,
-isJust,
-isNothing,
-listToMaybe,
-maybeToList,
+        -- ** Compound types
+        IsString(..),
+        String,    
+        lines,
+        unlines,
+        unwords,
 
-either,
-lefts,
-rights,
-partitionEithers,
+        -- ** Alternatives
+        Maybe,
+        Either,
+        maybe,
+        isJust,
+        isNothing,
+        listToMaybe,
+        maybeToList,
+
+        either,
+        lefts,
+        rights,
+        partitionEithers,
 
 
--- * Basic classes
-Eq(..),
+        -- * Basic classes
+        Eq(..),
 
-Ord(..),
-Ordering,
-comparing,
+        Ord(..),
+        Ordering,
+        comparing,
 
-TotalOrd(..),
-TotalOrdering,
-comparingTotal,
+        TotalOrd(..),
+        TotalOrdering,
+        comparingTotal,
 
-Bounded(..),
-Enum(..),
-Show(..),
-Num(..),
-Real(..),
-Fractional(..),
-Floating(..),
+        Bounded(..),
+        Enum(..),
+        Show(..),
+        Num(..),
+        Real(..),
+        Fractional(..),
+        Floating(..),
 
-Semigroup(..),
-Monoid(..),
-Functor(..),
-Applicative(..),
-Monad(..),
-MonadFix(..),
+        Semigroup(..),
+        Monoid(..),
+        Functor(..),
+        Applicative(..),
+        Monad(..),
+        MonadFix(..),
 
--- * Host language
-JsString,
-JsObject,
-JsArray,
+        -- * Host language
+        JsString,
+        JsObject,
+        JsArray,
 
--- *** Objects
-global,
-new,
-JsProp(..),
--- -- **** Concrete version
--- getString,
--- setString,
--- getInt,
--- setInt,
+        -- *** Objects
+        global,
+        new,
+        JsProp(..),
+        -- -- **** Concrete version
+        -- getString,
+        -- setString,
+        -- getInt,
+        -- setInt,
 
--- ** Basic I/O
-IO,
-consoleLog,
-documentWrite,
-alert,
-)
-where
+        -- ** Basic I/O
+        IO,
+        windowAlert,   
+        windowConsoleLog,
+        windowDocumentWrite,
+  ) where
     
 import Animator.Internal.Prim
 
@@ -105,6 +117,8 @@ import Data.Maybe
 import Data.Either
 import Data.Word
 import Data.String
+
+-- type Rat = Rational Int
 
 data TotalOrdering = GT | LT
 class Eq a => TotalOrd a where
