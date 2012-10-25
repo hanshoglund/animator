@@ -32,7 +32,13 @@ function aPrimGet(name, obj, _) {
 function aPrimSet(name, obj, value, _) {
     obj[name] = value;
     return [1, _];
-}          
+}
+function aPrimAdd(a, b, _) {
+    return [1, _, (a + b)]
+}
+function aPrimTypeOf(a, _) {
+    return [1, _, (typeof a)]
+}
 
 
 
@@ -41,47 +47,19 @@ function aPrimSet(name, obj, value, _) {
 
 // TODO remove these
 
-function animator_log_prim(obj, _) {
-    // debugger;
-    document.write(obj);
-    return [1, _];
-}
-function animator_log(text, _) {
+function aPrimLog(text, _) {
     window.console.log(text);
     return [1, _];
 }
-function animator_write(text, _) {
+function aPrimWrite(text, _) {
     document.write(text);
     return [1, _];
 }
-function animator_alert(text, _) {
+function aPrimAlert(text, _) {
     window.alert(text);
     return [1, _];
 }     
-function animator_processing(_) {
-  return [1, _, window.Processing];
-}
 
-function fib2(n) {
-  if (n < 2) return n;
-  return fib2(n - 1) + fib2(n - 2);
-}        
-
-function fib3(n){
-  var i;
-  var fibs = [0, 1];
-  for (i = 2; i <= n; ++i) { 
-    fibs[i] = fibs[i - 1] + fibs[i - 2];
-  }
-  return fibs[n];
-}
-
-function animator_fib2(n, _) {
-  return [1, _, fib2(n)];
-}
-function animator_fib3(n, _) {
-  return [1, _, fib3(n)];
-}
 
 
 

@@ -14,16 +14,24 @@ fib n = fib (n - 1) + fib (n - 2)
 fibs = map fib [0..14]
 
 
--- 
+
+
 main = do
-    x <- new
-    set "foo" x (1::Int)
-    set "bar" x (1::Int)
-    set "baz" x (1::Int)
-    a <- get "foo" x
-    b <- get "bar" x
-    c <- get "baz" x
-    windowDocumentWrite $ show ((a,b,c) :: (Int,Int,Int))
+    -- x <- new
+    -- set "foo" x (1::Int)
+    -- set "bar" x (1::Int)
+    -- set "baz" x (1::Int)
+    -- a <- get "foo" x
+    -- b <- get "bar" x
+    -- c <- get "baz" x
+    -- windowDocumentWrite $ show ((a,b,c) :: (Int,Int,Int))
+
+    window <- global
+    date <- get "Date" window
+    name <- (get "name" date :: IO String)
+    windowConsoleLog name
+    windowConsoleLog $ typeOf window
+    windowConsoleLog $ typeOf date
 
     -- y <- new
     -- y %%. "foo" .= "foo"
@@ -35,8 +43,8 @@ main = do
     -- documentWrite $ show ((a2,b2,c2) :: (String,String,String))
 
     -- windowAlert "This is a warning"
-    windowConsoleLog "This goes in the log"
-    windowConsoleLog $ "Fibs is " ++ show fibs
-    windowDocumentWrite "This goes in the doc"          
+    -- windowConsoleLog "This goes in the log"
+    -- windowConsoleLog $ "Fibs is " ++ show fibs
+    -- windowDocumentWrite "This goes in the doc"          
 
     -- global %. "window" %. "console" %. "log"

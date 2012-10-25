@@ -1,7 +1,7 @@
 
 {-# LANGUAGE DisambiguateRecordFields, TypeFamilies, MagicHash,
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
-    TypeSynonymInstances, FlexibleInstances, ForeignFunctionInterface #-}
+    TypeSynonymInstances, FlexibleInstances, ForeignFunctionInterface, OverloadedStrings #-}
 
 -------------------------------------------------------------------------------------
 -- | 
@@ -24,6 +24,7 @@ module Animator.Internal.Prim (
         new,
         create,
         global,
+        typeOf,
         JsName,
         JsProp(..),
 
@@ -39,38 +40,79 @@ module Animator.Internal.Prim (
 import Data.Int
 import Data.Word
 import Data.String (IsString(..))
+import Data.Semigroup
 import qualified Haste.Prim as H
 import qualified Haste.JSON as HJ
 
+foreign import ccall "aPrimObj"    new#       :: IO H.JSAny
+foreign import ccall "aPrimGlobal" global#    :: IO H.JSAny
+
+foreign import ccall "aPrimGet"    getInt#    :: H.JSString -> H.JSAny -> IO Int
+foreign import ccall "aPrimGet"    getWord#   :: H.JSString -> H.JSAny -> IO Word
+foreign import ccall "aPrimGet"    getInt32#  :: H.JSString -> H.JSAny -> IO Int32
+foreign import ccall "aPrimGet"    getWord32# :: H.JSString -> H.JSAny -> IO Word32
+foreign import ccall "aPrimGet"    getFloat#  :: H.JSString -> H.JSAny -> IO Float
+foreign import ccall "aPrimGet"    getDouble# :: H.JSString -> H.JSAny -> IO Double
+foreign import ccall "aPrimGet"    getString# :: H.JSString -> H.JSAny -> IO H.JSString
+foreign import ccall "aPrimGet"    getObj#    :: H.JSString -> H.JSAny -> IO H.JSAny
+
+foreign import ccall "aPrimSet"    setInt#    :: H.JSString -> H.JSAny -> Int -> IO ()
+foreign import ccall "aPrimGet"    setWord#   :: H.JSString -> H.JSAny -> Word -> IO ()
+foreign import ccall "aPrimGet"    setInt32#  :: H.JSString -> H.JSAny -> Int32 -> IO ()
+foreign import ccall "aPrimGet"    setWord32# :: H.JSString -> H.JSAny -> Word32 -> IO ()
+foreign import ccall "aPrimGet"    setFloat#  :: H.JSString -> H.JSAny -> Float -> IO ()
+foreign import ccall "aPrimGet"    setDouble# :: H.JSString -> H.JSAny -> Double -> IO ()
+foreign import ccall "aPrimSet"    setString# :: H.JSString -> H.JSAny -> H.JSString -> IO ()
+foreign import ccall "aPrimSet"    setObj#    :: H.JSString -> H.JSAny -> H.JSAny -> IO ()
+
+foreign import ccall "aPrimAdd"    concatStr# :: H.JSString -> H.JSString -> H.JSString
+foreign import ccall "aPrimTypeOf" typeOf#    :: H.JSAny -> H.JSString
+
+foreign import ccall "aPrimWrite" documentWrite#    :: H.JSString -> IO ()
+foreign import ccall "aPrimLog"   consoleLog#       :: H.JSString -> IO ()
+foreign import ccall "aPrimAlert" alert#            :: H.JSString -> IO ()
 
 
 
--- | An unboxed JavaScript string.
+-- | 
+-- An unboxed JavaScript string.
 newtype JsString = JsString { getJsString :: H.JSString }
     deriving (Eq, Ord, Show, IsString)
+
+instance Semigroup JsString where
+    (JsString x) <> (JsString y) = JsString $ concatStr# x y
+instance Monoid JsString where
+    mappend = (<>)
+    mempty = ""
+    
 -- Applicative
 -- Monad
 -- Functor
 -- Semigroup
--- Monoid
 -- Foldable
 
--- | Convert a Haskell string to a JavaScript string.
+-- | 
+-- Convert a Haskell string to a JavaScript string.
 toJsString :: String -> JsString  
 toJsString = JsString . H.toJSStr 
 
--- | Convert a JavaScript string to a Haskell string.
+-- | 
+-- Convert a JavaScript string to a Haskell string.
 fromJsString :: JsString -> String
 fromJsString = H.fromJSStr . getJsString
 
--- | An unboxed JavaScript object.
+
+
+
+
+
+
+-- | 
+-- An unboxed JavaScript object.
 newtype JsObject = JsObject { getJsObject :: H.JSAny }
 
--- -- | An unboxed JavaScript array.
--- newtype JsArray  = JsArray { getJsArray :: H.JSAny }
-
-
--- | Creates a new JavaScript object. 
+-- | 
+-- Creates a new JavaScript object. 
 --
 -- Equivalent to:
 --
@@ -78,7 +120,8 @@ newtype JsObject = JsObject { getJsObject :: H.JSAny }
 new :: IO JsObject
 new = new# >>= (return . JsObject)
 
--- | Creates a new JavaScript object using the given object as prototype.
+-- | 
+-- Creates a new JavaScript object using the given object as prototype.
 --
 -- Equivalent to:
 --
@@ -86,21 +129,16 @@ new = new# >>= (return . JsObject)
 create :: JsObject -> IO JsObject
 create x = undefined
                                       
--- | Returns the JavaScript global object.
+-- | 
+-- Returns the JavaScript global object.
 global :: IO JsObject
 global = global# >>= (return . JsObject)
 
+typeOf :: JsObject -> String
+typeOf = H.fromJSStr . typeOf# . getJsObject
 
-
-
-
-
-
-
-
-
-
-
+-- |
+-- JavaScript property name.
 type JsName = String
 
 -- | 
@@ -167,49 +205,25 @@ instance JsProp JsObject where
 
 
 
-
-
-foreign import ccall "animator_write" documentWrite#    :: H.JSString -> IO ()
-foreign import ccall "animator_log"   consoleLog#       :: H.JSString -> IO ()
-foreign import ccall "animator_alert" alert#            :: H.JSString -> IO ()
-
--- | Like @window.alert@ in JavaScript, i.e. displays a modal window with the given text.
-windowAlert :: String -> IO ()
-windowAlert str  = alert# (H.toJSStr $ str)
-
--- | Like @window.console.log@ in JavaScript, i.e. posts a line to the web console.
-windowConsoleLog :: String -> IO ()
-windowConsoleLog str = consoleLog# (H.toJSStr $ str)
-
--- | Like @window.document.write@ in JavaScript, i.e. appends the given content at the end of the `body` element.
-windowDocumentWrite :: String -> IO ()
-windowDocumentWrite str = documentWrite# (H.toJSStr $ "<code>" ++ str ++ "</code><br/>")
-
-
+-- TODO
 newtype JSON = JSON { getJSON :: HJ.JSON }
 
 
 
 
+-- | 
+-- Displays a modal window with the given text.
+windowAlert :: String -> IO ()
+windowAlert str  = alert# (H.toJSStr $ str)
+
+-- | 
+-- Posts a line to the web console.
+windowConsoleLog :: String -> IO ()
+windowConsoleLog str = consoleLog# (H.toJSStr $ str)
+
+-- | 
+-- Appends the given content at the end of the `body` element.
+windowDocumentWrite :: String -> IO ()
+windowDocumentWrite str = documentWrite# (H.toJSStr $ "<code>" ++ str ++ "</code><br/>")
 
 
-foreign import ccall "aPrimObj"    new#       :: IO H.JSAny
-foreign import ccall "aPrimGlobal" global#    :: IO H.JSAny
-
-foreign import ccall "aPrimGet"    getInt#    :: H.JSString -> H.JSAny -> IO Int
-foreign import ccall "aPrimGet"    getWord#   :: H.JSString -> H.JSAny -> IO Word
-foreign import ccall "aPrimGet"    getInt32#  :: H.JSString -> H.JSAny -> IO Int32
-foreign import ccall "aPrimGet"    getWord32# :: H.JSString -> H.JSAny -> IO Word32
-foreign import ccall "aPrimGet"    getFloat#  :: H.JSString -> H.JSAny -> IO Float
-foreign import ccall "aPrimGet"    getDouble# :: H.JSString -> H.JSAny -> IO Double
-foreign import ccall "aPrimGet"    getString# :: H.JSString -> H.JSAny -> IO H.JSString
-foreign import ccall "aPrimGet"    getObj#    :: H.JSString -> H.JSAny -> IO H.JSAny
-
-foreign import ccall "aPrimSet"    setInt#    :: H.JSString -> H.JSAny -> Int -> IO ()
-foreign import ccall "aPrimGet"    setWord#   :: H.JSString -> H.JSAny -> Word -> IO ()
-foreign import ccall "aPrimGet"    setInt32#  :: H.JSString -> H.JSAny -> Int32 -> IO ()
-foreign import ccall "aPrimGet"    setWord32# :: H.JSString -> H.JSAny -> Word32 -> IO ()
-foreign import ccall "aPrimGet"    setFloat#  :: H.JSString -> H.JSAny -> Float -> IO ()
-foreign import ccall "aPrimGet"    setDouble# :: H.JSString -> H.JSAny -> Double -> IO ()
-foreign import ccall "aPrimSet"    setString# :: H.JSString -> H.JSAny -> H.JSString -> IO ()
-foreign import ccall "aPrimSet"    setObj#    :: H.JSString -> H.JSAny -> H.JSAny -> IO ()
