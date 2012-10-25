@@ -169,9 +169,8 @@ type JsName = String
 -- | 
 -- Class of types that can be properties of a 'JsObject'.
 -- 
--- The methods of this class perform no dynamic checks, so retrieving a value of
--- the wrong type (for example, reading an 'Int' from a field containing a string)
--- results in undefined behaviour.
+-- Retrieving a value of the wrong type (for example, reading an 'Int' from a field 
+-- containing a string) results in a runtime error.
 class JsProp a where
     -- | @get n o@ fetches the value named @n@ from object @o@, or equivalently
     --
