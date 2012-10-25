@@ -40,6 +40,16 @@ function aPrimTypeOf(a, _) {
     return [1, _, (typeof a)]
 }
 
+aTestObj = {
+    n : null,
+    u : undefined,
+    i : 1,
+    f : 2.5,
+    a : [1,2,3],
+    o : { foo: 1, bar: 2 },
+    s : "hello!",
+    f : function () {}
+};
 
 
 

@@ -71,7 +71,7 @@ clean:
 	rm -f `find . -d -name "*.js*"`
 
 haddock:        
-	cabal haddock
+	cabal haddock --hyperlink-source
 	# haddock \
 		# --html \
 		# --title="Animator: Purely functional animation for the Web" \

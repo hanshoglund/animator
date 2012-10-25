@@ -18,13 +18,18 @@ module Animator.Internal.Prim (
         toJsString,
         fromJsString,
 
+        -- ** Functions
+        JsFun,
+        call,
+        JsArg(..),
+
         -- ** Objects
         JsObject,
         -- JsArray,
         new,
         create,
-        global,
         typeOf,
+        global,
         JsName,
         JsProp(..),
 
@@ -68,11 +73,14 @@ foreign import ccall "aPrimSet"    setObj#    :: H.JSString -> H.JSAny -> H.JSAn
 foreign import ccall "aPrimAdd"    concatStr# :: H.JSString -> H.JSString -> H.JSString
 foreign import ccall "aPrimTypeOf" typeOf#    :: H.JSAny -> H.JSString
 
-foreign import ccall "aPrimWrite" documentWrite#    :: H.JSString -> IO ()
-foreign import ccall "aPrimLog"   consoleLog#       :: H.JSString -> IO ()
-foreign import ccall "aPrimAlert" alert#            :: H.JSString -> IO ()
+foreign import ccall "aPrimWrite"  documentWrite#    :: H.JSString -> IO ()
+foreign import ccall "aPrimLog"    consoleLog#       :: H.JSString -> IO ()
+foreign import ccall "aPrimAlert"  alert#            :: H.JSString -> IO ()
 
 
+-------------------------------------------------------------------------------------
+-- Strings
+-------------------------------------------------------------------------------------
 
 -- | 
 -- An unboxed JavaScript string.
@@ -102,43 +110,60 @@ fromJsString :: JsString -> String
 fromJsString = H.fromJSStr . getJsString
 
 
+-------------------------------------------------------------------------------------
+-- Functions
+-------------------------------------------------------------------------------------
 
+-- | 
+-- An unboxed JavaScript function.
+newtype JsFun a b = JsFun { getJsFun :: H.JSAny }
 
+call :: (JsArg a, JsArg b) => JsFun a b -> a -> IO b
+call = error "Not implemented"
 
+-- |
+-- Class of values that can be passed to a 'JsFun'.
+class JsArg a where
 
+-------------------------------------------------------------------------------------
+-- Objects
+-------------------------------------------------------------------------------------
 
 -- | 
 -- An unboxed JavaScript object.
 newtype JsObject = JsObject { getJsObject :: H.JSAny }
 
 -- | 
--- Creates a new JavaScript object. 
---
--- Equivalent to:
+-- Creates a new JavaScript object, or equivalently
 --
 -- > {}
 new :: IO JsObject
 new = new# >>= (return . JsObject)
 
 -- | 
--- Creates a new JavaScript object using the given object as prototype.
---
--- Equivalent to:
+-- Creates a new JavaScript object using the given object as prototype, or equivalently
 --
 -- > Object.create(x)
 create :: JsObject -> IO JsObject
-create x = undefined
+create x = error "Not implemented"
                                       
 -- | 
 -- Returns the JavaScript global object.
 global :: IO JsObject
 global = global# >>= (return . JsObject)
 
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > typeof x
+--
+-- By definition, this function returns @\"object\"@, @\"function\"@
+-- @\"xml\"@ or @\"undefined\"@.
 typeOf :: JsObject -> String
 typeOf = H.fromJSStr . typeOf# . getJsObject
 
 -- |
--- JavaScript property name.
+-- A JavaScript property name.
 type JsName = String
 
 -- | 
@@ -148,23 +173,18 @@ type JsName = String
 -- the wrong type (for example, reading an 'Int' from a field containing a string)
 -- results in undefined behaviour.
 class JsProp a where
-    -- | @get n o@ fetches the value named @n@ from object @o@.
-    -- 
-    --   Equivalent to:
+    -- | @get n o@ fetches the value named @n@ from object @o@, or equivalently
     --
     -- > o.n    
     get :: JsName -> JsObject -> IO a
 
-    -- | @set n o x@ assigns the property @n@ to @x@ in object @o@.
-    --   
-    --   Equivalent to:
+    -- | @set n o x@ assigns the property @n@ to @x@ in object @o@, or equivalently
     --
     -- > o.n = x
     set :: JsName -> JsObject -> a -> IO ()
 
-    -- | @update n o f@ updates the value named @n@ in object @o@ by applying the function f.
-    --   
-    --   Equivalent to:
+    -- | @update n o f@ updates the value named @n@ in object @o@ by applying the function f, 
+    --   or equivalently
     --
     -- > x.n = f(x.n)
     update :: JsName -> JsObject -> (a -> a) -> IO ()
@@ -203,13 +223,17 @@ instance JsProp JsObject where
     set name obj value = setObj# (H.toJSStr name) (getJsObject obj) (getJsObject value)
 
 
-
+-------------------------------------------------------------------------------------
+-- JSON
+-------------------------------------------------------------------------------------
 
 -- TODO
 newtype JSON = JSON { getJSON :: HJ.JSON }
 
 
-
+-------------------------------------------------------------------------------------
+-- Utility
+-------------------------------------------------------------------------------------
 
 -- | 
 -- Displays a modal window with the given text.
