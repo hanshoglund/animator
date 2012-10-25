@@ -7,6 +7,12 @@ module Main where
 import Animator.Prelude
 import Animator.Internal.Prim
 
+fib 0 = 0
+fib 1 = 1
+fib n = fib (n - 1) + fib (n - 2)
+
+fibs = map fib [0..14]
+
 
 -- 
 main = do
@@ -17,7 +23,7 @@ main = do
     a <- get "foo" x
     b <- get "bar" x
     c <- get "baz" x
-    documentWrite $ show ((a,b,c) :: (Int,Int,Int))
+    windowDocumentWrite $ show ((a,b,c) :: (Int,Int,Int))
 
     -- y <- new
     -- y %%. "foo" .= "foo"
@@ -28,8 +34,9 @@ main = do
     -- c2 <- (y %. "baz")
     -- documentWrite $ show ((a2,b2,c2) :: (String,String,String))
 
-    -- alert "This is a warning"
-    consoleLog "This goes in the log"
-    documentWrite "This goes in the doc"          
+    -- windowAlert "This is a warning"
+    windowConsoleLog "This goes in the log"
+    windowConsoleLog $ "Fibs is " ++ show fibs
+    windowDocumentWrite "This goes in the doc"          
 
     -- global %. "window" %. "console" %. "log"

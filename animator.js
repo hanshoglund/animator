@@ -36,6 +36,11 @@ function aPrimSet(name, obj, value, _) {
 
 
 
+
+
+
+// TODO remove these
+
 function animator_log_prim(obj, _) {
     // debugger;
     document.write(obj);

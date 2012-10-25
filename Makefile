@@ -70,11 +70,13 @@ reload:
 clean:
 	rm -f `find . -d -name "*.js*"`
 
-haddock:
-	haddock \
-		--html --hoogle \
-		--title="Animator: Purely functional animation for the Web" \
-		-o dist/doc `find src -name \*.hs`
+haddock:        
+	cabal haddock
+	# haddock \
+		# --html \
+		# --title="Animator: Purely functional animation for the Web" \
+		# src
+		# -o dist/doc `find src -name \*.hs`
 
 server-start:
 	(python -m SimpleHTTPServer 5566 &) > /dev/null 2>&1

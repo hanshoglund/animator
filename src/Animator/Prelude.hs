@@ -80,7 +80,7 @@ module Animator.Prelude (
         -- * Host language
         JsString,
         JsObject,
-        JsArray,
+        -- JsArray,
 
         -- *** Objects
         global,
