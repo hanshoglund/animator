@@ -52,23 +52,23 @@ import qualified Haste.JSON as HJ
 foreign import ccall "aPrimObj"    new#       :: IO H.JSAny
 foreign import ccall "aPrimGlobal" global#    :: IO H.JSAny
 
-foreign import ccall "aPrimGet"    getInt#    :: H.JSString -> H.JSAny -> IO Int
-foreign import ccall "aPrimGet"    getWord#   :: H.JSString -> H.JSAny -> IO Word
-foreign import ccall "aPrimGet"    getInt32#  :: H.JSString -> H.JSAny -> IO Int32
-foreign import ccall "aPrimGet"    getWord32# :: H.JSString -> H.JSAny -> IO Word32
-foreign import ccall "aPrimGet"    getFloat#  :: H.JSString -> H.JSAny -> IO Float
-foreign import ccall "aPrimGet"    getDouble# :: H.JSString -> H.JSAny -> IO Double
-foreign import ccall "aPrimGet"    getString# :: H.JSString -> H.JSAny -> IO H.JSString
-foreign import ccall "aPrimGet"    getObj#    :: H.JSString -> H.JSAny -> IO H.JSAny
+foreign import ccall "aPrimGet"    getInt#    :: Int -> H.JSString -> H.JSAny -> IO Int
+foreign import ccall "aPrimGet"    getWord#   :: Int -> H.JSString -> H.JSAny -> IO Word
+foreign import ccall "aPrimGet"    getInt32#  :: Int -> H.JSString -> H.JSAny -> IO Int32
+foreign import ccall "aPrimGet"    getWord32# :: Int -> H.JSString -> H.JSAny -> IO Word32
+foreign import ccall "aPrimGet"    getFloat#  :: Int -> H.JSString -> H.JSAny -> IO Float
+foreign import ccall "aPrimGet"    getDouble# :: Int -> H.JSString -> H.JSAny -> IO Double
+foreign import ccall "aPrimGet"    getString# :: Int -> H.JSString -> H.JSAny -> IO H.JSString
+foreign import ccall "aPrimGet"    getObj#    :: Int -> H.JSString -> H.JSAny -> IO H.JSAny
 
-foreign import ccall "aPrimSet"    setInt#    :: H.JSString -> H.JSAny -> Int -> IO ()
-foreign import ccall "aPrimGet"    setWord#   :: H.JSString -> H.JSAny -> Word -> IO ()
-foreign import ccall "aPrimGet"    setInt32#  :: H.JSString -> H.JSAny -> Int32 -> IO ()
-foreign import ccall "aPrimGet"    setWord32# :: H.JSString -> H.JSAny -> Word32 -> IO ()
-foreign import ccall "aPrimGet"    setFloat#  :: H.JSString -> H.JSAny -> Float -> IO ()
-foreign import ccall "aPrimGet"    setDouble# :: H.JSString -> H.JSAny -> Double -> IO ()
-foreign import ccall "aPrimSet"    setString# :: H.JSString -> H.JSAny -> H.JSString -> IO ()
-foreign import ccall "aPrimSet"    setObj#    :: H.JSString -> H.JSAny -> H.JSAny -> IO ()
+foreign import ccall "aPrimSet"    setInt#    :: Int -> H.JSString -> H.JSAny -> Int -> IO ()
+foreign import ccall "aPrimGet"    setWord#   :: Int -> H.JSString -> H.JSAny -> Word -> IO ()
+foreign import ccall "aPrimGet"    setInt32#  :: Int -> H.JSString -> H.JSAny -> Int32 -> IO ()
+foreign import ccall "aPrimGet"    setWord32# :: Int -> H.JSString -> H.JSAny -> Word32 -> IO ()
+foreign import ccall "aPrimGet"    setFloat#  :: Int -> H.JSString -> H.JSAny -> Float -> IO ()
+foreign import ccall "aPrimGet"    setDouble# :: Int -> H.JSString -> H.JSAny -> Double -> IO ()
+foreign import ccall "aPrimSet"    setString# :: Int -> H.JSString -> H.JSAny -> H.JSString -> IO ()
+foreign import ccall "aPrimSet"    setObj#    :: Int -> H.JSString -> H.JSAny -> H.JSAny -> IO ()
 
 foreign import ccall "aPrimAdd"    concatStr# :: H.JSString -> H.JSString -> H.JSString
 foreign import ccall "aPrimTypeOf" typeOf#    :: H.JSAny -> H.JSString
@@ -190,37 +190,41 @@ class JsProp a where
     update :: JsName -> JsObject -> (a -> a) -> IO ()
     update n o f = get n o >>= set n o . f
 
-instance JsProp String where
-    get name obj = getString# (H.toJSStr name) (getJsObject obj) >>= (return . H.fromJSStr)
-    set name obj value = setString# (H.toJSStr name) (getJsObject obj) (H.toJSStr value)
+kNumberType = 0
+kStringType = 1
+kObjectType = 2
 
 instance JsProp Int where
-    get name obj = getInt# (H.toJSStr name) (getJsObject obj) >>= return
-    set name obj value = setInt# (H.toJSStr name) (getJsObject obj) value
+    get name obj = getInt# kNumberType (H.toJSStr name) (getJsObject obj) >>= return
+    set name obj value = setInt# kNumberType (H.toJSStr name) (getJsObject obj) value
 
 instance JsProp Word where
-    get name obj = getWord# (H.toJSStr name) (getJsObject obj) >>= return
-    set name obj value = setWord# (H.toJSStr name) (getJsObject obj) value
+    get name obj = getWord# kNumberType (H.toJSStr name) (getJsObject obj) >>= return
+    set name obj value = setWord# kNumberType (H.toJSStr name) (getJsObject obj) value
 
 instance JsProp Int32 where
-    get name obj = getInt32# (H.toJSStr name) (getJsObject obj) >>= return
-    set name obj value = setInt32# (H.toJSStr name) (getJsObject obj) value
+    get name obj = getInt32# kNumberType (H.toJSStr name) (getJsObject obj) >>= return
+    set name obj value = setInt32# kNumberType (H.toJSStr name) (getJsObject obj) value
 
 instance JsProp Word32 where
-    get name obj = getWord32# (H.toJSStr name) (getJsObject obj) >>= return
-    set name obj value = setWord32# (H.toJSStr name) (getJsObject obj) value
+    get name obj = getWord32# kNumberType (H.toJSStr name) (getJsObject obj) >>= return
+    set name obj value = setWord32# kNumberType (H.toJSStr name) (getJsObject obj) value
 
 instance JsProp Float where
-    get name obj = getFloat# (H.toJSStr name) (getJsObject obj) >>= return
-    set name obj value = setFloat# (H.toJSStr name) (getJsObject obj) value
+    get name obj = getFloat# kNumberType (H.toJSStr name) (getJsObject obj) >>= return
+    set name obj value = setFloat# kNumberType (H.toJSStr name) (getJsObject obj) value
 
 instance JsProp Double where
-    get name obj = getDouble# (H.toJSStr name) (getJsObject obj) >>= return
-    set name obj value = setDouble# (H.toJSStr name) (getJsObject obj) value
+    get name obj = getDouble# kNumberType (H.toJSStr name) (getJsObject obj) >>= return
+    set name obj value = setDouble# kNumberType (H.toJSStr name) (getJsObject obj) value
+
+instance JsProp String where
+    get name obj = getString# kStringType (H.toJSStr name) (getJsObject obj) >>= (return . H.fromJSStr)
+    set name obj value = setString# kStringType (H.toJSStr name) (getJsObject obj) (H.toJSStr value)
 
 instance JsProp JsObject where
-    get name obj = getObj# (H.toJSStr name) (getJsObject obj) >>= (return . JsObject)
-    set name obj value = setObj# (H.toJSStr name) (getJsObject obj) (getJsObject value)
+    get name obj = getObj# kObjectType (H.toJSStr name) (getJsObject obj) >>= (return . JsObject)
+    set name obj value = setObj# kObjectType (H.toJSStr name) (getJsObject obj) (getJsObject value)
 
 
 -------------------------------------------------------------------------------------
