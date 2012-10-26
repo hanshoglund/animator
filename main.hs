@@ -17,14 +17,10 @@ fibs = map fib [0..14]
 
 
 main = do
-    x <- new
-    set "foo" x (1::Int)
-    set "bar" x (1::Int)
-    set "baz" x (1::Int)
-    a <- get "foo" x
-    b <- get "bar" x
-    c <- get "baz" x
-    windowDocumentWrite $ show ((a,b,c) :: (Int,Int,Int))
+    x <- object
+    set "foo" x ("1232"::String)
+    r <- (get "foo" x :: IO String)
+    windowDocumentWrite $ (show r)
 
     -- y <- new
     -- y %%. "foo" .= "foo"

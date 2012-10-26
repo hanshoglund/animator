@@ -8,7 +8,7 @@ PRE_COMPILER = hastec \
 COMPILER = hastec \
 	-O2 \
 	--out=main.js \
-	--with-js=lib/processing/processing.js,lib/jquery/jquery.js,animator.js
+	--with-js=animator.js,lib/processing/processing.js,lib/jquery/jquery.js
 
 BROWSER  = Google Chrome
 MAIN	 = main
