@@ -76,6 +76,7 @@ aTestObj = {
 // TODO remove these
 
 function aPrimLog(text, _) {
+    window.console.log(typeof text);
     window.console.log(text);
     return [1, _];
 }

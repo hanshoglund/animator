@@ -1,26 +1,30 @@
 {-# LANGUAGE 
     NoMonomorphismRestriction,
-    TypeFamilies #-}
+    TypeFamilies,
+    ForeignFunctionInterface,
+    OverloadedStrings,
+    MagicHash #-}
 
 module Main where              
 
 import Animator.Prelude
 import Animator.Internal.Prim
-
-fib 0 = 0
-fib 1 = 1
-fib n = fib (n - 1) + fib (n - 2)
-
-fibs = map fib [0..14]
-
+import Unsafe.Coerce
+import Foreign.Ptr
+import Haste.Prim(toPtr)
 
 
 
 main = do
-    x <- object
-    set "foo" x ("1232"::String)
-    r <- (get "foo" x :: IO String)
-    windowDocumentWrite $ (show r)
+    -- x <- object
+    -- set "foo" x (1232::Int)
+    -- r <- (get "foo" x :: IO JsObject)
+    -- logAny# $ getJsObject r                    
+    
+    -- let p = toPtr ((\x -> x + x) :: Int -> Int)
+    o <- object
+    set "x" o (1::Int)
+    logAny# $ unsafeCoerce (getJsObject $ o)
 
     -- y <- new
     -- y %%. "foo" .= "foo"
@@ -37,3 +41,8 @@ main = do
     windowDocumentWrite "This goes in the doc"          
 
     -- global %. "window" %. "console" %. "log"
+
+           
+    -- object % "x" := 1 
+    --        % "y" := 2
+    -- array [1,2,3] % "0" := 33
