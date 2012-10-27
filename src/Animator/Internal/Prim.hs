@@ -74,6 +74,9 @@ module Animator.Internal.Prim (
         windowAlert,
         windowConsoleLog,
         windowDocumentWrite,
+        getJsObject,
+        Any#,
+        logAny#
   ) where
 
 import Prelude hiding (reverse, null)
@@ -138,6 +141,8 @@ foreign import ccall "aPrimSet"       setAny#           :: Int -> String# -> Any
 foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 foreign import ccall "aPrimAdd"       concatString#     :: String# -> String# -> String#
 foreign import ccall "aPrimTypeOf"    typeOf#           :: Any# -> String#
+
+foreign import ccall "aPrimLog"       logAny#           :: Any# -> IO ()
 
 foreign import ccall "aPrimWrite"     documentWrite#    :: String# -> IO ()
 foreign import ccall "aPrimLog"       consoleLog#       :: String# -> IO ()
@@ -264,16 +269,16 @@ arity :: JsFunction -> Int
 arity = error "Not implemented"
 
 -- |
--- Partially apply the given function , or equivalently
+-- Partially apply the given function, or equivalently
 --
--- > Function.prototype.bind(f, x, args)
+-- > Function.prototype.bind.call(f, x, ... as)
 bind :: JsValue a => JsFunction -> a -> [a] -> JsFunction
 bind = error "Not implemented"
 
 -- |
--- Apply the given function , or equivalently
+-- Apply the given function, or equivalently
 --
--- > Function.prototype.apply(f, x, args)
+-- > Function.prototype.apply.call(f, x, as)
 apply :: JsValue a => JsFunction -> a -> [a] -> a
 apply = error "Not implemented"
 
