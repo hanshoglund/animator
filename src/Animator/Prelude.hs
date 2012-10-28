@@ -78,25 +78,6 @@ module Animator.Prelude (
         MonadFix(..),
 
         -- * Host language
-        JsString,
-        JsObject,
-        -- JsArray,
-
-        -- *** Objects
-        global,
-        new,
-        JsProp(..),
-        -- -- **** Concrete version
-        -- getString,
-        -- setString,
-        -- getInt,
-        -- setInt,
-
-        -- ** Basic I/O
-        IO,
-        windowAlert,   
-        windowConsoleLog,
-        windowDocumentWrite,
   ) where
     
 import Animator.Internal.Prim

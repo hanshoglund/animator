@@ -85,13 +85,13 @@ testJQuery = do
     jq <- get "jQuery" g
 
     r1 <- call1 jq null ("#div1"::JsString)
-    r1 %% "fadeIn"
+    r1 %% "fadeIn" :: IO ()
 
     r2 <- call1 jq null ("#div2"::JsString)
-    (r2 %%! "fadeIn") ("slow"::JsString)
+    (r2 %%! "fadeIn") ("slow"::JsString) :: IO ()
 
     r3 <- call1 jq null ("#div3"::JsString)
-    (r3 %%! "fadeIn") (5000::Double)
+    (r3 %%! "fadeIn") (5000::Double) :: IO ()
 
 
     -- object % "x" := 1

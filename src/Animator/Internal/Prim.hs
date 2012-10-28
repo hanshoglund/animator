@@ -1,7 +1,8 @@
 
 {-# LANGUAGE DisambiguateRecordFields, TypeFamilies, MagicHash,
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
-    TypeSynonymInstances, FlexibleInstances, ForeignFunctionInterface, OverloadedStrings, CPP #-}
+    TypeSynonymInstances, FlexibleInstances, ForeignFunctionInterface, OverloadedStrings, CPP,
+    NoMonomorphismRestriction #-}
 
 -------------------------------------------------------------------------------------
 -- |
@@ -13,7 +14,7 @@
 
 module Animator.Internal.Prim (
         JsRef(..),
-        JsValue,
+        JsVal,
         typeOf,
         JsName,
         JsProp(..),
@@ -36,9 +37,8 @@ module Animator.Internal.Prim (
         -- ** Functions
         JsFunction,
         arity,
-        bind,
-        apply,
-        new,
+        -- apply,
+        -- new,
 
         -- ** Arrays
         JsArray,
@@ -76,8 +76,6 @@ module Animator.Internal.Prim (
         windowDocumentWrite,
         
         -- ** DEBUG
-        JsString,
-        JsObject,
         getJsString,
         getJsObject,                
         
@@ -131,6 +129,7 @@ type String#  = H.JSString
 type JSON#    = HJ.JSON
 toJsString#   = H.toJSStr
 fromJsString# = H.fromJSStr
+toPtr#        = H.toPtr
 #else
 type Any#     = Ptr Int
 type Fun#     = (Any# -> IO Any#)
@@ -139,6 +138,7 @@ type String#  = Int
 type JSON#    = Int
 toJsString#   = undefined
 fromJsString# = undefined
+toPtr#        = undefined
 #endif __HASTE__
 
 numberType#   = 0
@@ -181,7 +181,7 @@ foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
 foreign import ccall "aPrimLog"       logPrim#          :: Int -> IO ()
 
 logPrim :: a -> IO ()
-logPrim = logPrim# . unsafeCoerce . H.toPtr
+logPrim = logPrim# . unsafeCoerce . toPtr#
 {-# NOINLINE logPrim #-}
 
 eval :: JsString -> IO a
@@ -197,37 +197,43 @@ foreign import ccall "aPrimCall3" call3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-call0 :: JsObject -> a -> IO c
+call0 :: (JsVal a, JsVal b) 
+    => JsObject -> a -> IO b
 call0 f t = 
     q <$> call0# (getJsObject f) (p t)
     where 
         (p,q) = callPrePost
 
-call1 :: JsObject -> a -> b -> IO c
+call1 :: (JsVal a, JsVal b, JsVal c) 
+    => JsObject -> a -> b -> IO c
 call1 f t a = 
     q <$> call1# (getJsObject f) (p t) (p a)
     where 
         (p,q) = callPrePost
 
-call2 :: JsObject -> a -> b -> c -> IO d
+call2 :: (JsVal a, JsVal b, JsVal c, JsVal d) 
+    => JsObject -> a -> b -> c -> IO d
 call2 f t a b = 
     q <$> call2# (getJsObject f) (p t) (p a) (p b)
     where 
         (p,q) = callPrePost
 
-call3 :: JsObject -> a -> b -> c -> d -> IO e
+call3 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) 
+    => JsObject -> a -> b -> c -> d -> IO e
 call3 f t a b c = 
     q <$> call3# (getJsObject f) (p t) (p a) (p b) (p c)
     where 
         (p,q) = callPrePost
 
-call4 :: JsObject -> a -> b -> c -> d -> e -> IO f
+call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) 
+    => JsObject -> a -> b -> c -> d -> e -> IO f
 call4 f t a b c d = 
     q <$> call4# (getJsObject f) (p t) (p a) (p b) (p c) (p d)
     where 
         (p,q) = callPrePost
 
-call5 :: JsObject -> a -> b -> c -> d -> e -> f -> IO g
+call5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) 
+    => JsObject -> a -> b -> c -> d -> e -> f -> IO g
 call5 f t a b c d e = 
     q <$> call5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
     where 
@@ -240,37 +246,43 @@ foreign import ccall "aPrimBind3" bind3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-bind0 :: JsObject -> a -> IO c
+bind0 :: (JsVal a, JsVal b) 
+    => JsObject -> a -> IO b
 bind0 f t = 
     q <$> bind0# (getJsObject f) (p t)
     where 
         (p,q) = bindPrePost
 
-bind1 :: JsObject -> a -> b -> IO c
+bind1 :: (JsVal a, JsVal b, JsVal c) 
+    => JsObject -> a -> b -> IO c
 bind1 f t a = 
     q <$> bind1# (getJsObject f) (p t) (p a)
     where 
         (p,q) = bindPrePost
 
-bind2 :: JsObject -> a -> b -> c -> IO d
+bind2 :: (JsVal a, JsVal b, JsVal c, JsVal d) 
+    => JsObject -> a -> b -> c -> IO d
 bind2 f t a b = 
     q <$> bind2# (getJsObject f) (p t) (p a) (p b)
     where 
         (p,q) = bindPrePost
 
-bind3 :: JsObject -> a -> b -> c -> d -> IO e
+bind3 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) 
+    => JsObject -> a -> b -> c -> d -> IO e
 bind3 f t a b c = 
     q <$> bind3# (getJsObject f) (p t) (p a) (p b) (p c)
     where 
         (p,q) = bindPrePost
 
-bind4 :: JsObject -> a -> b -> c -> d -> e -> IO f
+bind4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) 
+    => JsObject -> a -> b -> c -> d -> e -> IO f
 bind4 f t a b c d = 
     q <$> bind4# (getJsObject f) (p t) (p a) (p b) (p c) (p d)
     where 
         (p,q) = bindPrePost
 
-bind5 :: JsObject -> a -> b -> c -> d -> e -> f -> IO g
+bind5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) 
+    => JsObject -> a -> b -> c -> d -> e -> f -> IO g
 bind5 f t a b c d e = 
     q <$> bind5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
     where 
@@ -283,36 +295,40 @@ bindPrePost = (unsafeCoerce, unsafeCoerce)
 infixl 9 %%
 infixl 9 %%!
 infixl 9 %%!!
-(%%)  = invoke0
+(%%)   = invoke0
 (%%!)  = invoke1
 (%%!!) = invoke2
 
-invoke0 :: JsObject -> JsName -> IO a
+invoke0 :: JsVal a => JsObject -> JsName -> IO a
 invoke0 o n = do
     f <- get n o
     call0 f o
 
-invoke1 :: JsObject -> JsName -> a -> IO b
+invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
 invoke1 o n a = do
     f <- get n o
     call1 f o a
 
-invoke2 :: JsObject -> JsName -> a -> b -> IO c
+invoke2 :: (JsVal a, JsVal b, JsVal c) 
+    => JsObject -> JsName -> a -> b -> IO c
 invoke2 o n a b = do
     f <- get n o
     call2 f o a b
 
-invoke3 :: JsObject -> JsName -> a -> b -> c -> IO d
+invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) 
+    => JsObject -> JsName -> a -> b -> c -> IO d
 invoke3 o n a b c = do
     f <- get n o
     call3 f o a b c
 
-invoke4 :: JsObject -> JsName -> a -> b -> c -> d -> IO e
+invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) 
+    => JsObject -> JsName -> a -> b -> c -> d -> IO e
 invoke4 o n a b c d = do
     f <- get n o
     call4 f o a b c d
 
-invoke5 :: JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
+invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) 
+    => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
 invoke5 o n a b c d e = do
     f <- get n o
     call5 f o a b c d e
@@ -332,21 +348,20 @@ instance JsRef JsObject where
 
 -- |
 -- Class of types that can be passed to a 'JsFunction'.
-class JsValue a where
-    bind# :: JsValue a => JsFunction -> JsObject -> [a] -> JsFunction
-    apply# :: JsValue a => JsFunction -> JsObject -> [a] -> a
-    new# :: JsValue a => JsFunction -> [a] -> IO JsObject
+class JsVal a where
 
--- instance JsValue Int where
--- instance JsValue Int32 where
--- instance JsValue Word where
--- instance JsValue Word32 where
--- instance JsValue Float where
--- instance JsValue Double where
--- instance JsValue JsString where
--- instance JsValue JsObject where
--- instance JsValue JsArray where
--- instance JsValue JsFunction where
+instance JsVal () where
+-- instance JsVal Bool where -- TODO
+instance JsVal Int where
+instance JsVal Int32 where
+instance JsVal Word where
+instance JsVal Word32 where
+instance JsVal Float where
+instance JsVal Double where
+instance JsVal JsString where
+instance JsVal JsObject where
+instance JsVal JsArray where
+instance JsVal JsFunction where
     
 
 -------------------------------------------------------------------------------------
@@ -441,26 +456,26 @@ newtype JsFunction = JsFunction { getJsFunction :: Any# }
 arity :: JsFunction -> Int
 arity = error "Not implemented"
 
--- |
--- Partially apply the given function, or equivalently
---
--- > Function.prototype.bind.call(f, x, ... as)
-bind :: JsValue a => JsFunction -> a -> [a] -> JsFunction
-bind = error "Not implemented"
-
--- |
--- Apply the given function, or equivalently
---
--- > Function.prototype.apply.call(f, x, as)
-apply :: JsValue a => JsFunction -> a -> [a] -> a
-apply = error "Not implemented"
-
--- |
--- Invokes the given function as a constructor, or equivalently
---
--- > new F(args)
-new :: JsValue a => JsFunction -> [a] -> IO JsObject
-new = error "Not implemented"
+-- -- |
+-- -- Partially apply the given function, or equivalently
+-- --
+-- -- > Function.prototype.bind.call(f, x, ... as)
+-- bind :: JsVal a => JsFunction -> a -> [a] -> JsFunction
+-- bind = error "Not implemented"
+-- 
+-- -- |
+-- -- Apply the given function, or equivalently
+-- --
+-- -- > Function.prototype.apply.call(f, x, as)
+-- apply :: JsVal a => JsFunction -> a -> [a] -> a
+-- apply = error "Not implemented"
+-- 
+-- -- |
+-- -- Invokes the given function as a constructor, or equivalently
+-- --
+-- -- > new F(args)
+-- new :: JsVal a => JsFunction -> [a] -> IO JsObject
+-- new = error "Not implemented"
 
 
 -------------------------------------------------------------------------------------
@@ -487,28 +502,28 @@ instance Monoid JsArray where
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.pop.call(x)
-pop :: JsValue a => JsArray -> IO a
+pop :: JsVal a => JsArray -> IO a
 pop = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.push.call(x, v)
-push :: JsValue a => a -> JsArray -> IO JsArray
+push :: JsVal a => a -> JsArray -> IO JsArray
 push = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.shift.call(x)
-shift :: JsValue a => JsArray -> IO a
+shift :: JsVal a => JsArray -> IO a
 shift = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.unshift.call(x, v)
-unshift :: JsValue a => a -> JsArray -> IO JsArray
+unshift :: JsVal a => a -> JsArray -> IO JsArray
 unshift = error "Not implemented"
 
 -- |
@@ -582,7 +597,7 @@ global = global# >>= (return . JsObject)
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > typeof x
-typeOf :: JsValue a => a -> String
+typeOf :: JsVal a => a -> String
 typeOf = fromJsString# . typeOf# . undefined
 
 -- |
@@ -635,7 +650,7 @@ toString = error "Not implemented"
 toLocaleString :: JsObject -> JsString
 toLocaleString = error "Not implemented"
 
-valueOf :: JsValue a => JsObject -> a
+valueOf :: JsVal a => JsObject -> a
 valueOf = error "Not implemented"
 
 
