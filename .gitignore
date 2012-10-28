@@ -1,7 +1,5 @@
-
 dist
 lib
 main.js
 .DS_Store
 TEST
-bench
