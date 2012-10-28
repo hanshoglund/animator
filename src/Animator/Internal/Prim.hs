@@ -93,6 +93,7 @@ import Data.Int
 import Data.Word
 import Data.String (IsString(..))
 import Data.Semigroup
+import Control.Applicative ((<$>))
 import Unsafe.Coerce
 
 #ifdef __HASTE__
@@ -169,32 +170,51 @@ eval = unsafeCoerce . eval# . getJsString
 
 
 
-foreign import ccall "aPrimCall0"     call0#             :: Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall1"     call1#             :: Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall2"     call2#             :: Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall3"     call3#             :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+
+foreign import ccall "aPrimCall0" call0#  :: Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall1" call1#  :: Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall2" call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall3" call3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
 call0 :: JsObject -> a -> IO c
-call0 f t = do
-    r <- call0# (getJsObject f) (p t)
-    return $ q r
+call0 f t = 
+    q <$> call0# (getJsObject f) (p t)
+    where 
+        (p,q) = callPrePost
+
 call1 :: JsObject -> a -> b -> IO c
-call1 f t a = do
-    r <- call1# (getJsObject f) (p t) (p a)
-    return $ q r
+call1 f t a = 
+    q <$> call1# (getJsObject f) (p t) (p a)
+    where 
+        (p,q) = callPrePost
+
 call2 :: JsObject -> a -> b -> c -> IO d
-call2 f t a b = do
-    r <- call2# (getJsObject f) (p t) (p a) (p b)
-    return $ q r
+call2 f t a b = 
+    q <$> call2# (getJsObject f) (p t) (p a) (p b)
+    where 
+        (p,q) = callPrePost
+
 call3 :: JsObject -> a -> b -> c -> d -> IO e
-call3 f t a b c = do
-    r <- call3# (getJsObject f) (p t) (p a) (p b) (p c)
-    return $ q r
+call3 f t a b c = 
+    q <$> call3# (getJsObject f) (p t) (p a) (p b) (p c)
+    where 
+        (p,q) = callPrePost
 
+call4 :: JsObject -> a -> b -> c -> d -> e -> IO f
+call4 f t a b c d = 
+    q <$> call4# (getJsObject f) (p t) (p a) (p b) (p c) (p d)
+    where 
+        (p,q) = callPrePost
 
-p = unsafeCoerce
-q = unsafeCoerce
+call5 :: JsObject -> a -> b -> c -> d -> e -> f -> IO g
+call5 f t a b c d e = 
+    q <$> call5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
+    where 
+        (p,q) = callPrePost
 
+callPrePost = (unsafeCoerce, unsafeCoerce)
 
 
 
@@ -614,6 +634,6 @@ windowConsoleLog str = consoleLog# (toJsString# $ str)
 -- |
 -- Appends the given content at the end of the `body` element.
 windowDocumentWrite :: String -> IO ()
-windowDocumentWrite str = documentWrite# (toJsString# $ "<code>" ++ str ++ "</code><br/>")
+windowDocumentWrite str = documentWrite# (toJsString# $ str)
 
 
