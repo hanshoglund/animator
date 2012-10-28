@@ -72,24 +72,24 @@ testPrim = do
 testCall = do    
     g <- global                     
     o <- eval "([1,2,3,4])"
-    foo <- get "foo" g
-    console <- get "console" g :: IO JsObject
+    foo <- get g "foo"
+    console <- get g "console" :: IO JsObject
     printRepr $ foo
-    res <- call1 foo console (o::JsObject)
+    res <- call1 foo (o::JsObject)
     printRepr $ (res::JsObject)
 
 
 testJQuery = do
     g <- global
-    jq <- get "jQuery" g
+    jq <- get g "jQuery"
 
-    r1 <- call1 jq null ("#div1"::JsString)
+    r1 <- call1 jq ("#div1"::JsString)
     r1 %% "fadeIn" :: IO ()
 
-    r2 <- call1 jq null ("#div2"::JsString)
+    r2 <- call1 jq ("#div2"::JsString)
     (r2 %%! "fadeIn") ("slow"::JsString) :: IO ()
 
-    r3 <- call1 jq null ("#div3"::JsString)
+    r3 <- call1 jq ("#div3"::JsString)
     (r3 %%! "fadeIn") (5000::Double) :: IO ()
 
 

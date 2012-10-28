@@ -60,18 +60,18 @@ function aPrimEval(s, _) {
 }   
 
 
-function aPrimGet(type, name, obj, _) {
+function aPrimGet(type, obj, name, _) {
     // aInternalCheck(type, obj[name], "Animator: Type error");
     return [1, _, 
         obj[name]
     ];
 }
-function aPrimSet(type, name, obj, value, _) {
+function aPrimSet(type, obj, name, value, _) {
     // aInternalCheck(type, value, "Animator: Type error");
     obj[name] = value;
     return [1, _];
 }
-function aPrimDelete(type, name, obj, _) {
+function aPrimDelete(type, obj, name, _) {
     delete obj[name];
     return [1, _];
 }

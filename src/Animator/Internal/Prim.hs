@@ -5,8 +5,16 @@
     NoMonomorphismRestriction #-}
 
 -------------------------------------------------------------------------------------
+
 -- |
--- This module provides a basic interface to the JavaScript host environment.
+-- The 'Animator.Primitive' modules provide a dynamic interface to the JavaScript host environment.
+-- It provides access to JavaScript types including strings, arrays, objects and functions.
+--
+-- Objects can be inspected, created and updated at runtime. JavaScript functions can be called,
+-- partially applied or passed to other JavaScripf functions. Haskell functions can be converted
+-- to JavaScript functions for use as callbacks in the host environment.
+--
+
 -------------------------------------------------------------------------------------
 
 -- TODO Remove TypeSynonymInstances, FlexibleInstances?
@@ -66,21 +74,32 @@ module Animator.Internal.Prim (
         call,
         call1,
         call2,
-        -- call3,
-        -- call4,
-        -- call5,
+        call3,
+        call4,
         bind,
         bind1,
         bind2,
-        -- bind3,
-        -- bind4,
-        -- bind5,
+        bind3,
+        bind4,
         invoke,
         invoke1,
         invoke2,
-        -- invoke3,
-        -- invoke4,
-        -- invoke5,
+        invoke3,
+        invoke4,
+
+        -- ** With object
+        callWith,
+        callWith1,
+        callWith2,
+        callWith3,
+        callWith4,
+        bindWith,
+        bindWith1,
+        bindWith2,
+        bindWith3,
+        bindWith4,
+
+        -- ** Infix operators
         (%%),
         (%%!),
         (%%!!),
@@ -211,18 +230,18 @@ class JsVal a => JsProp a where
     -- | @get n o@ fetches the value named @n@ from object @o@, or equivalently
     --
     -- > o.n
-    get :: JsName -> JsObject -> IO a
+    get :: JsObject -> JsName -> IO a
 
     -- | @set n o x@ assigns the property @n@ to @x@ in object @o@, or equivalently
     --
     -- > o.n = x
-    set :: JsName -> JsObject -> a -> IO ()
+    set :: JsObject -> JsName -> a -> IO ()
 
     -- | @update n o f@ updates the value named @n@ in object @o@ by applying the function f,
     --   or equivalently
     --
     -- > x.n = f(x.n)
-    update :: JsName -> JsObject -> (a -> a) -> IO ()
+    update :: JsObject -> JsName -> (a -> a) -> IO ()
     update n o f = get n o >>= set n o . f
 
 
@@ -331,26 +350,26 @@ valueOf :: JsVal a => JsObject -> a
 valueOf = error "Not implemented"
 
 
-foreign import ccall "aPrimGet"       getInt#           :: Int -> String# -> Any# -> IO Int
-foreign import ccall "aPrimGet"       getWord#          :: Int -> String# -> Any# -> IO Word
-foreign import ccall "aPrimGet"       getInt32#         :: Int -> String# -> Any# -> IO Int32
-foreign import ccall "aPrimGet"       getWord32#        :: Int -> String# -> Any# -> IO Word32
-foreign import ccall "aPrimGet"       getFloat#         :: Int -> String# -> Any# -> IO Float
-foreign import ccall "aPrimGet"       getDouble#        :: Int -> String# -> Any# -> IO Double
-foreign import ccall "aPrimGet"       getString#        :: Int -> String# -> Any# -> IO String#
-foreign import ccall "aPrimGet"       getAny#           :: Int -> String# -> Any# -> IO Any#
+foreign import ccall "aPrimGet"       getInt#           :: Int -> Any# -> String# -> IO Int
+foreign import ccall "aPrimGet"       getWord#          :: Int -> Any# -> String# -> IO Word
+foreign import ccall "aPrimGet"       getInt32#         :: Int -> Any# -> String# -> IO Int32
+foreign import ccall "aPrimGet"       getWord32#        :: Int -> Any# -> String# -> IO Word32
+foreign import ccall "aPrimGet"       getFloat#         :: Int -> Any# -> String# -> IO Float
+foreign import ccall "aPrimGet"       getDouble#        :: Int -> Any# -> String# -> IO Double
+foreign import ccall "aPrimGet"       getString#        :: Int -> Any# -> String# -> IO String#
+foreign import ccall "aPrimGet"       getAny#           :: Int -> Any# -> String# -> IO Any#
 
-foreign import ccall "aPrimSet"       setInt#           :: Int -> String# -> Any# -> Int     -> IO ()
-foreign import ccall "aPrimSet"       setWord#          :: Int -> String# -> Any# -> Word    -> IO ()
-foreign import ccall "aPrimSet"       setInt32#         :: Int -> String# -> Any# -> Int32   -> IO ()
-foreign import ccall "aPrimSet"       setWord32#        :: Int -> String# -> Any# -> Word32  -> IO ()
-foreign import ccall "aPrimSet"       setFloat#         :: Int -> String# -> Any# -> Float   -> IO ()
-foreign import ccall "aPrimSet"       setDouble#        :: Int -> String# -> Any# -> Double  -> IO ()
-foreign import ccall "aPrimSet"       setString#        :: Int -> String# -> Any# -> String# -> IO ()
-foreign import ccall "aPrimSet"       setAny#           :: Int -> String# -> Any# -> Any#    -> IO ()
+foreign import ccall "aPrimSet"       setInt#           :: Int -> Any# -> String# -> Int     -> IO ()
+foreign import ccall "aPrimSet"       setWord#          :: Int -> Any# -> String# -> Word    -> IO ()
+foreign import ccall "aPrimSet"       setInt32#         :: Int -> Any# -> String# -> Int32   -> IO ()
+foreign import ccall "aPrimSet"       setWord32#        :: Int -> Any# -> String# -> Word32  -> IO ()
+foreign import ccall "aPrimSet"       setFloat#         :: Int -> Any# -> String# -> Float   -> IO ()
+foreign import ccall "aPrimSet"       setDouble#        :: Int -> Any# -> String# -> Double  -> IO ()
+foreign import ccall "aPrimSet"       setString#        :: Int -> Any# -> String# -> String# -> IO ()
+foreign import ccall "aPrimSet"       setAny#           :: Int -> Any# -> String# -> Any#    -> IO ()
 
-get# i c n x = i (toJsString# n) (getJsObject x) >>= (return . c)
-set# o c n x v = o (toJsString# n) (getJsObject x) (c v)
+get# i c x n   = i (getJsObject x) (toJsString# n)  >>= (return . c)
+set# o c x n v = o (getJsObject x) (toJsString# n) (c v)
 
 instance JsProp Int where
     get = get# (getInt# numberType#) id
@@ -578,43 +597,49 @@ foreign import ccall "aPrimCall3" call3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-call :: JsVal b => JsFunction -> JsObject -> IO b
-call f t = do
+call  f = callWith  f null
+call1 f = callWith1 f null
+call2 f = callWith2 f null
+call3 f = callWith3 f null
+call4 f = callWith4 f null
+
+callWith :: JsVal b => JsFunction -> JsObject -> IO b
+callWith f t = do
     r <- call# (getJsFunction f) (p t)
     return $ q r
     where 
         (p,q) = callPrePost
 
-call1 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> IO c
-call1 f t a = do
+callWith1 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> IO c
+callWith1 f t a = do
     r <- call1# (getJsFunction f) (p t) (p a)
     return $ q r
     where 
         (p,q) = callPrePost
 
-call2 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> IO d
-call2 f t a b = do
+callWith2 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> IO d
+callWith2 f t a b = do
     r <- call2# (getJsFunction f) (p t) (p a) (p b)
     return $ q r
     where 
         (p,q) = callPrePost
 
-call3 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> IO e
-call3 f t a b c = do
+callWith3 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> IO e
+callWith3 f t a b c = do
     r <- call3# (getJsFunction f) (p t) (p a) (p b) (p c)
     return $ q r
     where 
         (p,q) = callPrePost
 
-call4 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> IO f
-call4 f t a b c d = do
+callWith4 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> IO f
+callWith4 f t a b c d = do
     r <- call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
     return $ q r
     where 
         (p,q) = callPrePost
 
-call5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO g
-call5 f t a b c d e = do
+callWith5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO g
+callWith5 f t a b c d e = do
     r <- call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
     return $ q r
     where 
@@ -627,43 +652,50 @@ foreign import ccall "aPrimBind3" bind3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-bind :: JsFunction -> JsObject -> IO JsFunction
-bind f t = do
+bind  f = bindWith  f null
+bind1 f = bindWith1 f null
+bind2 f = bindWith2 f null
+bind3 f = bindWith3 f null
+bind4 f = bindWith4 f null
+
+
+bindWith :: JsFunction -> JsObject -> IO JsFunction
+bindWith f t = do
     r <- bind# (getJsFunction f) (p t)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bind1 :: (JsVal b) => JsFunction -> JsObject -> b -> IO JsFunction
-bind1 f t a = do
+bindWith1 :: (JsVal b) => JsFunction -> JsObject -> b -> IO JsFunction
+bindWith1 f t a = do
     r <- bind1# (getJsFunction f) (p t) (p a)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bind2 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> c -> IO JsFunction
-bind2 f t a b = do
+bindWith2 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> c -> IO JsFunction
+bindWith2 f t a b = do
     r <- bind2# (getJsFunction f) (p t) (p a) (p b)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bind3 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> d -> IO JsFunction
-bind3 f t a b c = do
+bindWith3 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> d -> IO JsFunction
+bindWith3 f t a b c = do
     r <- bind3# (getJsFunction f) (p t) (p a) (p b) (p c)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bind4 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> e -> IO JsFunction
-bind4 f t a b c d = do
+bindWith4 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> e -> IO JsFunction
+bindWith4 f t a b c d = do
     r <- bind4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bind5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO JsFunction
-bind5 f t a b c d e = do
+bindWith5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO JsFunction
+bindWith5 f t a b c d e = do
     r <- bind5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
     return $ q r
     where 
@@ -682,33 +714,33 @@ infixl 9 %%!!
 
 invoke :: JsVal a => JsObject -> JsName -> IO a
 invoke o n = do
-    f <- get n o
-    call f o
+    f <- get o n
+    callWith f o
 
 invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
 invoke1 o n a = do
-    f <- get n o
-    call1 f o a
+    f <- get o n
+    callWith1 f o a
 
 invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
 invoke2 o n a b = do
-    f <- get n o
-    call2 f o a b
+    f <- get o n
+    callWith2 f o a b
 
 invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> JsName -> a -> b -> c -> IO d
 invoke3 o n a b c = do
-    f <- get n o
-    call3 f o a b c
+    f <- get o n
+    callWith3 f o a b c
 
 invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> JsName -> a -> b -> c -> d -> IO e
 invoke4 o n a b c d = do
-    f <- get n o
-    call4 f o a b c d
+    f <- get o n
+    callWith4 f o a b c d
 
 invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
 invoke5 o n a b c d e = do
-    f <- get n o
-    call5 f o a b c d e
+    f <- get o n
+    callWith5 f o a b c d e
                           
 -- -- |
 -- -- Partially apply the given function, or equivalently
