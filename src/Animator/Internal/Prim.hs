@@ -84,21 +84,21 @@ module Animator.Internal.Prim (
         call0,
         call1,
         call2,
-        call3,
-        call4,
-        call5,
+        -- call3,
+        -- call4,
+        -- call5,
         bind0,
         bind1,
         bind2,
-        bind3,
-        bind4,
-        bind5,
+        -- bind3,
+        -- bind4,
+        -- bind5,
         invoke0,
         invoke1,
         invoke2,
-        invoke3,
-        invoke4,
-        invoke5,
+        -- invoke3,
+        -- invoke4,
+        -- invoke5,
         (%%),
         (%%!),
         (%%!!),
@@ -197,43 +197,37 @@ foreign import ccall "aPrimCall3" call3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-call0 :: (JsVal a, JsVal b) 
-    => JsObject -> a -> IO b
+call0 :: (JsVal a, JsVal b) => JsObject -> a -> IO b
 call0 f t = 
     q <$> call0# (getJsObject f) (p t)
     where 
         (p,q) = callPrePost
 
-call1 :: (JsVal a, JsVal b, JsVal c) 
-    => JsObject -> a -> b -> IO c
+call1 :: (JsVal a, JsVal b, JsVal c) => JsObject -> a -> b -> IO c
 call1 f t a = 
     q <$> call1# (getJsObject f) (p t) (p a)
     where 
         (p,q) = callPrePost
 
-call2 :: (JsVal a, JsVal b, JsVal c, JsVal d) 
-    => JsObject -> a -> b -> c -> IO d
+call2 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> a -> b -> c -> IO d
 call2 f t a b = 
     q <$> call2# (getJsObject f) (p t) (p a) (p b)
     where 
         (p,q) = callPrePost
 
-call3 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) 
-    => JsObject -> a -> b -> c -> d -> IO e
+call3 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> a -> b -> c -> d -> IO e
 call3 f t a b c = 
     q <$> call3# (getJsObject f) (p t) (p a) (p b) (p c)
     where 
         (p,q) = callPrePost
 
-call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) 
-    => JsObject -> a -> b -> c -> d -> e -> IO f
+call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> a -> b -> c -> d -> e -> IO f
 call4 f t a b c d = 
     q <$> call4# (getJsObject f) (p t) (p a) (p b) (p c) (p d)
     where 
         (p,q) = callPrePost
 
-call5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) 
-    => JsObject -> a -> b -> c -> d -> e -> f -> IO g
+call5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsObject -> a -> b -> c -> d -> e -> f -> IO g
 call5 f t a b c d e = 
     q <$> call5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
     where 
@@ -246,43 +240,37 @@ foreign import ccall "aPrimBind3" bind3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-bind0 :: (JsVal a, JsVal b) 
-    => JsObject -> a -> IO b
+bind0 :: (JsVal a, JsVal b) => JsObject -> a -> IO b
 bind0 f t = 
     q <$> bind0# (getJsObject f) (p t)
     where 
         (p,q) = bindPrePost
 
-bind1 :: (JsVal a, JsVal b, JsVal c) 
-    => JsObject -> a -> b -> IO c
+bind1 :: (JsVal a, JsVal b, JsVal c) => JsObject -> a -> b -> IO c
 bind1 f t a = 
     q <$> bind1# (getJsObject f) (p t) (p a)
     where 
         (p,q) = bindPrePost
 
-bind2 :: (JsVal a, JsVal b, JsVal c, JsVal d) 
-    => JsObject -> a -> b -> c -> IO d
+bind2 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> a -> b -> c -> IO d
 bind2 f t a b = 
     q <$> bind2# (getJsObject f) (p t) (p a) (p b)
     where 
         (p,q) = bindPrePost
 
-bind3 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) 
-    => JsObject -> a -> b -> c -> d -> IO e
+bind3 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> a -> b -> c -> d -> IO e
 bind3 f t a b c = 
     q <$> bind3# (getJsObject f) (p t) (p a) (p b) (p c)
     where 
         (p,q) = bindPrePost
 
-bind4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) 
-    => JsObject -> a -> b -> c -> d -> e -> IO f
+bind4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> a -> b -> c -> d -> e -> IO f
 bind4 f t a b c d = 
     q <$> bind4# (getJsObject f) (p t) (p a) (p b) (p c) (p d)
     where 
         (p,q) = bindPrePost
 
-bind5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) 
-    => JsObject -> a -> b -> c -> d -> e -> f -> IO g
+bind5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsObject -> a -> b -> c -> d -> e -> f -> IO g
 bind5 f t a b c d e = 
     q <$> bind5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
     where 
@@ -309,26 +297,22 @@ invoke1 o n a = do
     f <- get n o
     call1 f o a
 
-invoke2 :: (JsVal a, JsVal b, JsVal c) 
-    => JsObject -> JsName -> a -> b -> IO c
+invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
 invoke2 o n a b = do
     f <- get n o
     call2 f o a b
 
-invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) 
-    => JsObject -> JsName -> a -> b -> c -> IO d
+invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> JsName -> a -> b -> c -> IO d
 invoke3 o n a b c = do
     f <- get n o
     call3 f o a b c
 
-invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) 
-    => JsObject -> JsName -> a -> b -> c -> d -> IO e
+invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> JsName -> a -> b -> c -> d -> IO e
 invoke4 o n a b c d = do
     f <- get n o
     call4 f o a b c d
 
-invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) 
-    => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
+invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
 invoke5 o n a b c d e = do
     f <- get n o
     call5 f o a b c d e
