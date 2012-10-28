@@ -38,17 +38,6 @@ function aPrimNull(_) {
         null
     ];
 }
-function aPrimGet(type, name, obj, _) {
-    // aInternalCheck(type, obj[name], "Animator: Type error");
-    return [1, _, 
-        obj[name]
-    ];
-}
-function aPrimSet(type, name, obj, value, _) {
-    // aInternalCheck(type, value, "Animator: Type error");
-    obj[name] = value;
-    return [1, _];
-}
 function aPrimAdd(a, b, _) {
     return [1, _, 
         (a + b)
@@ -70,19 +59,35 @@ function aPrimEval(s, _) {
     ];
 }   
 
-function aPrimCall0(f, _) {
+function aPrimGet(type, name, obj, _) {
+    // aInternalCheck(type, obj[name], "Animator: Type error");
     return [1, _, 
-        f()
+        obj[name]
+    ];
+}
+function aPrimSet(type, name, obj, value, _) {
+    // aInternalCheck(type, value, "Animator: Type error");
+    obj[name] = value;
+    return [1, _];
+}
+
+
+function aPrimCall0(f, t, _) {
+    return [1, _, 
+        // f()
+        f.call(t)
     ];
 }   
-function aPrimCall1(f, x, _) {
+function aPrimCall1(f, t, x, _) {
     return [1, _, 
-        f(x)
+        // f(x)
+        f.call(t, x)
     ];
 }   
-function aPrimCall2(f, x, y, _) {
+function aPrimCall2(f, t, x, y, _) {
     return [1, _, 
-        f(x, y)
+        // f(x, y)
+        f.call(t, x, y)
     ];
 }   
 function aPrimWrap2(f, _) {
