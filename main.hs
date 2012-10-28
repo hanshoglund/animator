@@ -53,31 +53,30 @@ Polymorhism requirements:
 main = testJQuery   
 
 testPrim = do    
-    logPrim $ (False::Bool)
-    logPrim $ (123::Int)
-    logPrim $ ("foo"::JsString)
+    printRepr $ (False::Bool)
+    printRepr $ (123::Int)
+    printRepr $ ("foo"::JsString)
 
     jf <- eval "(function(x){return x+x;})"
-    logPrim $ jf
+    printRepr $ jf
 
     jo <- eval "({foo:123,bar:function(x){return x}})"
-    logPrim $ jo
+    printRepr $ jo
 
     let hf = ((\x -> x + x) :: Int -> Int)
-    logPrim $ hf
+    printRepr $ hf
 
     let ho = (10::Int,20::Int)
-    logPrim $ ho
+    printRepr $ ho
 
 testCall = do    
     g <- global                     
     o <- eval "([1,2,3,4])"
-    foo <- get "foo" g :: IO JsObject
-    alert <- get "alert" g :: IO JsObject
+    foo <- get "foo" g
     console <- get "console" g :: IO JsObject
-    logPrim $ foo
+    printRepr $ foo
     res <- call1 foo console (o::JsObject)
-    logPrim $ (res::JsObject)
+    printRepr $ (res::JsObject)
 
 
 testJQuery = do

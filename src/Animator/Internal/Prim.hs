@@ -13,9 +13,8 @@
 --      Required for String instance of JsProp, can we rethink this?
 
 module Animator.Internal.Prim (
+        JsVal(..),
         JsRef(..),
-        JsVal,
-        typeOf,
         JsName,
         JsProp(..),
 
@@ -37,6 +36,27 @@ module Animator.Internal.Prim (
         -- ** Functions
         JsFunction,
         arity,
+        call,
+        call1,
+        call2,
+        -- call3,
+        -- call4,
+        -- call5,
+        bind,
+        bind1,
+        bind2,
+        -- bind3,
+        -- bind4,
+        -- bind5,
+        invoke,
+        invoke1,
+        invoke2,
+        -- invoke3,
+        -- invoke4,
+        -- invoke5,
+        (%%),
+        (%%!),
+        (%%!!),
         -- apply,
         -- new,
 
@@ -75,33 +95,14 @@ module Animator.Internal.Prim (
         windowConsoleLog,
         windowDocumentWrite,
         
-        -- ** DEBUG
-        getJsString,
-        getJsObject,                
-        
-        logPrim,
+        printRepr,
         eval,
-        call0,
-        call1,
-        call2,
-        -- call3,
-        -- call4,
-        -- call5,
-        bind0,
-        bind1,
-        bind2,
-        -- bind3,
-        -- bind4,
-        -- bind5,
-        invoke0,
-        invoke1,
-        invoke2,
-        -- invoke3,
-        -- invoke4,
-        -- invoke5,
-        (%%),
-        (%%!),
-        (%%!!),
+        
+
+        -- getJsString,
+        -- getJsObject,                
+        
+
   ) where
 
 import Prelude hiding (reverse, null)
@@ -178,11 +179,11 @@ foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
 
 foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
 
-foreign import ccall "aPrimLog"       logPrim#          :: Int -> IO ()
+foreign import ccall "aPrimLog"       printRepr#        :: Int -> IO ()
 
-logPrim :: a -> IO ()
-logPrim = logPrim# . unsafeCoerce . toPtr#
-{-# NOINLINE logPrim #-}
+printRepr :: a -> IO ()
+printRepr = printRepr# . unsafeCoerce . toPtr#
+{-# NOINLINE printRepr #-}
 
 eval :: JsString -> IO a
 eval = unsafeCoerce . eval# . getJsString
@@ -190,89 +191,169 @@ eval = unsafeCoerce . eval# . getJsString
 
 
 
-foreign import ccall "aPrimCall0" call0#  :: Any# -> Any# -> IO Any#
+
+
+
+
+-- |
+-- Class of JavaScript types. 
+class JsVal a where
+    
+    -- | Returns a string describing a type of the given value, or equivalently
+    --
+    -- > typeof x
+    typeOf :: JsVal a => a -> String
+
+instance JsVal () where
+    typeOf () = "object"
+-- instance JsVal Bool where -- TODO
+instance JsVal Int where
+    typeOf _ = "number"
+instance JsVal Int32 where
+    typeOf _ = "number"
+instance JsVal Word where
+    typeOf _ = "number"
+instance JsVal Word32 where
+    typeOf _ = "number"
+instance JsVal Float where
+    typeOf _ = "number"
+instance JsVal Double where
+    typeOf _ = "number"
+instance JsVal JsString where
+    typeOf _ = "string"
+instance JsVal JsObject where
+    typeOf _ = "object"
+instance JsVal JsArray where
+    typeOf _ = "object"
+instance JsVal JsFunction where
+    typeOf _ = "function"
+    
+-- |
+-- Class of JavaScript reference types.
+class JsVal a => JsRef a where
+    toObject :: a -> JsObject
+instance JsRef JsFunction where
+    toObject = unsafeCoerce    
+instance JsRef JsArray where
+    toObject = unsafeCoerce    
+instance JsRef JsObject where
+    toObject = id
+
+
+-- |
+-- A JavaScript property name.
+type JsName = String
+
+-- |
+-- Class of types that can be properties of a 'JsObject'.
+--
+-- Retrieving a value of the wrong type (for example, reading an 'Int' from a field
+-- containing a string) results in a runtime error.
+class JsVal a => JsProp a where
+    -- | @get n o@ fetches the value named @n@ from object @o@, or equivalently
+    --
+    -- > o.n
+    get :: JsName -> JsObject -> IO a
+
+    -- | @set n o x@ assigns the property @n@ to @x@ in object @o@, or equivalently
+    --
+    -- > o.n = x
+    set :: JsName -> JsObject -> a -> IO ()
+
+    -- | @update n o f@ updates the value named @n@ in object @o@ by applying the function f,
+    --   or equivalently
+    --
+    -- > x.n = f(x.n)
+    update :: JsName -> JsObject -> (a -> a) -> IO ()
+    update n o f = get n o >>= set n o . f
+
+
+
+
+
+foreign import ccall "aPrimCall0" call#  :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1" call1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall2" call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall3" call3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-call0 :: (JsVal a, JsVal b) => JsObject -> a -> IO b
-call0 f t = 
-    q <$> call0# (getJsObject f) (p t)
+call :: JsVal b => JsFunction -> JsObject -> IO b
+call f t = 
+    q <$> call# (getJsFunction f) (p t)
     where 
         (p,q) = callPrePost
 
-call1 :: (JsVal a, JsVal b, JsVal c) => JsObject -> a -> b -> IO c
+call1 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> IO c
 call1 f t a = 
-    q <$> call1# (getJsObject f) (p t) (p a)
+    q <$> call1# (getJsFunction f) (p t) (p a)
     where 
         (p,q) = callPrePost
 
-call2 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> a -> b -> c -> IO d
+call2 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> IO d
 call2 f t a b = 
-    q <$> call2# (getJsObject f) (p t) (p a) (p b)
+    q <$> call2# (getJsFunction f) (p t) (p a) (p b)
     where 
         (p,q) = callPrePost
 
-call3 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> a -> b -> c -> d -> IO e
+call3 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> IO e
 call3 f t a b c = 
-    q <$> call3# (getJsObject f) (p t) (p a) (p b) (p c)
+    q <$> call3# (getJsFunction f) (p t) (p a) (p b) (p c)
     where 
         (p,q) = callPrePost
 
-call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> a -> b -> c -> d -> e -> IO f
+call4 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> IO f
 call4 f t a b c d = 
-    q <$> call4# (getJsObject f) (p t) (p a) (p b) (p c) (p d)
+    q <$> call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
     where 
         (p,q) = callPrePost
 
-call5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsObject -> a -> b -> c -> d -> e -> f -> IO g
+call5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO g
 call5 f t a b c d e = 
-    q <$> call5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
+    q <$> call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
     where 
         (p,q) = callPrePost
         
-foreign import ccall "aPrimBind0" bind0#  :: Any# -> Any# -> IO Any#
+foreign import ccall "aPrimBind0" bind#  :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind1" bind1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind2" bind2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind3" bind3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-bind0 :: (JsVal a, JsVal b) => JsObject -> a -> IO b
-bind0 f t = 
-    q <$> bind0# (getJsObject f) (p t)
+bind :: JsFunction -> JsObject -> IO JsFunction
+bind f t = 
+    q <$> bind# (getJsFunction f) (p t)
     where 
         (p,q) = bindPrePost
 
-bind1 :: (JsVal a, JsVal b, JsVal c) => JsObject -> a -> b -> IO c
+bind1 :: (JsVal b) => JsFunction -> JsObject -> b -> IO JsFunction
 bind1 f t a = 
-    q <$> bind1# (getJsObject f) (p t) (p a)
+    q <$> bind1# (getJsFunction f) (p t) (p a)
     where 
         (p,q) = bindPrePost
 
-bind2 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> a -> b -> c -> IO d
+bind2 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> c -> IO JsFunction
 bind2 f t a b = 
-    q <$> bind2# (getJsObject f) (p t) (p a) (p b)
+    q <$> bind2# (getJsFunction f) (p t) (p a) (p b)
     where 
         (p,q) = bindPrePost
 
-bind3 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> a -> b -> c -> d -> IO e
+bind3 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> d -> IO JsFunction
 bind3 f t a b c = 
-    q <$> bind3# (getJsObject f) (p t) (p a) (p b) (p c)
+    q <$> bind3# (getJsFunction f) (p t) (p a) (p b) (p c)
     where 
         (p,q) = bindPrePost
 
-bind4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> a -> b -> c -> d -> e -> IO f
+bind4 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> e -> IO JsFunction
 bind4 f t a b c d = 
-    q <$> bind4# (getJsObject f) (p t) (p a) (p b) (p c) (p d)
+    q <$> bind4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
     where 
         (p,q) = bindPrePost
 
-bind5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsObject -> a -> b -> c -> d -> e -> f -> IO g
+bind5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO JsFunction
 bind5 f t a b c d e = 
-    q <$> bind5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
+    q <$> bind5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
     where 
         (p,q) = bindPrePost
 
@@ -283,14 +364,14 @@ bindPrePost = (unsafeCoerce, unsafeCoerce)
 infixl 9 %%
 infixl 9 %%!
 infixl 9 %%!!
-(%%)   = invoke0
+(%%)   = invoke
 (%%!)  = invoke1
 (%%!!) = invoke2
 
-invoke0 :: JsVal a => JsObject -> JsName -> IO a
-invoke0 o n = do
+invoke :: JsVal a => JsObject -> JsName -> IO a
+invoke o n = do
     f <- get n o
-    call0 f o
+    call f o
 
 invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
 invoke1 o n a = do
@@ -321,39 +402,13 @@ invoke5 o n a b c d e = do
 
 
 
-class JsRef a where
-    toJsObject :: a -> JsObject
-    toJsObject = error "Not implemented"
-instance JsRef JsFunction where
-instance JsRef JsArray where
-instance JsRef JSON where
-instance JsRef JsObject where
-    toJsObject = id
-
--- |
--- Class of types that can be passed to a 'JsFunction'.
-class JsVal a where
-
-instance JsVal () where
--- instance JsVal Bool where -- TODO
-instance JsVal Int where
-instance JsVal Int32 where
-instance JsVal Word where
-instance JsVal Word32 where
-instance JsVal Float where
-instance JsVal Double where
-instance JsVal JsString where
-instance JsVal JsObject where
-instance JsVal JsArray where
-instance JsVal JsFunction where
-    
 
 -------------------------------------------------------------------------------------
 -- Strings
 -------------------------------------------------------------------------------------
 
 -- |
--- An unboxed JavaScript string.
+-- A JavaScript string.
 newtype JsString = JsString { getJsString :: String# }
     deriving (Eq, Ord, Show)
 
@@ -434,7 +489,7 @@ toUpper = error "Not implemented"
 -------------------------------------------------------------------------------------
 
 -- |
--- An unboxed JavaScript function.
+-- A JavaScript function.
 newtype JsFunction = JsFunction { getJsFunction :: Any# }
 
 arity :: JsFunction -> Int
@@ -467,7 +522,7 @@ arity = error "Not implemented"
 -------------------------------------------------------------------------------------
 
 -- |
--- An unboxed JavaScript array.
+-- A JavaScript array.
 newtype JsArray = JsArray { getJsArray :: Any# }
 
 instance Semigroup JsArray where
@@ -546,7 +601,7 @@ sliceArray = error "Not implemented"
 -------------------------------------------------------------------------------------
 
 -- |
--- An unboxed JavaScript object.
+-- A JavaScript object.
 newtype JsObject = JsObject { getJsObject :: Any# }
 
 -- |
@@ -576,13 +631,6 @@ null = JsObject $ null#
 -- > window
 global :: IO JsObject
 global = global# >>= (return . JsObject)
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > typeof x
-typeOf :: JsVal a => a -> String
-typeOf = fromJsString# . typeOf# . undefined
 
 -- |
 -- Returns true if the specified object is of the specified object type, or equivalently
@@ -639,33 +687,6 @@ valueOf = error "Not implemented"
 
 
 
--- |
--- A JavaScript property name.
-type JsName = String
-
--- |
--- Class of types that can be properties of a 'JsObject'.
---
--- Retrieving a value of the wrong type (for example, reading an 'Int' from a field
--- containing a string) results in a runtime error.
-class JsProp a where
-    -- | @get n o@ fetches the value named @n@ from object @o@, or equivalently
-    --
-    -- > o.n
-    get :: JsName -> JsObject -> IO a
-
-    -- | @set n o x@ assigns the property @n@ to @x@ in object @o@, or equivalently
-    --
-    -- > o.n = x
-    set :: JsName -> JsObject -> a -> IO ()
-
-    -- | @update n o f@ updates the value named @n@ in object @o@ by applying the function f,
-    --   or equivalently
-    --
-    -- > x.n = f(x.n)
-    update :: JsName -> JsObject -> (a -> a) -> IO ()
-    update n o f = get n o >>= set n o . f
-
 
 get# i c n x = i (toJsString# n) (getJsObject x) >>= (return . c)
 set# o c n x v = o (toJsString# n) (getJsObject x) (c v)
@@ -694,13 +715,21 @@ instance JsProp Double where
     get = get# (getDouble# numberType#) id
     set = set# (setDouble# numberType#) id
 
-instance JsProp String where
-    get = get# (getString# stringType#) fromJsString#
-    set = set# (setString# stringType#) toJsString#
+instance JsProp JsString where
+    get = get# (getString# stringType#) JsString
+    set = set# (setString# stringType#) getJsString
 
 instance JsProp JsObject where
     get = get# (getAny# objectType#) JsObject
     set = set# (setAny# objectType#) getJsObject
+
+instance JsProp JsFunction where
+    get = get# (getAny# functionType#) JsFunction
+    set = set# (setAny# functionType#) getJsFunction
+
+-- instance JsProp String where
+--     get = get# (getString# stringType#) fromJsString#
+--     set = set# (setString# stringType#) toJsString#
 
 
 -------------------------------------------------------------------------------------
