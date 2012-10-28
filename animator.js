@@ -113,6 +113,36 @@ function aPrimCall5(f, t, a, b, c, d, e, _) {
         f.call(t, a, b, c, d, e)
     ];
 }   
+function aPrimBind0(f, t, _) {
+    return [1, _, 
+        f.bind(t)
+    ];
+}   
+function aPrimBind1(f, t, a, _) {
+    return [1, _, 
+        f.bind(t, a)
+    ];
+}   
+function aPrimBind2(f, t, a, b, _) {
+    return [1, _, 
+        f.bind(t, a, b)
+    ];
+}   
+function aPrimBind3(f, t, a, b, c, _) {
+    return [1, _, 
+        f.bind(t, a, b, c)
+    ];
+}   
+function aPrimBind4(f, t, a, b, c, d, _) {
+    return [1, _, 
+        f.bind(t, a, b, c, d)
+    ];
+}   
+function aPrimBind5(f, t, a, b, c, d, e, _) {
+    return [1, _, 
+        f.bind(t, a, b, c, d, e)
+    ];
+}   
 
 function aPrimWrap2(f, _) {
     return [1, _, 

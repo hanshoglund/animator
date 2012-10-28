@@ -89,6 +89,12 @@ module Animator.Internal.Prim (
         call3,
         call4,
         call5,
+        bind0,
+        bind1,
+        bind2,
+        bind3,
+        bind4,
+        bind5,
         invoke0,
         invoke1,
         invoke2,
@@ -226,8 +232,53 @@ call5 f t a b c d e =
     q <$> call5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
     where 
         (p,q) = callPrePost
+        
+foreign import ccall "aPrimBind0" bind0#  :: Any# -> Any# -> IO Any#
+foreign import ccall "aPrimBind1" bind1#  :: Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimBind2" bind2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimBind3" bind3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+
+bind0 :: JsObject -> a -> IO c
+bind0 f t = 
+    q <$> bind0# (getJsObject f) (p t)
+    where 
+        (p,q) = bindPrePost
+
+bind1 :: JsObject -> a -> b -> IO c
+bind1 f t a = 
+    q <$> bind1# (getJsObject f) (p t) (p a)
+    where 
+        (p,q) = bindPrePost
+
+bind2 :: JsObject -> a -> b -> c -> IO d
+bind2 f t a b = 
+    q <$> bind2# (getJsObject f) (p t) (p a) (p b)
+    where 
+        (p,q) = bindPrePost
+
+bind3 :: JsObject -> a -> b -> c -> d -> IO e
+bind3 f t a b c = 
+    q <$> bind3# (getJsObject f) (p t) (p a) (p b) (p c)
+    where 
+        (p,q) = bindPrePost
+
+bind4 :: JsObject -> a -> b -> c -> d -> e -> IO f
+bind4 f t a b c d = 
+    q <$> bind4# (getJsObject f) (p t) (p a) (p b) (p c) (p d)
+    where 
+        (p,q) = bindPrePost
+
+bind5 :: JsObject -> a -> b -> c -> d -> e -> f -> IO g
+bind5 f t a b c d e = 
+    q <$> bind5# (getJsObject f) (p t) (p a) (p b) (p c) (p d) (p e)
+    where 
+        (p,q) = bindPrePost
 
 callPrePost = (unsafeCoerce, unsafeCoerce)
+bindPrePost = (unsafeCoerce, unsafeCoerce)
+
 
 infixl 9 %%
 infixl 9 %%!
