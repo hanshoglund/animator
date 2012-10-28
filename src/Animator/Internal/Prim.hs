@@ -74,30 +74,29 @@ module Animator.Internal.Prim (
         call,
         call1,
         call2,
-        call3,
-        call4,
-        bind,
-        bind1,
-        bind2,
-        bind3,
-        bind4,
+        -- call3,
+        -- call4,
         invoke,
         invoke1,
         invoke2,
-        invoke3,
-        invoke4,
+        -- invoke3,
+        -- invoke4,
+        bind,
+        bind2,
+        -- bind3,
+        -- bind4,
 
         -- ** With object
         callWith,
         callWith1,
         callWith2,
-        callWith3,
-        callWith4,
+        -- callWith3,
+        -- callWith4,
         bindWith,
         bindWith1,
         bindWith2,
-        bindWith3,
-        bindWith4,
+        -- bindWith3,
+        -- bindWith4,
 
         -- ** Infix operators
         (%%),
@@ -597,48 +596,55 @@ foreign import ccall "aPrimCall3" call3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
+call :: JsVal a => JsFunction -> IO a
+call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
+call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
+call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> IO d
+call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> a -> b -> c -> d -> IO e
+
 call  f = callWith  f null
 call1 f = callWith1 f null
 call2 f = callWith2 f null
 call3 f = callWith3 f null
 call4 f = callWith4 f null
 
-callWith :: JsVal b => JsFunction -> JsObject -> IO b
+callWith :: JsVal a => JsFunction -> JsObject -> IO a
+callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
+callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
+callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> IO d
+callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> IO e
+callWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> a -> b -> c -> d -> e -> IO f
+
 callWith f t = do
     r <- call# (getJsFunction f) (p t)
     return $ q r
     where 
         (p,q) = callPrePost
 
-callWith1 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> IO c
 callWith1 f t a = do
     r <- call1# (getJsFunction f) (p t) (p a)
     return $ q r
     where 
         (p,q) = callPrePost
 
-callWith2 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> IO d
 callWith2 f t a b = do
     r <- call2# (getJsFunction f) (p t) (p a) (p b)
     return $ q r
     where 
         (p,q) = callPrePost
 
-callWith3 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> IO e
 callWith3 f t a b c = do
     r <- call3# (getJsFunction f) (p t) (p a) (p b) (p c)
     return $ q r
     where 
         (p,q) = callPrePost
 
-callWith4 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> IO f
 callWith4 f t a b c d = do
     r <- call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
     return $ q r
     where 
         (p,q) = callPrePost
 
-callWith5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO g
 callWith5 f t a b c d e = do
     r <- call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
     return $ q r
@@ -652,49 +658,53 @@ foreign import ccall "aPrimBind3" bind3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
-bind  f = bindWith  f null
-bind1 f = bindWith1 f null
+bind :: JsVal a => JsFunction -> a -> IO JsFunction
+bind2 :: (JsVal a, JsVal b) => JsFunction -> a -> b -> IO JsFunction
+bind3 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> c -> IO JsFunction
+bind4 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> d -> IO JsFunction
+
+bind  f = bindWith1 f null
 bind2 f = bindWith2 f null
 bind3 f = bindWith3 f null
 bind4 f = bindWith4 f null
 
-
 bindWith :: JsFunction -> JsObject -> IO JsFunction
+bindWith1 :: JsVal a => JsFunction -> JsObject -> a -> IO JsFunction
+bindWith2 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> b -> IO JsFunction
+bindWith3 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> c -> IO JsFunction
+bindWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> d -> IO JsFunction
+bindWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> e -> IO JsFunction
+
 bindWith f t = do
     r <- bind# (getJsFunction f) (p t)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bindWith1 :: (JsVal b) => JsFunction -> JsObject -> b -> IO JsFunction
 bindWith1 f t a = do
     r <- bind1# (getJsFunction f) (p t) (p a)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bindWith2 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> c -> IO JsFunction
 bindWith2 f t a b = do
     r <- bind2# (getJsFunction f) (p t) (p a) (p b)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bindWith3 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> d -> IO JsFunction
 bindWith3 f t a b c = do
     r <- bind3# (getJsFunction f) (p t) (p a) (p b) (p c)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bindWith4 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> e -> IO JsFunction
 bindWith4 f t a b c d = do
     r <- bind4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
     return $ q r
     where 
         (p,q) = bindPrePost
 
-bindWith5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO JsFunction
 bindWith5 f t a b c d e = do
     r <- bind5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
     return $ q r
