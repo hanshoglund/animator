@@ -74,9 +74,16 @@ module Animator.Internal.Prim (
         windowAlert,
         windowConsoleLog,
         windowDocumentWrite,
+        
+        JsString,
+        JsObject,
+        getJsString,
         getJsObject,
         Any#,
-        logAny#
+        logAny#,
+        logString#,
+        logInt#,
+        eval
   ) where
 
 import Prelude hiding (reverse, null)
@@ -130,11 +137,11 @@ foreign import ccall "aPrimGet"       getString#        :: Int -> String# -> Any
 foreign import ccall "aPrimGet"       getAny#           :: Int -> String# -> Any# -> IO Any#
 
 foreign import ccall "aPrimSet"       setInt#           :: Int -> String# -> Any# -> Int     -> IO ()
-foreign import ccall "aPrimGet"       setWord#          :: Int -> String# -> Any# -> Word    -> IO ()
-foreign import ccall "aPrimGet"       setInt32#         :: Int -> String# -> Any# -> Int32   -> IO ()
-foreign import ccall "aPrimGet"       setWord32#        :: Int -> String# -> Any# -> Word32  -> IO ()
-foreign import ccall "aPrimGet"       setFloat#         :: Int -> String# -> Any# -> Float   -> IO ()
-foreign import ccall "aPrimGet"       setDouble#        :: Int -> String# -> Any# -> Double  -> IO ()
+foreign import ccall "aPrimSet"       setWord#          :: Int -> String# -> Any# -> Word    -> IO ()
+foreign import ccall "aPrimSet"       setInt32#         :: Int -> String# -> Any# -> Int32   -> IO ()
+foreign import ccall "aPrimSet"       setWord32#        :: Int -> String# -> Any# -> Word32  -> IO ()
+foreign import ccall "aPrimSet"       setFloat#         :: Int -> String# -> Any# -> Float   -> IO ()
+foreign import ccall "aPrimSet"       setDouble#        :: Int -> String# -> Any# -> Double  -> IO ()
 foreign import ccall "aPrimSet"       setString#        :: Int -> String# -> Any# -> String# -> IO ()
 foreign import ccall "aPrimSet"       setAny#           :: Int -> String# -> Any# -> Any#    -> IO ()
 
@@ -142,11 +149,19 @@ foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 foreign import ccall "aPrimAdd"       concatString#     :: String# -> String# -> String#
 foreign import ccall "aPrimTypeOf"    typeOf#           :: Any# -> String#
 
-foreign import ccall "aPrimLog"       logAny#           :: Any# -> IO ()
-
 foreign import ccall "aPrimWrite"     documentWrite#    :: String# -> IO ()
 foreign import ccall "aPrimLog"       consoleLog#       :: String# -> IO ()
 foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
+
+foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
+
+foreign import ccall "aPrimLog"       logAny#           :: Any# -> IO ()
+foreign import ccall "aPrimLog"       logString#        :: String# -> IO ()
+foreign import ccall "aPrimLog"       logInt#           :: Int -> IO ()
+
+
+eval :: JsString -> IO Any#
+eval s = eval# (getJsString s)
 
 class JsRef a where
     toJsObject :: a -> JsObject
@@ -164,16 +179,16 @@ class JsValue a where
     apply# :: JsValue a => JsFunction -> JsObject -> [a] -> a
     new# :: JsValue a => JsFunction -> [a] -> IO JsObject
 
-instance JsValue Int where
-instance JsValue Int32 where
-instance JsValue Word where
-instance JsValue Word32 where
-instance JsValue Float where
-instance JsValue Double where
-instance JsValue JsString where
-instance JsValue JsObject where
-instance JsValue JsArray where
-instance JsValue JsFunction where
+-- instance JsValue Int where
+-- instance JsValue Int32 where
+-- instance JsValue Word where
+-- instance JsValue Word32 where
+-- instance JsValue Float where
+-- instance JsValue Double where
+-- instance JsValue JsString where
+-- instance JsValue JsObject where
+-- instance JsValue JsArray where
+-- instance JsValue JsFunction where
     
 
 -------------------------------------------------------------------------------------

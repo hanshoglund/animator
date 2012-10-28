@@ -37,25 +37,40 @@ function aCheck(type, value, error) {
 }              
 
 function aPrimGlobal(_) {
-    return [1, _, window];
+    return [1, _, 
+        window
+    ];
 }
 function aPrimObj(_) {
-    return [1, _, {}];
+    return [1, _, 
+        {}
+    ];
 }
 function aPrimGet(type, name, obj, _) {
-    aCheck(type, obj[name], "Animator: Type error");
-    return [1, _, obj[name]];
+    // aCheck(type, obj[name], "Animator: Type error");
+    return [1, _, 
+        obj[name]
+    ];
 }
 function aPrimSet(type, name, obj, value, _) {
-    aCheck(type, value, "Animator: Type error");
+    // aCheck(type, value, "Animator: Type error");
     obj[name] = value;
     return [1, _];
 }
 function aPrimAdd(a, b, _) {
-    return [1, _, (a + b)]
+    return [1, _, 
+        (a + b)
+    ]
 }
 function aPrimTypeOf(a, _) {
-    return [1, _, (typeof a)]
+    return [1, _, 
+        (typeof a)
+    ]
+}
+function aPrimEval(s, _) {
+    return [1, _, 
+        eval(s)
+    ];
 }
 
 aTestObj = {
@@ -78,6 +93,7 @@ aTestObj = {
 function aPrimLog(text, _) {
     window.console.log(typeof text);
     window.console.log(text);
+    window.console.log(" ");
     return [1, _];
 }
 function aPrimWrite(text, _) {
