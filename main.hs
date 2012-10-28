@@ -14,7 +14,12 @@ import Animator.Internal.Prim
 import Foreign.Ptr
 import Haste.Prim(toPtr, fromPtr)
 import GHC.Prim
-import Data.Foldable
+import Data.Foldable 
+import Prelude hiding (null)
+
+infixl 9 %%
+infixl 9 %%!
+infixl 9 %%!!
 
 {-
 
@@ -49,9 +54,9 @@ Polymorhism requirements:
         f(x,y,z)
 -}
 
-main = test
+main = testJQuery   
 
-test = do    
+testPrim = do    
     logPrim $ (False::Bool)
     logPrim $ (123::Int)
     logPrim $ ("foo"::JsString)
@@ -68,29 +73,46 @@ test = do
     let ho = (10::Int,20::Int)
     logPrim $ ho
 
+testCall = do    
+    g <- global                     
+    o <- eval "([1,2,3,4])"
+    foo <- get "foo" g :: IO JsObject
+    alert <- get "alert" g :: IO JsObject
+    console <- get "console" g :: IO JsObject
+    logPrim $ foo
+    res <- call1 foo console (o::JsObject)
+    logPrim $ (res::JsObject)
 
 
+(%%)  = invoke0
+(%%!)  = invoke1
+(%%!!) = invoke2
 
+invoke0 :: JsObject -> JsName -> IO a
+invoke0 o n = do
+    f <- get n o :: IO JsObject
+    call0 f o
+invoke1 :: JsObject -> JsName -> a -> IO b
+invoke1 o n a = do
+    f <- get n o :: IO JsObject
+    call1 f o a
+invoke2 :: JsObject -> JsName -> a -> b -> IO c
+invoke2 o n a b = do
+    f <- get n o :: IO JsObject
+    call2 f o a b
 
-    -- a <- object
-    -- set "x" a (1::Float)
-    -- set "y" a (2::Float)
-    --
-    -- b <- object
-    -- set "x" b (1::Float)
-    -- set "y" b (2::Float)
-    -- logPrim $ a
-    -- logPrim $ b
-    --
-    -- xa <- get "x" a :: IO Float
-    -- xb <- get "x" b :: IO Float
-    -- ya <- get "y" a :: IO Float
-    -- yb <- get "y" b :: IO Float
-    -- logPrim $ $ (xa * xb + ya * yb)
+testJQuery = do
+    g <- global
+    jq <- get "jQuery" g
 
-    -- o <- object
-    -- logAny# $ (getJsObject $ o)
+    r1 <- call1 jq null ("#div1"::JsString)
+    r1 %% "fadeIn"
 
+    r2 <- call1 jq null ("#div2"::JsString)
+    (r2 %%! "fadeIn") ("slow"::JsString)
+
+    r3 <- call1 jq null ("#div3"::JsString)
+    (r3 %%! "fadeIn") (5000::Double)
 
 
     -- object % "x" := 1

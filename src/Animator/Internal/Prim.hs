@@ -80,7 +80,11 @@ module Animator.Internal.Prim (
         getJsString,
         getJsObject,
         logPrim,
-        eval
+        eval,
+        call0,
+        call1,
+        call2,
+        call3,
   ) where
 
 import Prelude hiding (reverse, null)
@@ -124,6 +128,7 @@ functionType# = 3
 
 foreign import ccall "aPrimObj"       object#           :: IO Any#
 foreign import ccall "aPrimGlobal"    global#           :: IO Any#
+foreign import ccall "aPrimNull"      null#             :: Any#
 
 foreign import ccall "aPrimGet"       getInt#           :: Int -> String# -> Any# -> IO Int
 foreign import ccall "aPrimGet"       getWord#          :: Int -> String# -> Any# -> IO Word
@@ -153,14 +158,46 @@ foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
 
 foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
 
-foreign import ccall "aPrimLog"       logAny#           :: Any# -> IO ()
+foreign import ccall "aPrimLog"       logPrim#          :: Int -> IO ()
 
 logPrim :: a -> IO ()
-logPrim = logAny# . unsafeCoerce . H.toPtr
+logPrim = logPrim# . unsafeCoerce . H.toPtr
 {-# NOINLINE logPrim #-}
 
 eval :: JsString -> IO a
 eval = unsafeCoerce . eval# . getJsString
+
+
+
+foreign import ccall "aPrimCall0"     call0#             :: Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall1"     call1#             :: Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall2"     call2#             :: Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall3"     call3#             :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+
+call0 :: JsObject -> a -> IO c
+call0 f t = do
+    r <- call0# (getJsObject f) (p t)
+    return $ q r
+call1 :: JsObject -> a -> b -> IO c
+call1 f t a = do
+    r <- call1# (getJsObject f) (p t) (p a)
+    return $ q r
+call2 :: JsObject -> a -> b -> c -> IO d
+call2 f t a b = do
+    r <- call2# (getJsObject f) (p t) (p a) (p b)
+    return $ q r
+call3 :: JsObject -> a -> b -> c -> d -> IO e
+call3 f t a b c = do
+    r <- call3# (getJsObject f) (p t) (p a) (p b) (p c)
+    return $ q r
+
+
+p = unsafeCoerce
+q = unsafeCoerce
+
+
+
+
 
 
 class JsRef a where
@@ -411,7 +448,7 @@ create x = error "Not implemented"
 --
 -- > null
 null :: JsObject
-null = error "Not implemented" 
+null = JsObject $ null# 
 
 -- |
 -- Returns the JavaScript global object, or equivalently
