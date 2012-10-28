@@ -11,7 +11,6 @@ module Main where
 
 import Animator.Prelude
 import Animator.Internal.Prim
-import Unsafe.Coerce
 import Foreign.Ptr
 import Haste.Prim(toPtr, fromPtr)
 import GHC.Prim
@@ -53,26 +52,21 @@ Polymorhism requirements:
 main = test
 
 test = do    
-    let jb = toPtr (False::Bool)
-    logAny# $ unsafeCoerce jb
+    logPrim $ (False::Bool)
+    logPrim $ (123::Int)
+    logPrim $ ("foo"::JsString)
 
-    let jn = toPtr (123::Int)
-    logAny# $ unsafeCoerce jn
+    jf <- eval "(function(x){return x+x;})"
+    logPrim $ jf
 
-    let js = toPtr ("foo"::JsString)
-    logAny# $ unsafeCoerce js
+    jo <- eval "({foo:123,bar:function(x){return x}})"
+    logPrim $ jo
 
-    jf <- fmap toPtr $ eval "(function(x){return x+x;})"
-    logAny# $ unsafeCoerce jf
+    let hf = ((\x -> x + x) :: Int -> Int)
+    logPrim $ hf
 
-    jo <- fmap toPtr $ eval "({foo:123,bar:function(x){return x}})"
-    logAny# $ unsafeCoerce jo
-
-    let hf = toPtr ((\x -> x + x) :: Int -> Int)
-    logAny# $ unsafeCoerce hf
-
-    let ho = toPtr (10::Int,20::Int)
-    logAny# $ unsafeCoerce ho
+    let ho = (10::Int,20::Int)
+    logPrim $ ho
 
 
 
@@ -85,14 +79,14 @@ test = do
     -- b <- object
     -- set "x" b (1::Float)
     -- set "y" b (2::Float)
-    -- logAny# $ unsafeCoerce a
-    -- logAny# $ unsafeCoerce b
+    -- logPrim $ a
+    -- logPrim $ b
     --
     -- xa <- get "x" a :: IO Float
     -- xb <- get "x" b :: IO Float
     -- ya <- get "y" a :: IO Float
     -- yb <- get "y" b :: IO Float
-    -- logAny# $ unsafeCoerce $ (xa * xb + ya * yb)
+    -- logPrim $ $ (xa * xb + ya * yb)
 
     -- o <- object
     -- logAny# $ (getJsObject $ o)

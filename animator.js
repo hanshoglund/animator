@@ -1,27 +1,14 @@
 
 /*
-  Global scope:
-    * Unfortunately, the Haskell compiler currently places everything in the global scope
-      * The RTS exports several functions
-      * The genrated functions all start with an underscore, called things like ''
-    * Processing exports the function 'Processing'
-    * Animator exportrs the function 'Animator'
-
-  FFI peculiarities:
-    * No varargs
-    * Each function takes a dummy argument after all other arguments
-      * The value can be ignored, I call it  _world
-    * Each function returns a boxed pair (list) where the first value is a dummy value
-      * To return (), return [0, w] where w is any value
-      * To return x, return [0, w, x] where w is any value
-      * I return _world, but this is not required
-    * Acceptable FFI types:
-      * Bool, Int, Word, Float, Double, Word32, JSString
-      * Strings can be converted to String or JSON on Haskell side
-
+    Namespace issues
+        The Haste compiler relies heavily on the global scope ...
+            - All RTS functions are global
+            - All generated functions (_N) are global
+            - Primitive functions must be global
  */
 
-function aCheck(type, value, error) {
+// TODO hide
+function aInternalCheck(type, value, error) {
     switch(type)                                   
     {                                              
         case 0:                                    
@@ -46,14 +33,19 @@ function aPrimObj(_) {
         {}
     ];
 }
+function aPrimNull(_) {
+    return [1, _, 
+        null
+    ];
+}
 function aPrimGet(type, name, obj, _) {
-    // aCheck(type, obj[name], "Animator: Type error");
+    // aInternalCheck(type, obj[name], "Animator: Type error");
     return [1, _, 
         obj[name]
     ];
 }
 function aPrimSet(type, name, obj, value, _) {
-    // aCheck(type, value, "Animator: Type error");
+    // aInternalCheck(type, value, "Animator: Type error");
     obj[name] = value;
     return [1, _];
 }
@@ -67,28 +59,43 @@ function aPrimTypeOf(a, _) {
         (typeof a)
     ]
 }
+function aPrimInstanceOf(a, b, _) {
+    return [1, _, 
+        (a instanceof b)
+    ]
+}
 function aPrimEval(s, _) {
     return [1, _, 
         eval(s)
     ];
+}   
+
+function aPrimCall0(f, _) {
+    return [1, _, 
+        f()
+    ];
+}   
+function aPrimCall1(f, x, _) {
+    return [1, _, 
+        f(x)
+    ];
+}   
+function aPrimCall2(f, x, y, _) {
+    return [1, _, 
+        f(x, y)
+    ];
+}   
+function aPrimWrap2(f, _) {
+    return [1, _, 
+        function (x, y) {
+            var r = A(f, [[1,x], [1,y], 0]);
+            return r[2];
+        }
+    ];
 }
 
-aTestObj = {
-    n : null,
-    u : undefined,
-    i : 1,
-    f : 2.5,
-    a : [1,2,3],
-    o : { foo: 1, bar: 2 },
-    s : "hello!",
-    f : function () {}
-};
 
-
-
-
-
-// TODO remove these
+// TODO Must these be primitives (?)
 
 function aPrimLog(text, _) {
     window.console.log(typeof text);
@@ -105,7 +112,3 @@ function aPrimAlert(text, _) {
     return [1, _];
 }
 
-
-
-
-// -------------------- Generated code start --------------------

@@ -79,10 +79,7 @@ module Animator.Internal.Prim (
         JsObject,
         getJsString,
         getJsObject,
-        Any#,
-        logAny#,
-        logString#,
-        logInt#,
+        logPrim,
         eval
   ) where
 
@@ -92,6 +89,7 @@ import Data.Int
 import Data.Word
 import Data.String (IsString(..))
 import Data.Semigroup
+import Unsafe.Coerce
 
 #ifdef __HASTE__
 import qualified Haste.Prim as H
@@ -156,12 +154,14 @@ foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
 foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
 
 foreign import ccall "aPrimLog"       logAny#           :: Any# -> IO ()
-foreign import ccall "aPrimLog"       logString#        :: String# -> IO ()
-foreign import ccall "aPrimLog"       logInt#           :: Int -> IO ()
 
+logPrim :: a -> IO ()
+logPrim = logAny# . unsafeCoerce . H.toPtr
+{-# NOINLINE logPrim #-}
 
-eval :: JsString -> IO Any#
-eval s = eval# (getJsString s)
+eval :: JsString -> IO a
+eval = unsafeCoerce . eval# . getJsString
+
 
 class JsRef a where
     toJsObject :: a -> JsObject
