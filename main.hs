@@ -17,10 +17,6 @@ import GHC.Prim
 import Data.Foldable 
 import Prelude hiding (null)
 
-infixl 9 %%
-infixl 9 %%!
-infixl 9 %%!!
-
 {-
 
 FFI quirks:
@@ -83,23 +79,6 @@ testCall = do
     res <- call1 foo console (o::JsObject)
     logPrim $ (res::JsObject)
 
-
-(%%)  = invoke0
-(%%!)  = invoke1
-(%%!!) = invoke2
-
-invoke0 :: JsObject -> JsName -> IO a
-invoke0 o n = do
-    f <- get n o :: IO JsObject
-    call0 f o
-invoke1 :: JsObject -> JsName -> a -> IO b
-invoke1 o n a = do
-    f <- get n o :: IO JsObject
-    call1 f o a
-invoke2 :: JsObject -> JsName -> a -> b -> IO c
-invoke2 o n a b = do
-    f <- get n o :: IO JsObject
-    call2 f o a b
 
 testJQuery = do
     g <- global

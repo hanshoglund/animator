@@ -75,16 +75,29 @@ module Animator.Internal.Prim (
         windowConsoleLog,
         windowDocumentWrite,
         
+        -- ** DEBUG
         JsString,
         JsObject,
         getJsString,
-        getJsObject,
+        getJsObject,                
+        
         logPrim,
         eval,
         call0,
         call1,
         call2,
         call3,
+        call4,
+        call5,
+        invoke0,
+        invoke1,
+        invoke2,
+        invoke3,
+        invoke4,
+        invoke5,
+        (%%),
+        (%%!),
+        (%%!!),
   ) where
 
 import Prelude hiding (reverse, null)
@@ -215,6 +228,43 @@ call5 f t a b c d e =
         (p,q) = callPrePost
 
 callPrePost = (unsafeCoerce, unsafeCoerce)
+
+infixl 9 %%
+infixl 9 %%!
+infixl 9 %%!!
+(%%)  = invoke0
+(%%!)  = invoke1
+(%%!!) = invoke2
+
+invoke0 :: JsObject -> JsName -> IO a
+invoke0 o n = do
+    f <- get n o
+    call0 f o
+
+invoke1 :: JsObject -> JsName -> a -> IO b
+invoke1 o n a = do
+    f <- get n o
+    call1 f o a
+
+invoke2 :: JsObject -> JsName -> a -> b -> IO c
+invoke2 o n a b = do
+    f <- get n o
+    call2 f o a b
+
+invoke3 :: JsObject -> JsName -> a -> b -> c -> IO d
+invoke3 o n a b c = do
+    f <- get n o
+    call3 f o a b c
+
+invoke4 :: JsObject -> JsName -> a -> b -> c -> d -> IO e
+invoke4 o n a b c d = do
+    f <- get n o
+    call4 f o a b c d
+
+invoke5 :: JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
+invoke5 o n a b c d e = do
+    f <- get n o
+    call5 f o a b c d e
 
 
 

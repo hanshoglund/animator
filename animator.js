@@ -116,8 +116,9 @@ function aPrimCall5(f, t, a, b, c, d, e, _) {
 
 function aPrimWrap2(f, _) {
     return [1, _, 
-        function (x, y) {
-            var r = A(f, [[1,x], [1,y], 0]);
+        function (x, y) {                
+            var _ = 0;
+            var r = A(f, [[1,x], [1,y], _]);
             return r[2];
         }
     ];
