@@ -20,6 +20,31 @@ module Animator.Internal.Prim (
         JsName,
         JsProp(..),
 
+        -- ** Objects
+        JsObject,
+        -- undef,
+        object,
+        create,
+        null,
+        global,
+        isInstanceOf,
+        isPrototypeOf,
+        constructor,
+        hasOwnProperty,
+        propertyIsEnumerable,
+
+        -- ** Arrays
+        JsArray,
+        push,
+        pop,
+        shift,
+        unshift,
+        reverse,
+        sort,
+        -- splice,
+        join,
+        sliceArray,
+                        
         -- ** Strings
         JsString,
         toJsString,
@@ -34,7 +59,7 @@ module Animator.Internal.Prim (
         sliceString,
         toLower,
         toUpper,
-        
+
         -- ** Functions
         JsFunction,
         arity,
@@ -61,31 +86,6 @@ module Animator.Internal.Prim (
         (%%!!),
         -- apply,
         -- new,
-
-        -- ** Arrays
-        JsArray,
-        push,
-        pop,
-        shift,
-        unshift,
-        reverse,
-        sort,
-        -- splice,
-        join,
-        sliceArray,
-        
-        -- ** Objects
-        JsObject,
-        -- undef,
-        object,
-        create,
-        null,
-        global,
-        isInstanceOf,
-        isPrototypeOf,
-        constructor,
-        hasOwnProperty,
-        propertyIsEnumerable,
 
         -- ** JSON
         JSON,
@@ -115,6 +115,7 @@ import Foreign.Ptr
 #endif __HASTE__
 
 
+
 #ifdef __HASTE__
 type Any#     = H.JSAny              -- Opaque reference
 type String#  = H.JSString
@@ -136,7 +137,11 @@ stringType#   = 1
 objectType#   = 2
 functionType# = 3
 
-foreign import ccall "aPrimAdd"       concatString#     :: String# -> String# -> String#
+
+
+
+
+
 foreign import ccall "aPrimTypeOf"    typeOf#           :: Any# -> String#
 foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
 
@@ -222,7 +227,349 @@ class JsVal a => JsProp a where
 
 
 
+-------------------------------------------------------------------------------------
+-- Objects
+-------------------------------------------------------------------------------------
 
+foreign import ccall "aPrimObj"       object#           :: IO Any#
+foreign import ccall "aPrimGlobal"    global#           :: IO Any#
+foreign import ccall "aPrimNull"      null#             :: Any#
+
+-- |
+-- A JavaScript object.
+newtype JsObject = JsObject { getJsObject :: Any# }
+
+-- |
+-- Creates a new JavaScript object, or equivalently
+--
+-- > {}
+object :: IO JsObject
+object = object# >>= (return . JsObject)
+
+-- |
+-- Creates a new JavaScript object using the given object as prototype, or equivalently
+--
+-- > Object.create(x)
+create :: JsObject -> IO JsObject
+create x = error "Not implemented"
+
+-- |
+-- Returns the JavaScript null object, or equivalently
+--
+-- > null
+null :: JsObject
+null = JsObject $ null# 
+
+-- |
+-- Returns the JavaScript global object, or equivalently
+--
+-- > window
+global :: IO JsObject
+global = global# >>= (return . JsObject)
+
+-- |
+-- Returns true if the specified object is of the specified object type, or equivalently
+--
+-- > x instanceof y
+isInstanceOf :: JsObject -> JsObject -> Bool
+isInstanceOf = error "Not implemented"
+
+-- |
+-- Returns
+--
+-- > x.isPrototypeOf(y)
+isPrototypeOf :: JsObject -> JsObject -> Bool
+isPrototypeOf = error "Not implemented"
+
+-- |
+-- Returns
+--
+-- > x.constructor(y)
+constructor :: JsObject -> JsFunction
+constructor = error "Not implemented"
+
+-- |
+-- Returns
+--
+-- > x.hasOwnProperty(y)
+hasOwnProperty :: JsName -> JsObject -> IO Bool
+hasOwnProperty = error "Not implemented"
+
+-- |
+-- Returns
+--
+-- > x.propertyIsEnumerable(y)
+propertyIsEnumerable :: JsName -> JsObject -> IO Bool
+propertyIsEnumerable = error "Not implemented"
+
+-- |
+-- Deletes the given property from an object, or equivalently
+--
+-- > delete o.n
+delete :: JsName -> JsObject -> IO ()
+delete = error "Not implemented"
+
+-- |
+-- Returns
+--
+-- > x.toString(y)
+toString :: JsObject -> JsString
+toString = error "Not implemented"
+
+-- |
+-- Returns
+--
+-- > x.toLocaleString(y)
+toLocaleString :: JsObject -> JsString
+toLocaleString = error "Not implemented"
+
+-- |
+-- Returns
+--
+-- > x.valueOf(y)
+valueOf :: JsVal a => JsObject -> a
+valueOf = error "Not implemented"
+
+
+foreign import ccall "aPrimGet"       getInt#           :: Int -> String# -> Any# -> IO Int
+foreign import ccall "aPrimGet"       getWord#          :: Int -> String# -> Any# -> IO Word
+foreign import ccall "aPrimGet"       getInt32#         :: Int -> String# -> Any# -> IO Int32
+foreign import ccall "aPrimGet"       getWord32#        :: Int -> String# -> Any# -> IO Word32
+foreign import ccall "aPrimGet"       getFloat#         :: Int -> String# -> Any# -> IO Float
+foreign import ccall "aPrimGet"       getDouble#        :: Int -> String# -> Any# -> IO Double
+foreign import ccall "aPrimGet"       getString#        :: Int -> String# -> Any# -> IO String#
+foreign import ccall "aPrimGet"       getAny#           :: Int -> String# -> Any# -> IO Any#
+
+foreign import ccall "aPrimSet"       setInt#           :: Int -> String# -> Any# -> Int     -> IO ()
+foreign import ccall "aPrimSet"       setWord#          :: Int -> String# -> Any# -> Word    -> IO ()
+foreign import ccall "aPrimSet"       setInt32#         :: Int -> String# -> Any# -> Int32   -> IO ()
+foreign import ccall "aPrimSet"       setWord32#        :: Int -> String# -> Any# -> Word32  -> IO ()
+foreign import ccall "aPrimSet"       setFloat#         :: Int -> String# -> Any# -> Float   -> IO ()
+foreign import ccall "aPrimSet"       setDouble#        :: Int -> String# -> Any# -> Double  -> IO ()
+foreign import ccall "aPrimSet"       setString#        :: Int -> String# -> Any# -> String# -> IO ()
+foreign import ccall "aPrimSet"       setAny#           :: Int -> String# -> Any# -> Any#    -> IO ()
+
+get# i c n x = i (toJsString# n) (getJsObject x) >>= (return . c)
+set# o c n x v = o (toJsString# n) (getJsObject x) (c v)
+
+instance JsProp Int where
+    get = get# (getInt# numberType#) id
+    set = set# (setInt# numberType#) id
+
+instance JsProp Word where
+    get = get# (getWord# numberType#) id
+    set = set# (setWord# numberType#) id
+
+instance JsProp Int32 where
+    get = get# (getInt32# numberType#) id
+    set = set# (setInt32# numberType#) id
+
+instance JsProp Word32 where
+    get = get# (getWord32# numberType#) id
+    set = set# (setWord32# numberType#) id
+
+instance JsProp Float where
+    get = get# (getFloat# numberType#) id
+    set = set# (setFloat# numberType#) id
+
+instance JsProp Double where
+    get = get# (getDouble# numberType#) id
+    set = set# (setDouble# numberType#) id
+
+instance JsProp JsString where
+    get = get# (getString# stringType#) JsString
+    set = set# (setString# stringType#) getJsString
+
+instance JsProp JsObject where
+    get = get# (getAny# objectType#) JsObject
+    set = set# (setAny# objectType#) getJsObject
+
+instance JsProp JsFunction where
+    get = get# (getAny# functionType#) JsFunction
+    set = set# (setAny# functionType#) getJsFunction
+
+-- instance JsProp String where
+--     get = get# (getString# stringType#) fromJsString#
+--     set = set# (setString# stringType#) toJsString#
+                                                         
+
+
+-------------------------------------------------------------------------------------
+-- Arrays
+-------------------------------------------------------------------------------------
+
+foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
+
+-- |
+-- A JavaScript array.
+newtype JsArray = JsArray { getJsArray :: Any# }
+
+instance Semigroup JsArray where
+    (JsArray x) <> (JsArray y) = JsArray $ concatArray# x y
+instance Monoid JsArray where
+    mappend = (<>)
+    mempty = error "Not implemented"
+
+-- Applicative
+-- Monad
+-- Functor
+-- Semigroup
+-- Foldable
+
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > Array.prototype.pop.call(x)
+pop :: JsVal a => JsArray -> IO a
+pop = error "Not implemented"
+
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > Array.prototype.push.call(x, v)
+push :: JsVal a => a -> JsArray -> IO JsArray
+push = error "Not implemented"
+
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > Array.prototype.shift.call(x)
+shift :: JsVal a => JsArray -> IO a
+shift = error "Not implemented"
+
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > Array.prototype.unshift.call(x, v)
+unshift :: JsVal a => a -> JsArray -> IO JsArray
+unshift = error "Not implemented"
+
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > Array.prototype.reverse.call(x)
+reverse :: JsArray -> IO JsArray
+reverse = error "Not implemented"
+
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > Array.prototype.sort.call(x)
+sort :: JsArray -> IO JsArray
+sort = error "Not implemented"
+
+-- splice
+
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > Array.prototype.join.call(x, s)
+join :: JsString -> JsArray -> JsString
+join = error "Not implemented"
+
+-- |
+-- Returns a string describing a type of the given object, or equivalently
+--
+-- > Array.prototype.slice.call(x, a, b)
+sliceArray :: Int -> Int -> JsString -> JsString
+sliceArray = error "Not implemented"
+
+
+
+-------------------------------------------------------------------------------------
+-- Strings
+-------------------------------------------------------------------------------------
+
+-- |
+-- A JavaScript string.
+newtype JsString = JsString { getJsString :: String# }
+    deriving (Eq, Ord, Show)
+
+instance IsString JsString where
+    fromString = toJsString
+instance Semigroup JsString where
+    (JsString x) <> (JsString y) = JsString $ x `concatString#` y
+instance Monoid JsString where
+    mappend = (<>)
+    mempty = ""
+
+-- Applicative
+-- Monad
+-- Functor
+-- Semigroup
+-- Foldable
+
+-- |
+-- Convert a Haskell string to a JavaScript string.
+toJsString :: String -> JsString
+toJsString = JsString . toJsString#
+
+-- |
+-- Convert a JavaScript string to a Haskell string.
+fromJsString :: JsString -> String
+fromJsString = fromJsString# . getJsString
+
+-- |
+-- Returns the JavaScript global object, or equivalently
+--
+-- > String.prototype.charAt.call(s, i)
+charAt :: Int -> JsString -> JsString
+charAt = error "Not implemented"
+
+-- |
+-- Returns the JavaScript global object, or equivalently
+--
+-- > String.prototype.indexOf.call(s, c)
+indexOf :: JsString -> JsString -> Int
+indexOf = error "Not implemented"
+
+-- |
+-- Returns the JavaScript global object, or equivalently
+--
+-- > String.prototype.lastIndexOf.call(s, c)
+lastIndexOf :: JsString -> JsString -> Int
+lastIndexOf = error "Not implemented"
+
+-- match
+-- replace
+-- search
+-- split
+
+-- |
+-- Returns the JavaScript global object, or equivalently
+--
+-- > String.prototype.slice.call(s, a, b)
+sliceString :: Int -> Int -> JsString -> JsString
+sliceString = error "Not implemented"
+
+-- |
+-- Returns the JavaScript global object, or equivalently
+--
+-- > String.prototype.toLowerCase.call(s)
+toLower :: JsString -> JsString
+toLower = error "Not implemented"
+
+-- |
+-- Returns the JavaScript global object, or equivalently
+--
+-- > String.prototype.toUpperCase.call(s)
+toUpper :: JsString -> JsString
+toUpper = error "Not implemented"
+
+
+
+-------------------------------------------------------------------------------------
+-- Functions
+-------------------------------------------------------------------------------------
+
+foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
+
+-- |
+-- A JavaScript function.
+newtype JsFunction = JsFunction { getJsFunction :: Any# }
+
+arity :: JsFunction -> Int
+arity = error "Not implemented"
 
 foreign import ccall "aPrimCall0" call#  :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1" call1#  :: Any# -> Any# -> Any# -> IO Any#
@@ -362,104 +709,7 @@ invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject ->
 invoke5 o n a b c d e = do
     f <- get n o
     call5 f o a b c d e
-
-
-
-
-
-
--------------------------------------------------------------------------------------
--- Strings
--------------------------------------------------------------------------------------
-
--- |
--- A JavaScript string.
-newtype JsString = JsString { getJsString :: String# }
-    deriving (Eq, Ord, Show)
-
-instance IsString JsString where
-    fromString = toJsString
-instance Semigroup JsString where
-    (JsString x) <> (JsString y) = JsString $ x `concatString#` y
-instance Monoid JsString where
-    mappend = (<>)
-    mempty = ""
-
--- Applicative
--- Monad
--- Functor
--- Semigroup
--- Foldable
-
--- |
--- Convert a Haskell string to a JavaScript string.
-toJsString :: String -> JsString
-toJsString = JsString . toJsString#
-
--- |
--- Convert a JavaScript string to a Haskell string.
-fromJsString :: JsString -> String
-fromJsString = fromJsString# . getJsString
-
--- |
--- Returns the JavaScript global object, or equivalently
---
--- > String.prototype.charAt.call(s, i)
-charAt :: Int -> JsString -> JsString
-charAt = error "Not implemented"
-
--- |
--- Returns the JavaScript global object, or equivalently
---
--- > String.prototype.indexOf.call(s, c)
-indexOf :: JsString -> JsString -> Int
-indexOf = error "Not implemented"
-
--- |
--- Returns the JavaScript global object, or equivalently
---
--- > String.prototype.lastIndexOf.call(s, c)
-lastIndexOf :: JsString -> JsString -> Int
-lastIndexOf = error "Not implemented"
-
--- match
--- replace
--- search
--- split
-
--- |
--- Returns the JavaScript global object, or equivalently
---
--- > String.prototype.slice.call(s, a, b)
-sliceString :: Int -> Int -> JsString -> JsString
-sliceString = error "Not implemented"
-
--- |
--- Returns the JavaScript global object, or equivalently
---
--- > String.prototype.toLowerCase.call(s)
-toLower :: JsString -> JsString
-toLower = error "Not implemented"
-
--- |
--- Returns the JavaScript global object, or equivalently
---
--- > String.prototype.toUpperCase.call(s)
-toUpper :: JsString -> JsString
-toUpper = error "Not implemented"
-
-
--------------------------------------------------------------------------------------
--- Functions
--------------------------------------------------------------------------------------
-
--- |
--- A JavaScript function.
-newtype JsFunction = JsFunction { getJsFunction :: Any# }
-
-arity :: JsFunction -> Int
-arity = error "Not implemented"
-
+                          
 -- -- |
 -- -- Partially apply the given function, or equivalently
 -- --
@@ -482,242 +732,6 @@ arity = error "Not implemented"
 -- new = error "Not implemented"
 
 
--------------------------------------------------------------------------------------
--- Arrays
--------------------------------------------------------------------------------------
-
-foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
-
--- |
--- A JavaScript array.
-newtype JsArray = JsArray { getJsArray :: Any# }
-
-instance Semigroup JsArray where
-    (JsArray x) <> (JsArray y) = JsArray $ concatArray# x y
-instance Monoid JsArray where
-    mappend = (<>)
-    mempty = error "Not implemented"
-
--- Applicative
--- Monad
--- Functor
--- Semigroup
--- Foldable
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > Array.prototype.pop.call(x)
-pop :: JsVal a => JsArray -> IO a
-pop = error "Not implemented"
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > Array.prototype.push.call(x, v)
-push :: JsVal a => a -> JsArray -> IO JsArray
-push = error "Not implemented"
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > Array.prototype.shift.call(x)
-shift :: JsVal a => JsArray -> IO a
-shift = error "Not implemented"
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > Array.prototype.unshift.call(x, v)
-unshift :: JsVal a => a -> JsArray -> IO JsArray
-unshift = error "Not implemented"
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > Array.prototype.reverse.call(x)
-reverse :: JsArray -> IO JsArray
-reverse = error "Not implemented"
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > Array.prototype.sort.call(x)
-sort :: JsArray -> IO JsArray
-sort = error "Not implemented"
-
--- splice
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > Array.prototype.join.call(x, s)
-join :: JsString -> JsArray -> JsString
-join = error "Not implemented"
-
--- |
--- Returns a string describing a type of the given object, or equivalently
---
--- > Array.prototype.slice.call(x, a, b)
-sliceArray :: Int -> Int -> JsString -> JsString
-sliceArray = error "Not implemented"
-
-
--------------------------------------------------------------------------------------
--- Objects
--------------------------------------------------------------------------------------
-
-foreign import ccall "aPrimObj"       object#           :: IO Any#
-foreign import ccall "aPrimGlobal"    global#           :: IO Any#
-foreign import ccall "aPrimNull"      null#             :: Any#
-
--- |
--- A JavaScript object.
-newtype JsObject = JsObject { getJsObject :: Any# }
-
--- |
--- Creates a new JavaScript object, or equivalently
---
--- > {}
-object :: IO JsObject
-object = object# >>= (return . JsObject)
-
--- |
--- Creates a new JavaScript object using the given object as prototype, or equivalently
---
--- > Object.create(x)
-create :: JsObject -> IO JsObject
-create x = error "Not implemented"
-
--- |
--- Returns the JavaScript null object, or equivalently
---
--- > null
-null :: JsObject
-null = JsObject $ null# 
-
--- |
--- Returns the JavaScript global object, or equivalently
---
--- > window
-global :: IO JsObject
-global = global# >>= (return . JsObject)
-
--- |
--- Returns true if the specified object is of the specified object type, or equivalently
---
--- > x instanceof y
-isInstanceOf :: JsObject -> JsObject -> Bool
-isInstanceOf = error "Not implemented"
-
--- |
--- 
---
--- > x.isPrototypeOf(y)
-isPrototypeOf :: JsObject -> JsObject -> Bool
-isPrototypeOf = error "Not implemented"
-
--- |
--- 
---
--- > x.constructor(y)
-constructor :: JsObject -> JsFunction
-constructor = error "Not implemented"
-
--- |
--- 
---
--- > x.hasOwnProperty(y)
-hasOwnProperty :: JsName -> JsObject -> IO Bool
-hasOwnProperty = error "Not implemented"
-
--- |
--- 
---
--- > x.propertyIsEnumerable(y)
-propertyIsEnumerable :: JsName -> JsObject -> IO Bool
-propertyIsEnumerable = error "Not implemented"
-
-
-
--- |
--- Deletes the given property from an object, or equivalently
---
--- > delete o.n
-delete :: JsName -> JsObject -> IO ()
-delete = error "Not implemented"
-
-toString :: JsObject -> JsString
-toString = error "Not implemented"
-
-toLocaleString :: JsObject -> JsString
-toLocaleString = error "Not implemented"
-
-valueOf :: JsVal a => JsObject -> a
-valueOf = error "Not implemented"
-
-
-foreign import ccall "aPrimGet"       getInt#           :: Int -> String# -> Any# -> IO Int
-foreign import ccall "aPrimGet"       getWord#          :: Int -> String# -> Any# -> IO Word
-foreign import ccall "aPrimGet"       getInt32#         :: Int -> String# -> Any# -> IO Int32
-foreign import ccall "aPrimGet"       getWord32#        :: Int -> String# -> Any# -> IO Word32
-foreign import ccall "aPrimGet"       getFloat#         :: Int -> String# -> Any# -> IO Float
-foreign import ccall "aPrimGet"       getDouble#        :: Int -> String# -> Any# -> IO Double
-foreign import ccall "aPrimGet"       getString#        :: Int -> String# -> Any# -> IO String#
-foreign import ccall "aPrimGet"       getAny#           :: Int -> String# -> Any# -> IO Any#
-
-foreign import ccall "aPrimSet"       setInt#           :: Int -> String# -> Any# -> Int     -> IO ()
-foreign import ccall "aPrimSet"       setWord#          :: Int -> String# -> Any# -> Word    -> IO ()
-foreign import ccall "aPrimSet"       setInt32#         :: Int -> String# -> Any# -> Int32   -> IO ()
-foreign import ccall "aPrimSet"       setWord32#        :: Int -> String# -> Any# -> Word32  -> IO ()
-foreign import ccall "aPrimSet"       setFloat#         :: Int -> String# -> Any# -> Float   -> IO ()
-foreign import ccall "aPrimSet"       setDouble#        :: Int -> String# -> Any# -> Double  -> IO ()
-foreign import ccall "aPrimSet"       setString#        :: Int -> String# -> Any# -> String# -> IO ()
-foreign import ccall "aPrimSet"       setAny#           :: Int -> String# -> Any# -> Any#    -> IO ()
-
-get# i c n x = i (toJsString# n) (getJsObject x) >>= (return . c)
-set# o c n x v = o (toJsString# n) (getJsObject x) (c v)
-
-instance JsProp Int where
-    get = get# (getInt# numberType#) id
-    set = set# (setInt# numberType#) id
-
-instance JsProp Word where
-    get = get# (getWord# numberType#) id
-    set = set# (setWord# numberType#) id
-
-instance JsProp Int32 where
-    get = get# (getInt32# numberType#) id
-    set = set# (setInt32# numberType#) id
-
-instance JsProp Word32 where
-    get = get# (getWord32# numberType#) id
-    set = set# (setWord32# numberType#) id
-
-instance JsProp Float where
-    get = get# (getFloat# numberType#) id
-    set = set# (setFloat# numberType#) id
-
-instance JsProp Double where
-    get = get# (getDouble# numberType#) id
-    set = set# (setDouble# numberType#) id
-
-instance JsProp JsString where
-    get = get# (getString# stringType#) JsString
-    set = set# (setString# stringType#) getJsString
-
-instance JsProp JsObject where
-    get = get# (getAny# objectType#) JsObject
-    set = set# (setAny# objectType#) getJsObject
-
-instance JsProp JsFunction where
-    get = get# (getAny# functionType#) JsFunction
-    set = set# (setAny# functionType#) getJsFunction
-
--- instance JsProp String where
---     get = get# (getString# stringType#) fromJsString#
---     set = set# (setString# stringType#) toJsString#
-
 
 -------------------------------------------------------------------------------------
 -- JSON
@@ -731,6 +745,7 @@ parse = error "Not implemented"
 
 stringify :: JSON -> JsString
 stringify = error "Not implemented"
+
 
 
 -------------------------------------------------------------------------------------
