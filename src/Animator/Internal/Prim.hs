@@ -226,17 +226,17 @@ type JsName = String
 -- Retrieving a value of the wrong type (for example, reading an 'Int' from a field
 -- containing a string) results in a runtime error.
 class JsVal a => JsProp a where
-    -- | @get n o@ fetches the value named @n@ from object @o@, or equivalently
+    -- | Fetches the value of property @n@ in object @o@, or equivalently
     --
     -- > o.n
     get :: JsObject -> JsName -> IO a
 
-    -- | @set n o x@ assigns the property @n@ to @x@ in object @o@, or equivalently
+    -- | Assigns the property @n@ to @x@ in object @o@, or equivalently
     --
     -- > o.n = x
     set :: JsObject -> JsName -> a -> IO ()
 
-    -- | @update n o f@ updates the value named @n@ in object @o@ by applying the function f,
+    -- | Updates the value named @n@ in object @o@ by applying the function f,
     --   or equivalently
     --
     -- > x.n = f(x.n)
@@ -306,6 +306,21 @@ isPrototypeOf = error "Not implemented"
 constructor :: JsObject -> JsFunction
 constructor = error "Not implemented"
 
+
+-- | 
+-- Deletes the property @n@ form object @o@, or equivalently
+--
+-- > delete o.n
+delete :: JsObject -> JsName -> IO ()
+delete = error "Not implemented"
+
+-- | 
+-- Returns
+--
+-- > delete o.n
+hasProperty :: JsObject -> JsName -> IO Bool
+hasProperty = error "Not implemented"
+
 -- |
 -- Returns
 --
@@ -319,13 +334,6 @@ hasOwnProperty = error "Not implemented"
 -- > x.propertyIsEnumerable(y)
 propertyIsEnumerable :: JsName -> JsObject -> IO Bool
 propertyIsEnumerable = error "Not implemented"
-
--- |
--- Deletes the given property from an object, or equivalently
---
--- > delete o.n
-delete :: JsName -> JsObject -> IO ()
-delete = error "Not implemented"
 
 -- |
 -- Returns
@@ -586,6 +594,10 @@ foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 -- A JavaScript function.
 newtype JsFunction = JsFunction { getJsFunction :: Any# }
 
+-- |
+-- Returns the arity of the given function, or equivalently
+--
+-- > f.length
 arity :: JsFunction -> Int
 arity = error "Not implemented"
 
@@ -596,10 +608,34 @@ foreign import ccall "aPrimCall3" call3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
+-- |
+-- Apply the given function, or equivalently
+--
+-- > f()
 call :: JsVal a => JsFunction -> IO a
+
+-- |
+-- Apply the given function, or equivalently
+--
+-- > f(a)
 call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
+
+-- |
+-- Apply the given function, or equivalently
+--
+-- > f(a, b)
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
+
+-- |
+-- Apply the given function, or equivalently
+--
+-- > f(a, b, c)
 call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> IO d
+
+-- |
+-- Apply the given function, or equivalently
+--
+-- > f(a, b, c, d)
 call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> a -> b -> c -> d -> IO e
 
 call  f = callWith  f null
@@ -658,9 +694,28 @@ foreign import ccall "aPrimBind3" bind3#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
+-- |
+-- Partially apply the given function, or equivalently
+--
+-- > f.bind(null, a)
 bind :: JsVal a => JsFunction -> a -> IO JsFunction
+
+-- |
+-- Partially apply the given function, or equivalently
+--
+-- > f.bind(null, a, b)
 bind2 :: (JsVal a, JsVal b) => JsFunction -> a -> b -> IO JsFunction
+
+-- |
+-- Partially apply the given function, or equivalently
+--
+-- > f.bind(null, a, b, c)
 bind3 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> c -> IO JsFunction
+
+-- |
+-- Partially apply the given function, or equivalently
+--
+-- > f.bind(null, a, b, c, d)
 bind4 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> d -> IO JsFunction
 
 bind  f = bindWith1 f null
@@ -668,11 +723,40 @@ bind2 f = bindWith2 f null
 bind3 f = bindWith3 f null
 bind4 f = bindWith4 f null
 
+-- |
+-- Partially apply the given function with the given @this@ value, or equivalently
+--
+-- > f.bind(thisArg)
 bindWith :: JsFunction -> JsObject -> IO JsFunction
+
+-- |
+-- Partially apply the given function with the given @this@ value, or equivalently
+--
+-- > f.bind(thisArg, a)
 bindWith1 :: JsVal a => JsFunction -> JsObject -> a -> IO JsFunction
+
+-- |
+-- Partially apply the given function with the given @this@ value, or equivalently
+--
+-- > f.bind(thisArg, a, b)
 bindWith2 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> b -> IO JsFunction
+
+-- |
+-- Partially apply the given function with the given @this@ value, or equivalently
+--
+-- > f.bind(thisArg, a, b, c)
 bindWith3 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> c -> IO JsFunction
+
+-- |
+-- Partially apply the given function with the given @this@ value, or equivalently
+--
+-- > f.bind(thisArg, a, b, c, d)
 bindWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> d -> IO JsFunction
+
+-- |
+-- Partially apply the given function with the given @this@ value, or equivalently
+--
+-- > f.bind(thisArg, a, b, c, d, e)
 bindWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> e -> IO JsFunction
 
 bindWith f t = do
@@ -722,32 +806,62 @@ infixl 9 %%!!
 (%%!)  = invoke1
 (%%!!) = invoke2
 
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n()
 invoke :: JsVal a => JsObject -> JsName -> IO a
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a)
+invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a, b)
+invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a, b, c)
+invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> JsName -> a -> b -> c -> IO d
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a, b, c, d)
+invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> JsName -> a -> b -> c -> d -> IO e
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a, b, c, d, e)
+invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
+
 invoke o n = do
     f <- get o n
     callWith f o
 
-invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
 invoke1 o n a = do
     f <- get o n
     callWith1 f o a
 
-invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
 invoke2 o n a b = do
     f <- get o n
     callWith2 f o a b
 
-invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> JsName -> a -> b -> c -> IO d
 invoke3 o n a b c = do
     f <- get o n
     callWith3 f o a b c
 
-invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> JsName -> a -> b -> c -> d -> IO e
 invoke4 o n a b c d = do
     f <- get o n
     callWith4 f o a b c d
 
-invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
 invoke5 o n a b c d e = do
     f <- get o n
     callWith5 f o a b c d e
