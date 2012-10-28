@@ -57,10 +57,10 @@ testPrim = do
     printRepr $ (123::Int)
     printRepr $ ("foo"::JsString)
 
-    jf <- eval "(function(x){return x+x;})"
+    jf <- eval "(function(x){return x+x;})" :: IO JsFunction
     printRepr $ jf
 
-    jo <- eval "({foo:123,bar:function(x){return x}})"
+    jo <- eval "({foo:123,bar:function(x){return x}})" :: IO JsObject
     printRepr $ jo
 
     let hf = ((\x -> x + x) :: Int -> Int)

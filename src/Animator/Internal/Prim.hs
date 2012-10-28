@@ -14,6 +14,8 @@
 
 module Animator.Internal.Prim (
         JsVal(..),
+        eval,
+
         JsRef(..),
         JsName,
         JsProp(..),
@@ -91,18 +93,10 @@ module Animator.Internal.Prim (
         stringify,
 
         -- ** Utility
-        windowAlert,
+        alert,
         windowConsoleLog,
-        windowDocumentWrite,
-        
+        windowDocumentWrite,        
         printRepr,
-        eval,
-        
-
-        -- getJsString,
-        -- getJsObject,                
-        
-
   ) where
 
 import Prelude hiding (reverse, null)
@@ -111,7 +105,6 @@ import Data.Int
 import Data.Word
 import Data.String (IsString(..))
 import Data.Semigroup
-import Control.Applicative ((<$>))
 import Unsafe.Coerce
 
 #ifdef __HASTE__
@@ -124,8 +117,6 @@ import Foreign.Ptr
 
 #ifdef __HASTE__
 type Any#     = H.JSAny              -- Opaque reference
-type Fun#     = (Any# -> IO Any#)    -- Opaque unary function
-type FunPtr#  = H.Ptr Fun#           -- Unboxed JS string
 type String#  = H.JSString
 type JSON#    = HJ.JSON
 toJsString#   = H.toJSStr
@@ -133,8 +124,6 @@ fromJsString# = H.fromJSStr
 toPtr#        = H.toPtr
 #else
 type Any#     = Ptr Int
-type Fun#     = (Any# -> IO Any#)
-type FunPtr#  = Ptr Fun#
 type String#  = Int
 type JSON#    = Int
 toJsString#   = undefined
@@ -147,52 +136,9 @@ stringType#   = 1
 objectType#   = 2
 functionType# = 3
 
-foreign import ccall "aPrimObj"       object#           :: IO Any#
-foreign import ccall "aPrimGlobal"    global#           :: IO Any#
-foreign import ccall "aPrimNull"      null#             :: Any#
-
-foreign import ccall "aPrimGet"       getInt#           :: Int -> String# -> Any# -> IO Int
-foreign import ccall "aPrimGet"       getWord#          :: Int -> String# -> Any# -> IO Word
-foreign import ccall "aPrimGet"       getInt32#         :: Int -> String# -> Any# -> IO Int32
-foreign import ccall "aPrimGet"       getWord32#        :: Int -> String# -> Any# -> IO Word32
-foreign import ccall "aPrimGet"       getFloat#         :: Int -> String# -> Any# -> IO Float
-foreign import ccall "aPrimGet"       getDouble#        :: Int -> String# -> Any# -> IO Double
-foreign import ccall "aPrimGet"       getString#        :: Int -> String# -> Any# -> IO String#
-foreign import ccall "aPrimGet"       getAny#           :: Int -> String# -> Any# -> IO Any#
-
-foreign import ccall "aPrimSet"       setInt#           :: Int -> String# -> Any# -> Int     -> IO ()
-foreign import ccall "aPrimSet"       setWord#          :: Int -> String# -> Any# -> Word    -> IO ()
-foreign import ccall "aPrimSet"       setInt32#         :: Int -> String# -> Any# -> Int32   -> IO ()
-foreign import ccall "aPrimSet"       setWord32#        :: Int -> String# -> Any# -> Word32  -> IO ()
-foreign import ccall "aPrimSet"       setFloat#         :: Int -> String# -> Any# -> Float   -> IO ()
-foreign import ccall "aPrimSet"       setDouble#        :: Int -> String# -> Any# -> Double  -> IO ()
-foreign import ccall "aPrimSet"       setString#        :: Int -> String# -> Any# -> String# -> IO ()
-foreign import ccall "aPrimSet"       setAny#           :: Int -> String# -> Any# -> Any#    -> IO ()
-
-foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 foreign import ccall "aPrimAdd"       concatString#     :: String# -> String# -> String#
 foreign import ccall "aPrimTypeOf"    typeOf#           :: Any# -> String#
-
-foreign import ccall "aPrimWrite"     documentWrite#    :: String# -> IO ()
-foreign import ccall "aPrimLog"       consoleLog#       :: String# -> IO ()
-foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
-
 foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
-
-foreign import ccall "aPrimLog"       printRepr#        :: Int -> IO ()
-
-printRepr :: a -> IO ()
-printRepr = printRepr# . unsafeCoerce . toPtr#
-{-# NOINLINE printRepr #-}
-
-eval :: JsString -> IO a
-eval = unsafeCoerce . eval# . getJsString
-
-
-
-
-
-
 
 
 -- |
@@ -203,6 +149,13 @@ class JsVal a where
     --
     -- > typeof x
     typeOf :: JsVal a => a -> String
+
+-- |
+-- Evaluate the given string as JavaScript, or equivalently
+--
+-- > eval(s) 
+eval :: JsVal a => JsString -> IO a
+eval = unsafeCoerce . eval# . getJsString
 
 instance JsVal () where
     typeOf () = "object"
@@ -279,38 +232,44 @@ foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
 call :: JsVal b => JsFunction -> JsObject -> IO b
-call f t = 
-    q <$> call# (getJsFunction f) (p t)
+call f t = do
+    r <- call# (getJsFunction f) (p t)
+    return $ q r
     where 
         (p,q) = callPrePost
 
 call1 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> IO c
-call1 f t a = 
-    q <$> call1# (getJsFunction f) (p t) (p a)
+call1 f t a = do
+    r <- call1# (getJsFunction f) (p t) (p a)
+    return $ q r
     where 
         (p,q) = callPrePost
 
 call2 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> IO d
-call2 f t a b = 
-    q <$> call2# (getJsFunction f) (p t) (p a) (p b)
+call2 f t a b = do
+    r <- call2# (getJsFunction f) (p t) (p a) (p b)
+    return $ q r
     where 
         (p,q) = callPrePost
 
 call3 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> IO e
-call3 f t a b c = 
-    q <$> call3# (getJsFunction f) (p t) (p a) (p b) (p c)
+call3 f t a b c = do
+    r <- call3# (getJsFunction f) (p t) (p a) (p b) (p c)
+    return $ q r
     where 
         (p,q) = callPrePost
 
 call4 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> IO f
-call4 f t a b c d = 
-    q <$> call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
+call4 f t a b c d = do
+    r <- call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
+    return $ q r
     where 
         (p,q) = callPrePost
 
 call5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f, JsVal g) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO g
-call5 f t a b c d e = 
-    q <$> call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
+call5 f t a b c d e = do
+    r <- call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
+    return $ q r
     where 
         (p,q) = callPrePost
         
@@ -322,38 +281,44 @@ foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any
 foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
 bind :: JsFunction -> JsObject -> IO JsFunction
-bind f t = 
-    q <$> bind# (getJsFunction f) (p t)
+bind f t = do
+    r <- bind# (getJsFunction f) (p t)
+    return $ q r
     where 
         (p,q) = bindPrePost
 
 bind1 :: (JsVal b) => JsFunction -> JsObject -> b -> IO JsFunction
-bind1 f t a = 
-    q <$> bind1# (getJsFunction f) (p t) (p a)
+bind1 f t a = do
+    r <- bind1# (getJsFunction f) (p t) (p a)
+    return $ q r
     where 
         (p,q) = bindPrePost
 
 bind2 :: (JsVal b, JsVal c) => JsFunction -> JsObject -> b -> c -> IO JsFunction
-bind2 f t a b = 
-    q <$> bind2# (getJsFunction f) (p t) (p a) (p b)
+bind2 f t a b = do
+    r <- bind2# (getJsFunction f) (p t) (p a) (p b)
+    return $ q r
     where 
         (p,q) = bindPrePost
 
 bind3 :: (JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> b -> c -> d -> IO JsFunction
-bind3 f t a b c = 
-    q <$> bind3# (getJsFunction f) (p t) (p a) (p b) (p c)
+bind3 f t a b c = do
+    r <- bind3# (getJsFunction f) (p t) (p a) (p b) (p c)
+    return $ q r
     where 
         (p,q) = bindPrePost
 
 bind4 :: (JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> b -> c -> d -> e -> IO JsFunction
-bind4 f t a b c d = 
-    q <$> bind4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
+bind4 f t a b c d = do
+    r <- bind4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
+    return $ q r
     where 
         (p,q) = bindPrePost
 
 bind5 :: (JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> b -> c -> d -> e -> f -> IO JsFunction
-bind5 f t a b c d e = 
-    q <$> bind5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
+bind5 f t a b c d e = do
+    r <- bind5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
+    return $ q r
     where 
         (p,q) = bindPrePost
 
@@ -521,6 +486,8 @@ arity = error "Not implemented"
 -- Arrays
 -------------------------------------------------------------------------------------
 
+foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
+
 -- |
 -- A JavaScript array.
 newtype JsArray = JsArray { getJsArray :: Any# }
@@ -599,6 +566,10 @@ sliceArray = error "Not implemented"
 -------------------------------------------------------------------------------------
 -- Objects
 -------------------------------------------------------------------------------------
+
+foreign import ccall "aPrimObj"       object#           :: IO Any#
+foreign import ccall "aPrimGlobal"    global#           :: IO Any#
+foreign import ccall "aPrimNull"      null#             :: Any#
 
 -- |
 -- A JavaScript object.
@@ -686,7 +657,23 @@ valueOf :: JsVal a => JsObject -> a
 valueOf = error "Not implemented"
 
 
+foreign import ccall "aPrimGet"       getInt#           :: Int -> String# -> Any# -> IO Int
+foreign import ccall "aPrimGet"       getWord#          :: Int -> String# -> Any# -> IO Word
+foreign import ccall "aPrimGet"       getInt32#         :: Int -> String# -> Any# -> IO Int32
+foreign import ccall "aPrimGet"       getWord32#        :: Int -> String# -> Any# -> IO Word32
+foreign import ccall "aPrimGet"       getFloat#         :: Int -> String# -> Any# -> IO Float
+foreign import ccall "aPrimGet"       getDouble#        :: Int -> String# -> Any# -> IO Double
+foreign import ccall "aPrimGet"       getString#        :: Int -> String# -> Any# -> IO String#
+foreign import ccall "aPrimGet"       getAny#           :: Int -> String# -> Any# -> IO Any#
 
+foreign import ccall "aPrimSet"       setInt#           :: Int -> String# -> Any# -> Int     -> IO ()
+foreign import ccall "aPrimSet"       setWord#          :: Int -> String# -> Any# -> Word    -> IO ()
+foreign import ccall "aPrimSet"       setInt32#         :: Int -> String# -> Any# -> Int32   -> IO ()
+foreign import ccall "aPrimSet"       setWord32#        :: Int -> String# -> Any# -> Word32  -> IO ()
+foreign import ccall "aPrimSet"       setFloat#         :: Int -> String# -> Any# -> Float   -> IO ()
+foreign import ccall "aPrimSet"       setDouble#        :: Int -> String# -> Any# -> Double  -> IO ()
+foreign import ccall "aPrimSet"       setString#        :: Int -> String# -> Any# -> String# -> IO ()
+foreign import ccall "aPrimSet"       setAny#           :: Int -> String# -> Any# -> Any#    -> IO ()
 
 get# i c n x = i (toJsString# n) (getJsObject x) >>= (return . c)
 set# o c n x v = o (toJsString# n) (getJsObject x) (c v)
@@ -750,10 +737,21 @@ stringify = error "Not implemented"
 -- Utility
 -------------------------------------------------------------------------------------
 
+foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
+foreign import ccall "aPrimWrite"     documentWrite#    :: String# -> IO ()
+foreign import ccall "aPrimLog"       consoleLog#       :: String# -> IO ()
+foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
+
 -- |
 -- Displays a modal window with the given text.
-windowAlert :: String -> IO ()
-windowAlert str  = alert# (toJsString# $ str)
+printRepr :: a -> IO ()
+printRepr = printRepr# . unsafeCoerce . toPtr#
+{-# NOINLINE printRepr #-}
+
+-- |
+-- Displays a modal window with the given text.
+alert :: String -> IO ()
+alert str  = alert# (toJsString# $ str)
 
 -- |
 -- Posts a line to the web console.
