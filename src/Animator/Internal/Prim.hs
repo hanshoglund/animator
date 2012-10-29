@@ -1,7 +1,6 @@
 
-{-# LANGUAGE DisambiguateRecordFields, TypeFamilies, MagicHash,
+{-# LANGUAGE MagicHash, CPP, ForeignFunctionInterface, OverloadedStrings, 
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
-    TypeSynonymInstances, FlexibleInstances, ForeignFunctionInterface, OverloadedStrings, CPP,
     NoMonomorphismRestriction #-}
 
 -------------------------------------------------------------------------------------
@@ -515,11 +514,11 @@ foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 --
 newtype JsArray = JsArray { getJsArray :: Any# }
 
-instance Semigroup JsArray where
-    (JsArray x) <> (JsArray y) = JsArray $ concatArray# x y
-instance Monoid JsArray where
-    mappend = (<>)
-    mempty = error "Not implemented"
+-- instance Semigroup JsArray where
+--     (JsArray x) <> (JsArray y) = JsArray $ concatArray# x y
+-- instance Monoid JsArray where
+--     mappend = (<>)
+--     mempty  = array
 
 -- Applicative
 -- Monad

@@ -1,11 +1,7 @@
-{-# LANGUAGE
-    NoMonomorphismRestriction,
-    TypeFamilies,
-    ForeignFunctionInterface,
-    OverloadedStrings,
-    BangPatterns,
-    MagicHash,
-    UnboxedTuples #-}
+
+{-# LANGUAGE MagicHash, CPP, ForeignFunctionInterface, OverloadedStrings, 
+    StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
+    NoMonomorphismRestriction #-}
 
 module Main where
 
