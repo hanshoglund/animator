@@ -52,7 +52,15 @@ Polymorhism requirements:
 
 main = do
     testJQuery
-    testLift
+    -- testLift  
+    testLookup
+
+testLookup = do
+    x <- object
+    set x "foo" (1::Int)
+    y <- create x
+    printRepr x
+    printRepr y
 
 withGlobal :: (JsObject -> IO a) -> IO a
 withGlobal f = global >>= f
@@ -76,7 +84,7 @@ testLift = do
     printRepr cs
     printRepr ds
     
-    setTimeout 1000 $ printLog "Hello from Haskell!"
+    setTimeout 1000 $ printLog "Hello to Jonas!"
 
 
 testPrim = do    

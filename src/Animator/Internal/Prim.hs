@@ -11,7 +11,7 @@
 -- It provides access to JavaScript types including strings, arrays, objects and functions.
 --
 -- Objects can be inspected, created and updated at runtime. JavaScript functions can be called,
--- partially applied or passed to other JavaScripf functions. Haskell functions can be converted
+-- partially applied or passed to other JavaScript functions. Haskell functions can be converted
 -- to JavaScript functions for use as callbacks in the host environment.
 --
 
@@ -25,7 +25,6 @@ module Animator.Internal.Prim (
         -- ** Classes
         -- *** All types
         JsVal(..),
-        eval,
 
         -- *** Reference types
         JsRef(..),
@@ -34,6 +33,7 @@ module Animator.Internal.Prim (
         -- *** Property assignment
         JsProp(..),
         (%%),
+        lookup,
 
         -- ** Objects
         JsObject,
@@ -67,6 +67,7 @@ module Animator.Internal.Prim (
 
         -- *** Creation and access
         array,
+        length,
         push,
         pop,
         shift,
@@ -78,7 +79,7 @@ module Animator.Internal.Prim (
         -- splice,
         join,
         sliceArray,
-                        
+
 
 
         -- ** Strings
@@ -129,7 +130,7 @@ module Animator.Internal.Prim (
         callWith,
         callWith1,
         callWith2,
-        
+
         bindWith,
         bindWith1,
         bindWith2,
@@ -147,19 +148,28 @@ module Animator.Internal.Prim (
         stringify,
 
         -- ** Utility
+        -- *** Eval
+        eval,
+
+        -- *** Print
         alert,
         printLog,
-        printDoc,        
+        printDoc,
         printRepr,
+
+        -- *** Debug
+        debug
   ) where
 
-import Prelude hiding (reverse, null)
+import Prelude hiding (reverse, null, length, lookup)
 
 import Data.Int
 import Data.Word
 import Data.String (IsString(..))
-import Data.Semigroup
+import Data.Semigroup  
+
 import Unsafe.Coerce
+import System.IO.Unsafe
 
 #ifdef __HASTE__
 import qualified Haste.Prim as H
@@ -195,24 +205,17 @@ functionType# = 3
 
 
 foreign import ccall "aPrimTypeOf"    typeOf#           :: Any# -> String#
-foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
-
 
 -- |
--- Class of JavaScript types. 
+-- Class of JavaScript types.
 class JsVal a where
-    
     -- | Returns a string describing a type of the given value, or equivalently
     --
     -- > typeof x
+    --
+    -- /ECMA-262 11.4.3/
     typeOf :: JsVal a => a -> String
-
--- |
--- Evaluate the given string as JavaScript, or equivalently
---
--- > eval(s) 
-eval :: JsVal a => JsString -> IO a
-eval = unsafeCoerce . eval# . getJsString
+    typeOf = fromJsString# . typeOf# . unsafeCoerce
 
 instance JsVal () where
     typeOf () = "object"
@@ -232,22 +235,23 @@ instance JsVal Double where
 instance JsVal JsString where
     typeOf _ = "string"
 instance JsVal JsObject where
-    typeOf _ = "object" -- TODO error if it is a function
+    -- typeOf = default
 instance JsVal JsArray where
     typeOf _ = "object"
 instance JsVal JsFunction where
     typeOf _ = "function"
 -- instance JsVal (Ptr a) where -- TODO
 --     typeOf _ = "object"
-    
+
+
 -- |
 -- Class of JavaScript reference types.
 class JsVal a => JsRef a where
     toObject :: a -> JsObject
 instance JsRef JsFunction where
-    toObject = unsafeCoerce    
+    toObject = unsafeCoerce
 instance JsRef JsArray where
-    toObject = unsafeCoerce    
+    toObject = unsafeCoerce
 instance JsRef JsObject where
     toObject = id
 
@@ -279,19 +283,45 @@ class JsVal a => JsProp a where
     update :: JsObject -> JsName -> (a -> a) -> IO ()
     update n o f = get n o >>= set n o . f
 
+lookup :: JsProp a => JsObject -> [JsName] -> IO a
+lookup o [] = error "lookup: Empty list"
+lookup o (x:xs) = do
+    o' <- lookup' o xs
+    get o' x
 
+lookup' :: JsObject -> [JsName] -> IO JsObject
+lookup' o [] = return $ o
+lookup' o (x:xs) = do
+    o' <- lookup' o xs
+    get o' x 
+
+lookupGlobal :: JsProp a => [JsName] -> IO a
+lookupGlobal xs = do
+    g <- global
+    lookup g xs
 
 -------------------------------------------------------------------------------------
 -- Objects
 -------------------------------------------------------------------------------------
 
-foreign import ccall "aPrimObj"       object#           :: IO Any#
-foreign import ccall "aPrimGlobal"    global#           :: IO Any#
-foreign import ccall "aPrimNull"      null#             :: Any#
+foreign import ccall "aPrimNull"       null#             :: Any#
+foreign import ccall "aPrimObj"        object#           :: IO Any#
+foreign import ccall "aPrimGlobal"     global#           :: IO Any#
+foreign import ccall "aPrimInstanceOf" instanceOf#       :: Any# -> Any# -> Int
 
 -- |
 -- A JavaScript object.
+--
+-- This type is disjoint from ordinary Haskell data types, which have a compiler-specific
+-- internal representation. All JavaScript reference types can be converted to JsObject
+-- using the 'JsRef' instancce.
+--
+--  /ECMA-262 8.6/
+--
 newtype JsObject = JsObject { getJsObject :: Any# }
+
+_Object           = unsafePerformIO $ lookupGlobal ["Object"]
+_Object_prototype = unsafePerformIO $ lookupGlobal ["Object", "prototype"]
 
 -- |
 -- Creates a new JavaScript object, or equivalently
@@ -305,14 +335,14 @@ object = object# >>= (return . JsObject)
 --
 -- > Object.create(x)
 create :: JsObject -> IO JsObject
-create x = error "Not implemented"
+create = _Object %. "create"
 
 -- |
 -- Returns the JavaScript null object, or equivalently
 --
 -- > null
 null :: JsObject
-null = JsObject $ null# 
+null = JsObject $ null#
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -326,7 +356,7 @@ global = global# >>= (return . JsObject)
 --
 -- > x instanceof y
 isInstanceOf :: JsObject -> JsObject -> Bool
-isInstanceOf = error "Not implemented"
+(JsObject x) `isInstanceOf` (JsObject y) = (/= 0) $ instanceOf# x y
 
 -- |
 -- Returns
@@ -342,15 +372,14 @@ isPrototypeOf = error "Not implemented"
 constructor :: JsObject -> JsFunction
 constructor = error "Not implemented"
 
-
--- | 
+-- |
 -- Deletes the property @n@ form object @o@, or equivalently
 --
 -- > delete o.n
 delete :: JsObject -> JsName -> IO ()
 delete = error "Not implemented"
 
--- | 
+-- |
 -- Returns
 --
 -- > o.n !== undefined
@@ -453,7 +482,7 @@ instance JsProp JsFunction where
 -- instance JsProp String where
 --     get = get# (getString# stringType#) fromJsString#
 --     set = set# (setString# stringType#) toJsString#
-                                                         
+
 
 
 -------------------------------------------------------------------------------------
@@ -464,6 +493,8 @@ foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 
 -- |
 -- A JavaScript array.
+--
+-- TODO doc
 newtype JsArray = JsArray { getJsArray :: Any# }
 
 instance Semigroup JsArray where
@@ -479,51 +510,58 @@ instance Monoid JsArray where
 -- Foldable
 
 -- |
--- Returns 
+-- Returns
 --
 -- > []
 array :: IO JsArray
 array = error "Not implemented"
 
 -- |
+-- Returns the length of the given array, or equivalently
+--
+-- > xs.length
+length :: JsArray -> Int
+length = error "Not implemented"
+
+-- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > Array.prototype.pop.call(x)
+-- > xs.pop()
 pop :: JsVal a => JsArray -> IO a
 pop = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > Array.prototype.push.call(x, v)
+-- > xs.push(x)
 push :: JsVal a => a -> JsArray -> IO JsArray
 push = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > Array.prototype.shift.call(x)
+-- > xs.shift()
 shift :: JsVal a => JsArray -> IO a
 shift = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > Array.prototype.unshift.call(x, v)
+-- > xs.shift(x)
 unshift :: JsVal a => a -> JsArray -> IO JsArray
 unshift = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > Array.prototype.reverse.call(x)
+-- > xs.reverse()
 reverse :: JsArray -> IO JsArray
 reverse = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > Array.prototype.sort.call(x)
+-- > xs.sort()
 sort :: JsArray -> IO JsArray
 sort = error "Not implemented"
 
@@ -551,6 +589,18 @@ sliceArray = error "Not implemented"
 
 -- |
 -- A JavaScript string.
+--
+-- This is an immutable sequence of Unicode characters using a representation specific
+-- to the JavaScript engine. In many cases these will be much more efficent than Haskell
+-- strings, on the other hand the full range of 'Data.Char' and 'Data.List' functions are
+-- not available. Allthough JsString is normally used for text, any unsigned 16-bit value
+-- can be stored using 'charAt' and 'fromCharCode'.
+--
+-- There is no 'Char' type in JavaScript, so functions dealing with single characters
+-- return singleton strings.
+--
+-- /ECMA-262 8.4/
+--
 newtype JsString = JsString { getJsString :: String# }
     deriving (Eq, Ord, Show)
 
@@ -634,7 +684,13 @@ toUpper = error "Not implemented"
 foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 
 -- |
--- A JavaScript function.
+-- A JavaScript function, i.e. a callable object.
+--
+-- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
+-- internal representation. To convert between the two, use 'call', 'lift' or 'liftIO'.
+--
+-- /ECMA-262 9.11/
+--
 newtype JsFunction = JsFunction { getJsFunction :: Any# }
 
 -- |
@@ -711,39 +767,39 @@ callWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunctio
 callWith f t = do
     r <- call# (getJsFunction f) (p t)
     return $ q r
-    where 
+    where
         (p,q) = callPrePost
 
 callWith1 f t a = do
     r <- call1# (getJsFunction f) (p t) (p a)
     return $ q r
-    where 
+    where
         (p,q) = callPrePost
 
 callWith2 f t a b = do
     r <- call2# (getJsFunction f) (p t) (p a) (p b)
     return $ q r
-    where 
+    where
         (p,q) = callPrePost
 
 callWith3 f t a b c = do
     r <- call3# (getJsFunction f) (p t) (p a) (p b) (p c)
     return $ q r
-    where 
+    where
         (p,q) = callPrePost
 
 callWith4 f t a b c d = do
     r <- call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
     return $ q r
-    where 
+    where
         (p,q) = callPrePost
 
 callWith5 f t a b c d e = do
     r <- call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
     return $ q r
-    where 
+    where
         (p,q) = callPrePost
-        
+
 foreign import ccall "aPrimBind0" bind#  :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind1" bind1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind2" bind2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
@@ -819,37 +875,37 @@ bindWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsOb
 bindWith f t = do
     r <- bind# (getJsFunction f) (p t)
     return $ q r
-    where 
+    where
         (p,q) = bindPrePost
 
 bindWith1 f t a = do
     r <- bind1# (getJsFunction f) (p t) (p a)
     return $ q r
-    where 
+    where
         (p,q) = bindPrePost
 
 bindWith2 f t a b = do
     r <- bind2# (getJsFunction f) (p t) (p a) (p b)
     return $ q r
-    where 
+    where
         (p,q) = bindPrePost
 
 bindWith3 f t a b c = do
     r <- bind3# (getJsFunction f) (p t) (p a) (p b) (p c)
     return $ q r
-    where 
+    where
         (p,q) = bindPrePost
 
 bindWith4 f t a b c d = do
     r <- bind4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
     return $ q r
-    where 
+    where
         (p,q) = bindPrePost
 
 bindWith5 f t a b c d e = do
     r <- bind5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
     return $ q r
-    where 
+    where
         (p,q) = bindPrePost
 
 callPrePost = (unsafeCoerce, unsafeCoerce)
@@ -938,21 +994,21 @@ invoke4 o n a b c d = do
 invoke5 o n a b c d e = do
     f <- get o n
     callWith5 f o a b c d e
-                          
+
 -- -- |
 -- -- Partially apply the given function, or equivalently
 -- --
 -- -- > Function.prototype.bind.call(f, x, ... as)
 -- bind :: JsVal a => JsFunction -> a -> [a] -> JsFunction
 -- bind = error "Not implemented"
--- 
+--
 -- -- |
 -- -- Apply the given function, or equivalently
 -- --
 -- -- > Function.prototype.apply.call(f, x, as)
 -- apply :: JsVal a => JsFunction -> a -> [a] -> a
 -- apply = error "Not implemented"
--- 
+--
 -- -- |
 -- -- Invokes the given function as a constructor, or equivalently
 -- --
@@ -998,7 +1054,7 @@ lift2 = JsFunction . liftPure2# . unsafeCoerce . toPtr#
 liftIO  = JsFunction . lift#  . unsafeCoerce . toPtr#
 liftIO1 = JsFunction . lift1# . unsafeCoerce . toPtr#
 liftIO2 = JsFunction . lift2# . unsafeCoerce . toPtr#
-       
+
 
 -------------------------------------------------------------------------------------
 -- JSON
@@ -1019,16 +1075,20 @@ stringify = error "Not implemented"
 -- Utility
 -------------------------------------------------------------------------------------
 
-foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
+foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
+
+-- |
+-- Evaluates the given string as JavaScript.
+--
+-- /ECMA-262 15.1.2.1/
+--
+eval :: JsVal a => JsString -> IO a
+eval = unsafeCoerce . eval# . getJsString
+
+
 foreign import ccall "aPrimWrite"     documentWrite#    :: String# -> IO ()
 foreign import ccall "aPrimLog"       consoleLog#       :: String# -> IO ()
 foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
-
--- |
--- Displays a modal window with the given text.
-printRepr :: a -> IO ()
-printRepr = printRepr# . unsafeCoerce . toPtr#
-{-# NOINLINE printRepr #-}
 
 -- |
 -- Displays a modal window with the given text.
@@ -1045,4 +1105,20 @@ printLog str = consoleLog# (toJsString# $ str)
 printDoc :: String -> IO ()
 printDoc str = documentWrite# (toJsString# $ str)
 
+-- |
+-- Activates the JavaScript debugger.
+--
+-- /ECMA-262 12.15/
+debug :: IO ()
+debug = eval "debugger"
+{-# NOINLINE debug #-}
+
+
+foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
+
+-- |
+-- Prints the JavaScript representation of the given Haskell value.
+printRepr :: a -> IO ()
+printRepr = printRepr# . unsafeCoerce . toPtr#
+{-# NOINLINE printRepr #-}
 
