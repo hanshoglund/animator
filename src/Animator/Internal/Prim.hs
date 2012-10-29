@@ -299,8 +299,7 @@ lookup' o (x:xs) = do
     o' <- lookup' o xs
     get o' x 
 
--- _lookupGlobal xs = unsafePerformIO $ global >>= \g -> lookup g xs
-_lookupGlobal xs = undefined
+_lookupGlobal xs = unsafePerformIO $ global >>= \g -> lookup g xs
 
 _Object             = _lookupGlobal ["Object"]
 _Object_prototype   = _lookupGlobal ["Object", "prototype"]

@@ -51,9 +51,9 @@ Polymorhism requirements:
 -}
 
 main = do
-    -- testJQuery
+    testJQuery
     testLift  
-    -- testLookup
+    testLookup
 
 testLookup = do
     x <- object
