@@ -6,7 +6,7 @@
 -------------------------------------------------------------------------------------
 
 -- |
--- The 'Animator.Primitive' modules provide a dynamic interface to the JavaScript host environment.
+-- The "Animator.Internal.Prim" modules provide a dynamic interface to the JavaScript host environment.
 -- It provides access to JavaScript types including strings, arrays, objects and functions.
 --
 -- Objects can be inspected, created and updated at runtime. JavaScript functions can be called,
@@ -21,7 +21,8 @@
 
 module Animator.Internal.Prim (
 
-        -- ** Classes
+        -- ------------------------------------------------------------
+        -- ** JavaScript types
         -- *** All types
         JsVal(..),
 
@@ -29,11 +30,14 @@ module Animator.Internal.Prim (
         JsRef(..),
         JsName,
 
-        -- *** Property assignment
+        -- *** Property types
         JsProp(..),
-        (%%),
         lookup,
 
+        --- **** Infix version
+        (%%),
+
+        -- ------------------------------------------------------------
         -- ** Objects
         JsObject,
 
@@ -59,8 +63,7 @@ module Animator.Internal.Prim (
         toLocaleString,
         valueOf,
 
-
-
+        -- ------------------------------------------------------------
         -- ** Arrays
         JsArray,
 
@@ -79,8 +82,7 @@ module Animator.Internal.Prim (
         join,
         sliceArray,
 
-
-
+        -- ------------------------------------------------------------
         -- ** Strings
         JsString,
 
@@ -102,6 +104,7 @@ module Animator.Internal.Prim (
         toLower,
         toUpper,
 
+        -- ------------------------------------------------------------
         -- ** Functions
         JsFunction,
 
@@ -118,21 +121,15 @@ module Animator.Internal.Prim (
         bind2,
 
         -- *** Lifting Haskell functions
-        liftPure,
-        liftPure1,
-        liftPure2,
         lift,
         lift1,
         lift2,
+        liftPure,
+        liftPure1,
+        liftPure2,
 
-        -- *** With explicit this argument
-        -- callWith,
-        -- callWith1,
-        -- callWith2,
-
+        -- *** With explicit 'this' argument
         bindWith,
-        -- bindWith1,
-        -- bindWith2,
 
         -- *** Infix versions
         (%),
@@ -141,11 +138,13 @@ module Animator.Internal.Prim (
         -- apply,
         -- new,
 
+        -- ------------------------------------------------------------
         -- ** JSON
         JSON,
         parse,
         stringify,
 
+        -- ------------------------------------------------------------
         -- ** Utility
         -- *** Eval
         eval,
@@ -171,35 +170,34 @@ import Unsafe.Coerce
 import System.IO.Unsafe
 
 #ifdef __HASTE__
+
 import qualified Haste.Prim as H
 import qualified Haste.JSON as HJ
-#else
-import Foreign.Ptr
+import Haste.Prim(Ptr(..))
+
 #endif __HASTE__
 
-
+import Foreign.Ptr(Ptr)
 
 #ifdef __HASTE__
+
 type Any#     = H.JSAny              -- Opaque reference
 type String#  = H.JSString
 type JSON#    = HJ.JSON
 toJsString#   = H.toJSStr
 fromJsString# = H.fromJSStr
 toPtr#        = H.toPtr
+
 #else
+
 type Any#     = Ptr Int
 type String#  = Int
 type JSON#    = Int
 toJsString#   = undefined
 fromJsString# = undefined
 toPtr#        = undefined
+
 #endif __HASTE__
-
-numberType#   = 0
-stringType#   = 1
-objectType#   = 2
-functionType# = 3
-
 
 
 
@@ -243,8 +241,8 @@ instance JsVal JsArray where
     typeOf _ = "object"
 instance JsVal JsFunction where
     typeOf _ = "function"
--- instance JsVal (Ptr a) where -- TODO
---     typeOf _ = "object"
+instance JsVal (Ptr a) where -- TODO
+    typeOf _ = "object"
 
 
 -- |
@@ -286,6 +284,12 @@ class JsVal a => JsProp a where
     update :: JsObject -> JsName -> (a -> a) -> IO ()
     update n o f = get n o >>= set n o . f
 
+-- | 
+-- Recursively traverses an object hierarchy using 'get'.
+--   
+-- @lookup o [a1,a2, ... an]@ is equivalent to
+--
+-- > o.a1.a2. ... an
 lookup :: JsProp a => JsObject -> [JsName] -> IO a
 lookup o [] = error "lookup: Empty list"
 lookup o (x:xs) = do
@@ -383,9 +387,6 @@ constructor :: JsObject -> JsFunction
 constructor x = q $ x %% "constructor"
     where q = unsafePerformIO
 
-foreign import ccall "aPrimHas"    has#    :: Int -> Any# -> String# -> IO Int
-foreign import ccall "aPrimDelete" delete# :: Int -> Any# -> String# -> IO Int
-
 -- |
 -- Deletes the property @n@ form object @o@, or equivalently
 --
@@ -436,6 +437,8 @@ toLocaleString x = x % "toLocaleString"
 valueOf :: JsVal a => JsObject -> IO a
 valueOf x = x % "valueOf"
 
+foreign import ccall "aPrimHas"       has#              :: Int -> Any# -> String# -> IO Int
+foreign import ccall "aPrimDelete"    delete#           :: Int -> Any# -> String# -> IO Int
 
 foreign import ccall "aPrimGet"       getInt#           :: Int -> Any# -> String# -> IO Int
 foreign import ccall "aPrimGet"       getWord#          :: Int -> Any# -> String# -> IO Word
@@ -457,6 +460,11 @@ foreign import ccall "aPrimSet"       setAny#           :: Int -> Any# -> String
 
 get# i c x n   = i (getJsObject x) (toJsString# n)  >>= (return . c)
 set# o c x n v = o (getJsObject x) (toJsString# n) (c v)
+
+numberType#    = 0
+stringType#    = 1
+objectType#    = 2
+functionType#  = 3
 
 instance JsProp Int where
     get = get# (getInt# numberType#) id
@@ -490,6 +498,10 @@ instance JsProp JsObject where
     get = get# (getAny# objectType#) JsObject
     set = set# (setAny# objectType#) getJsObject
 
+instance JsProp JsArray where
+    get = get# (getAny# objectType#) JsArray
+    set = set# (setAny# objectType#) getJsArray
+
 instance JsProp JsFunction where
     get = get# (getAny# functionType#) JsFunction
     set = set# (setAny# functionType#) getJsFunction
@@ -510,21 +522,11 @@ foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 -- |
 -- A JavaScript array.
 --
+-- Informally, arrays are objects with dense numeric indices.
+--
 --  /ECMA-262 15.4/
 --
 newtype JsArray = JsArray { getJsArray :: Any# }
-
--- instance Semigroup JsArray where
---     (JsArray x) <> (JsArray y) = JsArray $ concatArray# x y
--- instance Monoid JsArray where
---     mappend = (<>)
---     mempty  = array
-
--- Applicative
--- Monad
--- Functor
--- Semigroup
--- Foldable
 
 -- |
 -- Returns
@@ -543,44 +545,44 @@ length xs = (toObject xs) %% "length"
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > xs.pop()
-pop :: JsVal a => JsArray -> IO a
-pop = error "Not implemented"
+-- > xs.push(x)
+push :: JsProp a => JsArray -> a -> IO JsArray
+push xs = (toObject xs) %. "push"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > xs.push(x)
-push :: JsVal a => a -> JsArray -> IO JsArray
-push = error "Not implemented"
+-- > xs.pop()
+pop :: JsProp a => JsArray -> IO a
+pop xs = (toObject xs) % "pop"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.shift()
-shift :: JsVal a => JsArray -> IO a
-shift = error "Not implemented"
+shift :: JsProp a => JsArray -> IO a
+shift xs = (toObject xs) % "shift"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.shift(x)
-unshift :: JsVal a => a -> JsArray -> IO JsArray
-unshift = error "Not implemented"
+unshift :: JsProp a => JsArray -> a -> IO JsArray
+unshift xs = (toObject xs) %. "unshift"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.reverse()
 reverse :: JsArray -> IO JsArray
-reverse = error "Not implemented"
+reverse xs = (toObject xs) % "reverse"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.sort()
 sort :: JsArray -> IO JsArray
-sort = error "Not implemented"
+sort xs = (toObject xs) % "sort"
 
 -- splice
 
@@ -588,15 +590,15 @@ sort = error "Not implemented"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.join.call(x, s)
-join :: JsArray -> JsArray -> IO JsString
-join = error "Not implemented"
+join :: JsArray -> JsString -> IO JsString
+join xs = (toObject xs) %. "join"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.slice.call(x, a, b)
-sliceArray :: Int -> Int -> JsArray -> IO JsArray
-sliceArray = error "Not implemented"
+sliceArray :: JsArray -> Int -> Int -> IO JsArray
+sliceArray xs = (toObject xs) %.. "slice"
 
 
 
