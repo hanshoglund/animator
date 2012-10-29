@@ -9,60 +9,60 @@
 
 // TODO hide
 function aInternalCheck(type, value, error) {
-    switch(type)                                   
-    {                                              
-        case 0:                                    
-            if (typeof value !== "number") throw error;    
-            break;                                 
-        case 1:                                    
-            if (typeof value !== "string") throw error;    
-            break;                                 
-        case 2:                                    
-            if (typeof type !== "object") throw error;    
-            break;                                 
-    }                                
-}              
+    switch(type)
+    {
+        case 0:
+            if (typeof value !== "number") throw error;
+            break;
+        case 1:
+            if (typeof value !== "string") throw error;
+            break;
+        case 2:
+            if (typeof type !== "object") throw error;
+            break;
+    }
+}
 
 function aPrimGlobal(_) {
-    return [1, _, 
+    return [1, _,
         window
     ];
 }
 function aPrimObj(_) {
-    return [1, _, 
+    return [1, _,
         {}
     ];
 }
 function aPrimNull(_) {
-    return [1, _, 
+    return [1, _,
         null
     ];
 }
 function aPrimAdd(a, b, _) {
-    return [1, _, 
+    return [1, _,
         (a + b)
     ]
 }
 function aPrimTypeOf(a, _) {
-    return [1, _, 
+    return [1, _,
         (typeof a)
     ]
 }
 function aPrimInstanceOf(a, b, _) {
-    return [1, _, 
+    return [1, _,
         (a instanceof b)
     ]
 }
 function aPrimEval(s, _) {
-    return [1, _, 
+    return [1, _,
         eval(s)
     ];
-}   
+}
 
 
 function aPrimGet(type, obj, name, _) {
     // aInternalCheck(type, obj[name], "Animator: Type error");
-    return [1, _, 
+    return [1, _,
         obj[name]
     ];
 }
@@ -78,77 +78,92 @@ function aPrimDelete(type, obj, name, _) {
 
 
 function aPrimCall0(f, t, _) {
-    return [1, _, 
+    return [1, _,
         // f()
         f.call(t)
     ];
-}   
+}
 function aPrimCall1(f, t, a, _) {
-    return [1, _, 
+    return [1, _,
         // f(a)
         f.call(t, a)
     ];
-}   
+}
 function aPrimCall2(f, t, a, b, _) {
-    return [1, _, 
+    return [1, _,
         // f(a, y)
         f.call(t, a, b)
     ];
-}   
+}
 function aPrimCall3(f, t, a, b, c, _) {
-    return [1, _, 
+    return [1, _,
         // f(a, b, c)
         f.call(t, a, b, c)
     ];
-}   
+}
 function aPrimCall4(f, t, a, b, c, d, _) {
-    return [1, _, 
+    return [1, _,
         // f(a, b, c, d)
         f.call(t, a, b, c, d)
     ];
-}   
+}
 function aPrimCall5(f, t, a, b, c, d, e, _) {
-    return [1, _, 
+    return [1, _,
         // f(a, b, c, d, e)
         f.call(t, a, b, c, d, e)
     ];
-}   
+}
 function aPrimBind0(f, t, _) {
-    return [1, _, 
+    return [1, _,
         f.bind(t)
     ];
-}   
+}
 function aPrimBind1(f, t, a, _) {
-    return [1, _, 
+    return [1, _,
         f.bind(t, a)
     ];
-}   
+}
 function aPrimBind2(f, t, a, b, _) {
-    return [1, _, 
+    return [1, _,
         f.bind(t, a, b)
     ];
-}   
+}
 function aPrimBind3(f, t, a, b, c, _) {
-    return [1, _, 
+    return [1, _,
         f.bind(t, a, b, c)
     ];
-}   
+}
 function aPrimBind4(f, t, a, b, c, d, _) {
-    return [1, _, 
+    return [1, _,
         f.bind(t, a, b, c, d)
     ];
-}   
+}
 function aPrimBind5(f, t, a, b, c, d, e, _) {
-    return [1, _, 
+    return [1, _,
         f.bind(t, a, b, c, d, e)
     ];
-}   
+}
 
-function aPrimWrap2(f, _) {
-    return [1, _, 
-        function (x, y) {                
-            var _ = 0;
-            var r = A(f, [[1,x], [1,y], _]);
+function aPrimLift0(f, _) {
+    return [1, _,
+        function () {
+            var r = A(f, [_]);
+            return r[2];
+        }
+    ];
+}
+function aPrimLift1(f, _) {
+    return [1, _,
+        function (a) {
+            var r = A(f, [[1,a], _]);
+            return r[2];
+        }
+    ];
+}
+function aPrimLift2(f, _) {
+    return [1, _,
+        function (a, b) {
+            var r = A(f, [[1,a], [1,b], _]);
             return r[2];
         }
     ];

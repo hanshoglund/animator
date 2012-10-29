@@ -114,9 +114,9 @@ module Animator.Internal.Prim (
         invoke2,
         bind,
         bind2,
-        -- lift,
-        -- lift1,
-        -- lift2,
+        lift,
+        lift1,
+        lift2,
 
         -- ** With object
         callWith,
@@ -923,88 +923,33 @@ invoke5 o n a b c d e = do
 -- new :: JsVal a => JsFunction -> [a] -> IO JsObject
 -- new = error "Not implemented"
 
--- foreign import ccall "aPrimLift0" call#  :: Any# -> Any# -> IO Any#
--- foreign import ccall "aPrimLift1" call1#  :: Any# -> Any# -> Any# -> IO Any#
--- foreign import ccall "aPrimLift2" call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
--- 
--- -- |
--- -- Apply the given function, or equivalently
--- --
--- -- > f()
--- call :: JsVal a => JsFunction -> IO a
--- 
--- -- |
--- -- Apply the given function, or equivalently
--- --
--- -- > f(a)
--- call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
--- 
--- -- |
--- -- Apply the given function, or equivalently
--- --
--- -- > f(a, b)
--- call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
--- 
--- -- |
--- -- Apply the given function, or equivalently
--- --
--- -- > f(a, b, c)
--- call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> IO d
--- 
--- -- |
--- -- Apply the given function, or equivalently
--- --
--- -- > f(a, b, c, d)
--- call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> a -> b -> c -> d -> IO e
--- 
--- call  f = callWith  f null
--- call1 f = callWith1 f null
--- call2 f = callWith2 f null
--- call3 f = callWith3 f null
--- call4 f = callWith4 f null
--- 
--- callWith :: JsVal a => JsFunction -> JsObject -> IO a
--- callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
--- callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
--- callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> IO d
--- callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> IO e
--- callWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> a -> b -> c -> d -> e -> IO f
--- 
--- callWith f t = do
---     r <- call# (getJsFunction f) (p t)
---     return $ q r
---     where 
---         (p,q) = callPrePost
--- 
--- callWith1 f t a = do
---     r <- call1# (getJsFunction f) (p t) (p a)
---     return $ q r
---     where 
---         (p,q) = callPrePost
--- 
--- callWith2 f t a b = do
---     r <- call2# (getJsFunction f) (p t) (p a) (p b)
---     return $ q r
---     where 
---         (p,q) = callPrePost
--- 
--- callWith3 f t a b c = do
---     r <- call3# (getJsFunction f) (p t) (p a) (p b) (p c)
---     return $ q r
---     where 
---         (p,q) = callPrePost
--- 
--- callWith4 f t a b c d = do
---     r <- call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
---     return $ q r
---     where 
---         (p,q) = callPrePost
--- 
--- callWith5 f t a b c d e = do
---     r <- call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
---     return $ q r
---     where 
---         (p,q) = callPrePost       
+foreign import ccall "aPrimLift0" lift#   :: Any# -> Any#
+foreign import ccall "aPrimLift1" lift1#  :: Any# -> Any#
+foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
+
+-- |
+-- Apply the given function, or equivalently
+--
+-- > f()
+lift :: JsVal a => IO a -> JsFunction
+
+-- |
+-- Apply the given function, or equivalently
+--
+-- > f(a)
+lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
+
+-- |
+-- Apply the given function, or equivalently
+--
+-- > f(a, b)
+lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
+
+
+lift  = JsFunction . lift#  . unsafeCoerce . toPtr#
+lift1 = JsFunction . lift1# . unsafeCoerce . toPtr#
+lift2 = JsFunction . lift2# . unsafeCoerce . toPtr#
+       
 
 -------------------------------------------------------------------------------------
 -- JSON
