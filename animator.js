@@ -71,6 +71,12 @@ function aPrimGet(type, obj, name, _) {
         obj[name]
     ];
 }
+function aPrimHas(type, obj, name, _) {
+    // aInternalCheck(type, obj[name], "Animator: Type error");
+    return [1, _,
+        (obj[name] !== undefined)
+    ];
+}
 function aPrimSet(type, obj, name, value, _) {
     // aInternalCheck(type, value, "Animator: Type error");
     obj[name] = value;
@@ -80,7 +86,6 @@ function aPrimDelete(type, obj, name, _) {
     delete obj[name];
     return [1, _];
 }
-
 
 function aPrimCall0(f, t, _) {
     return [1, _,

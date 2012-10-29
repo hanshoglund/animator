@@ -155,9 +155,9 @@ module Animator.Internal.Prim (
         alert,
         printLog,
         printDoc,
-        printRepr,
 
         -- *** Debug
+        printRepr,
         debug
   ) where
 
@@ -299,20 +299,18 @@ lookup' o (x:xs) = do
     o' <- lookup' o xs
     get o' x 
 
-lookupGlobal :: JsProp a => [JsName] -> IO a
-lookupGlobal xs = do
-    g <- global
-    lookup g xs
+-- _lookupGlobal xs = unsafePerformIO $ global >>= \g -> lookup g xs
+_lookupGlobal xs = undefined
 
-_Object             = unsafePerformIO $ lookupGlobal ["Object"]
-_Object_prototype   = unsafePerformIO $ lookupGlobal ["Object", "prototype"]
-_Array              = unsafePerformIO $ lookupGlobal ["Array"]
-_Array_prototype    = unsafePerformIO $ lookupGlobal ["Array", "prototype"]
-_Function           = unsafePerformIO $ lookupGlobal ["Function"]
-_Function_prototype = unsafePerformIO $ lookupGlobal ["Function", "prototype"]
-_String             = unsafePerformIO $ lookupGlobal ["String"]
-_String_prototype   = unsafePerformIO $ lookupGlobal ["String", "prototype"]
-_JSON               = unsafePerformIO $ lookupGlobal ["JSON"]
+_Object             = _lookupGlobal ["Object"]
+_Object_prototype   = _lookupGlobal ["Object", "prototype"]
+_Array              = _lookupGlobal ["Array"]
+_Array_prototype    = _lookupGlobal ["Array", "prototype"]
+_Function           = _lookupGlobal ["Function"]
+_Function_prototype = _lookupGlobal ["Function", "prototype"]
+_String             = _lookupGlobal ["String"]
+_String_prototype   = _lookupGlobal ["String", "prototype"]
+_JSON               = _lookupGlobal ["JSON"]
 
 
 -------------------------------------------------------------------------------------
@@ -336,20 +334,6 @@ foreign import ccall "aPrimInstanceOf" instanceOf#       :: Any# -> Any# -> Int
 newtype JsObject = JsObject { getJsObject :: Any# }
 
 -- |
--- Creates a new JavaScript object, or equivalently
---
--- > {}
-object :: IO JsObject
-object = object# >>= (return . JsObject)
-
--- |
--- Creates a new JavaScript object using the given object as prototype, or equivalently
---
--- > Object.create(x)
-create :: JsObject -> IO JsObject
-create = _Object %. "create"
-
--- |
 -- Returns the JavaScript null object, or equivalently
 --
 -- > null
@@ -357,11 +341,25 @@ null :: JsObject
 null = JsObject $ null#
 
 -- |
+-- Creates a new JavaScript object, or equivalently
+--
+-- > {}
+object :: IO JsObject
+object = object# >>= (return . JsObject)
+
+-- |
 -- Returns the JavaScript global object, or equivalently
 --
 -- > window
 global :: IO JsObject
 global = global# >>= (return . JsObject)
+
+-- |
+-- Creates a new JavaScript object using the given object as prototype, or equivalently
+--
+-- > Object.create(x)
+create :: JsObject -> IO JsObject
+create = _Object %. "create"
 
 -- |
 -- Returns true if the specified object is of the specified object type, or equivalently
@@ -387,19 +385,22 @@ constructor :: JsObject -> JsFunction
 constructor x = q $ x %% "constructor"
     where q = unsafePerformIO
 
+foreign import ccall "aPrimHas"    has#    :: Int -> Any# -> String# -> IO Int
+foreign import ccall "aPrimDelete" delete# :: Int -> Any# -> String# -> IO Int
+
 -- |
 -- Deletes the property @n@ form object @o@, or equivalently
 --
 -- > delete o.n
 delete :: JsObject -> JsName -> IO ()
-delete = error "Not implemented"
+delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
 
 -- |
 -- Returns
 --
 -- > o.n !== undefined
-hasProperty :: JsObject -> JsName -> IO Bool
-hasProperty = error "Not implemented"
+hasProperty :: JsObject -> JsName -> IO Int
+hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
 
 -- |
 -- Returns
@@ -415,30 +416,27 @@ hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
 propertyIsEnumerable :: JsObject -> JsName -> IO Int
 propertyIsEnumerable x n = (x %. "propertyIsEnumerable") (toJsString n)
 
+
 -- |
 -- Returns
 --
 -- > x.toString(y)
-toString :: JsObject -> JsString
-toString x = q $ (x % "toString")
-    where q = unsafePerformIO
-
+toString :: JsObject -> IO JsString
+toString x = x % "toString"
 
 -- |
 -- Returns
 --
 -- > x.toLocaleString(y)
-toLocaleString :: JsObject -> JsString
-toLocaleString x = q $ (x % "toLocaleString")
-    where q = unsafePerformIO
+toLocaleString :: JsObject -> IO JsString
+toLocaleString x = x % "toLocaleString"
 
 -- |
 -- Returns
 --
 -- > x.valueOf(y)
-valueOf :: JsVal a => JsObject -> a
-valueOf x = q $ (x % "valueOf")
-    where q = unsafePerformIO
+valueOf :: JsVal a => JsObject -> IO a
+valueOf x = x % "valueOf"
 
 
 foreign import ccall "aPrimGet"       getInt#           :: Int -> Any# -> String# -> IO Int
@@ -541,9 +539,8 @@ array = array# >>= (return . JsArray)
 -- Returns the length of the given array, or equivalently
 --
 -- > xs.length
-length :: JsArray -> Int
-length xs = q $ (toObject xs) %% "length"
-    where q = unsafePerformIO
+length :: JsArray -> IO Int
+length xs = (toObject xs) %% "length"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
@@ -593,14 +590,14 @@ sort = error "Not implemented"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.join.call(x, s)
-join :: JsString -> JsArray -> JsString
+join :: JsArray -> JsArray -> IO JsString
 join = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.slice.call(x, a, b)
-sliceArray :: Int -> Int -> JsString -> JsString
+sliceArray :: Int -> Int -> JsArray -> IO JsArray
 sliceArray = error "Not implemented"
 
 
@@ -615,8 +612,8 @@ sliceArray = error "Not implemented"
 -- Defined as an immutable sequence of Unicode characters. Allthough this type is
 -- normally used for text, it can be used to store any unsigned 16-bit value using
 -- 'charAt' and 'fromCharCode'. Operations on 'JsString' are normally magnitudes faster
--- than the equivalent on 'String'; on the other hand the full range of 'Data.Char' and
--- 'Data.List' functions are not available.
+-- than the equivalent 'String' operation; on the other hand the full range of
+-- 'Data.Char' and 'Data.List' functions are not available.
 --
 -- There is no 'Char' type in JavaScript, so functions dealing with single characters
 -- return singleton strings.
@@ -1139,7 +1136,11 @@ debug = eval "debugger"
 foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
 
 -- |
--- Prints the JavaScript representation of the given Haskell value.
+-- Prints the JavaScript representation of the given Haskell value.                  
+--
+-- The representation of an arbitrary object is should not be relied upon. However, it
+-- may be useful in certain situations (such as reading JavaScript error messages).
+--
 printRepr :: a -> IO ()
 printRepr = printRepr# . unsafeCoerce . toPtr#
 {-# NOINLINE printRepr #-}
