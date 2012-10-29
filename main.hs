@@ -75,8 +75,8 @@ testLift = do
     printRepr bs
 
     cs <- eval "([5,5,6])" :: IO JsObject
-    let h = pliftJ2 ((+) :: Int -> Int -> Int)
-    ds <- (cs %.. "reduce") h (0::Int) :: IO JsArray
+    let add = pliftJ2 (+)  :: JsFun (Int -> Int -> Int) 
+    ds <- (cs %.. "reduce") add (0::Int) :: IO JsArray
     printRepr cs
     printRepr ds
     
@@ -103,16 +103,17 @@ testPrim = do
 testCall = do    
     g <- global                     
     o <- eval "([1,2,3,4])"
-    foo <- get g "foo"
-    console <- get g "console" :: IO JsObject
+    foo <- g %% "foo"
+    console <- g %% "console" :: IO JsObject
     printRepr $ foo
     res <- call1 foo (o::JsObject)
     printRepr $ (res::JsObject)
 
 
+
 testJQuery = do
     g <- global
-    jq <- get g "jQuery"
+    jq <- g %% "jQuery"
 
     r1 <- call1 jq ("#div1"::JsString)
     r1 % "fadeIn" :: IO ()

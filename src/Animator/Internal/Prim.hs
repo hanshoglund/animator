@@ -147,13 +147,13 @@ module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
         -- ** Utility
-        -- *** Eval
-        eval,
-
         -- *** Print
         alert,
         printLog,
         printDoc,
+
+        -- *** Eval
+        eval,
 
         -- *** Debug
         printRepr,
@@ -260,6 +260,7 @@ instance JsRef JsObject where
 
 -- |
 -- A JavaScript property name.
+--
 type JsName = String
 
 -- |
@@ -267,13 +268,14 @@ type JsName = String
 --
 -- Retrieving a value of the wrong type (for example, reading an 'Int' from a field
 -- containing a string) results in a runtime error.
+--
 class JsVal a => JsProp a where
-    -- | Fetches the value of property @n@ in object @o@, or equivalently
+    -- | Fetch the value of property @n@ in object @o@, or equivalently
     --
     -- > o.n
     get :: JsObject -> JsName -> IO a
 
-    -- | Assigns the property @n@ to @x@ in object @o@, or equivalently
+    -- | Assign the property @n@ to @x@ in object @o@, or equivalently
     --
     -- > o.n = x
     set :: JsObject -> JsName -> a -> IO ()
@@ -286,7 +288,7 @@ class JsVal a => JsProp a where
     update n o f = get n o >>= set n o . f
 
 -- | 
--- Recursively traverses an object hierarchy using 'get'.
+-- Recursively traverse an object hierarchy using 'get'.
 --   
 -- @lookup o [a1,a2, ... an]@ is equivalent to
 --
@@ -337,53 +339,61 @@ foreign import ccall "aPrimInstanceOf" instanceOf#       :: Any# -> Any# -> Int
 newtype JsObject = JsObject { getJsObject :: Any# }
 
 -- |
--- Returns the JavaScript null object, or equivalently
+-- Return the JavaScript null object, or equivalently
 --
 -- > null
+--
 null :: JsObject
 null = JsObject $ null#
 
 -- |
--- Creates a new JavaScript object, or equivalently
+-- Create a new JavaScript object, or equivalently
 --
 -- > {}
+--
 object :: IO JsObject
 object = object# >>= (return . JsObject)
 
 -- |
--- Returns the JavaScript global object, or equivalently
+-- Return the JavaScript global object, or equivalently
 --
 -- > window
+--
 global :: IO JsObject
 global = global# >>= (return . JsObject)
 
 -- |
--- Creates a new JavaScript object using the given object as prototype, or equivalently
+-- Create a new JavaScript object using the given object as prototype, or equivalently
 --
 -- > Object.create(x)
+--
+--
 create :: JsObject -> IO JsObject
 create = _Object %. "create"
 
 -- |
--- Returns true if the specified object is of the specified object type, or equivalently
+-- Return true if object @x@ is an instance created by @y@, or equivalently
 --
 -- > x instanceof y
+--
 isInstanceOf :: JsObject -> JsObject -> Int
 x `isInstanceOf` y = p x `instanceOf#` p y 
     where p = getJsObject
 
 -- |
--- Returns
+-- Return true if object @x@ is the prototype of object @y@, or equivalently
 --
 -- > x.isPrototypeOf(y)
+--
 isPrototypeOf :: JsObject -> JsObject -> Int
 x `isPrototypeOf` y = q $ (x %. "isPrototypeOf") y
     where q = unsafePerformIO
     
 -- |
--- Returns
+-- Returns the constructor of object @x@, or equivalently
 --
 -- > x.constructor
+--
 constructor :: (JsVal a, JsVal b) => JsObject -> JsFun (a -> b) 
 constructor x = q $ x %% "constructor"
     where q = unsafePerformIO
@@ -392,6 +402,7 @@ constructor x = q $ x %% "constructor"
 -- Deletes the property @n@ form object @o@, or equivalently
 --
 -- > delete o.n
+--
 delete :: JsObject -> JsName -> IO ()
 delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
 
@@ -399,6 +410,7 @@ delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
 -- Returns
 --
 -- > o.n !== undefined
+--
 hasProperty :: JsObject -> JsName -> IO Int
 hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
 
@@ -406,6 +418,7 @@ hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
 -- Returns
 --
 -- > x.hasOwnProperty(y)
+--
 hasOwnProperty :: JsObject -> JsName -> IO Int
 hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
 
@@ -413,6 +426,7 @@ hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
 -- Returns
 --
 -- > x.propertyIsEnumerable(y)
+--
 propertyIsEnumerable :: JsObject -> JsName -> IO Int
 propertyIsEnumerable x n = (x %. "propertyIsEnumerable") (toJsString n)
 
@@ -421,6 +435,7 @@ propertyIsEnumerable x n = (x %. "propertyIsEnumerable") (toJsString n)
 -- Returns
 --
 -- > x.toString(y)
+--
 toString :: JsObject -> IO JsString
 toString x = x % "toString"
 
@@ -428,6 +443,7 @@ toString x = x % "toString"
 -- Returns
 --
 -- > x.toLocaleString(y)
+--
 toLocaleString :: JsObject -> IO JsString
 toLocaleString x = x % "toLocaleString"
 
@@ -435,6 +451,7 @@ toLocaleString x = x % "toLocaleString"
 -- Returns
 --
 -- > x.valueOf(y)
+--
 valueOf :: JsVal a => JsObject -> IO a
 valueOf x = x % "valueOf"
 
@@ -507,11 +524,6 @@ instance JsProp (JsFun a) where
     get = get# (getAny# functionType#) JsFun
     set = set# (setAny# functionType#) getJsFun
 
--- instance JsProp String where
---     get = get# (getString# stringType#) fromJsString#
---     set = set# (setString# stringType#) toJsString#
-
-
 
 -------------------------------------------------------------------------------------
 -- Arrays
@@ -533,6 +545,7 @@ newtype JsArray = JsArray { getJsArray :: Any# }
 -- Returns
 --
 -- > []
+--
 array :: IO JsArray
 array = array# >>= (return . JsArray)
 
@@ -540,6 +553,7 @@ array = array# >>= (return . JsArray)
 -- Returns the length of the given array, or equivalently
 --
 -- > xs.length
+--
 length :: JsArray -> IO Int
 length xs = (toObject xs) %% "length"
 
@@ -547,6 +561,7 @@ length xs = (toObject xs) %% "length"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.push(x)
+--
 push :: JsProp a => JsArray -> a -> IO JsArray
 push xs = (toObject xs) %. "push"
 
@@ -554,6 +569,7 @@ push xs = (toObject xs) %. "push"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.pop()
+--
 pop :: JsProp a => JsArray -> IO a
 pop xs = (toObject xs) % "pop"
 
@@ -561,6 +577,7 @@ pop xs = (toObject xs) % "pop"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.shift()
+--
 shift :: JsProp a => JsArray -> IO a
 shift xs = (toObject xs) % "shift"
 
@@ -568,6 +585,7 @@ shift xs = (toObject xs) % "shift"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.shift(x)
+--
 unshift :: JsProp a => JsArray -> a -> IO JsArray
 unshift xs = (toObject xs) %. "unshift"
 
@@ -575,6 +593,7 @@ unshift xs = (toObject xs) %. "unshift"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.reverse()
+--
 reverse :: JsArray -> IO JsArray
 reverse xs = (toObject xs) % "reverse"
 
@@ -582,6 +601,7 @@ reverse xs = (toObject xs) % "reverse"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > xs.sort()
+--
 sort :: JsArray -> IO JsArray
 sort xs = (toObject xs) % "sort"
 
@@ -591,6 +611,7 @@ sort xs = (toObject xs) % "sort"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.join.call(x, s)
+--
 join :: JsArray -> JsString -> IO JsString
 join xs = (toObject xs) %. "join"
 
@@ -598,6 +619,7 @@ join xs = (toObject xs) %. "join"
 -- Returns a string describing a type of the given object, or equivalently
 --
 -- > Array.prototype.slice.call(x, a, b)
+--
 sliceArray :: JsArray -> Int -> Int -> IO JsArray
 sliceArray xs = (toObject xs) %.. "slice"
 
@@ -610,14 +632,12 @@ sliceArray xs = (toObject xs) %.. "slice"
 -- |
 -- A JavaScript string.
 --
--- Defined as an immutable sequence of Unicode characters. Allthough this type is
--- normally used for text, it can be used to store any unsigned 16-bit value using
--- 'charAt' and 'fromCharCode'. Operations on 'JsString' are normally magnitudes faster
--- than the equivalent 'String' operation; on the other hand the full range of
--- 'Data.Char' and 'Data.List' functions are not available.
+-- Informally, a sequence of Unicode characters. Allthough this type is normally used for text, it
+-- can be used to store any unsigned 16-bit value using 'charAt' and 'fromCharCode'. Operations on
+-- 'JsString' are much more efficient than the equivalent 'String' operations.
 --
--- There is no 'Char' type in JavaScript, so functions dealing with single characters
--- return singleton strings.
+-- There is no 'Char' type in JavaScript, so functions dealing with single characters return
+-- singleton strings.
 --
 -- /ECMA-262 8.4, 15.5/
 --
@@ -640,11 +660,13 @@ instance Monoid JsString where
 
 -- |
 -- Convert a Haskell string to a JavaScript string.
+--
 toJsString :: String -> JsString
 toJsString = JsString . toJsString#
 
 -- |
 -- Convert a JavaScript string to a Haskell string.
+--
 fromJsString :: JsString -> String
 fromJsString = fromJsString# . getJsString
 
@@ -652,6 +674,7 @@ fromJsString = fromJsString# . getJsString
 -- Returns the JavaScript global object, or equivalently
 --
 -- > String.prototype.charAt.call(s, i)
+--
 charAt :: Int -> JsString -> JsString
 charAt = error "Not implemented"
 
@@ -659,6 +682,7 @@ charAt = error "Not implemented"
 -- Returns the JavaScript global object, or equivalently
 --
 -- > String.prototype.indexOf.call(s, c)
+--
 indexOf :: JsString -> JsString -> Int
 indexOf = error "Not implemented"
 
@@ -666,6 +690,7 @@ indexOf = error "Not implemented"
 -- Returns the JavaScript global object, or equivalently
 --
 -- > String.prototype.lastIndexOf.call(s, c)
+--
 lastIndexOf :: JsString -> JsString -> Int
 lastIndexOf = error "Not implemented"
 
@@ -678,6 +703,7 @@ lastIndexOf = error "Not implemented"
 -- Returns the JavaScript global object, or equivalently
 --
 -- > String.prototype.slice.call(s, a, b)
+--
 sliceString :: Int -> Int -> JsString -> JsString
 sliceString = error "Not implemented"
 
@@ -685,6 +711,7 @@ sliceString = error "Not implemented"
 -- Returns the JavaScript global object, or equivalently
 --
 -- > String.prototype.toLowerCase.call(s)
+--
 toLower :: JsString -> JsString
 toLower = error "Not implemented"
 
@@ -692,6 +719,7 @@ toLower = error "Not implemented"
 -- Returns the JavaScript global object, or equivalently
 --
 -- > String.prototype.toUpperCase.call(s)
+--
 toUpper :: JsString -> JsString
 toUpper = error "Not implemented"
 
@@ -717,6 +745,7 @@ newtype JsFun a = JsFun { getJsFun :: Any# }
 -- Returns the arity of the given function, or equivalently
 --
 -- > f.length
+--
 arity :: JsFun a -> Int
 arity = error "Not implemented"
 
@@ -731,18 +760,21 @@ foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any
 -- Apply the given function, or equivalently
 --
 -- > f()
+--
 call :: JsVal a => JsFun a -> IO a
 
 -- |
 -- Apply the given function, or equivalently
 --
 -- > f(a)
+--
 call1 :: (JsVal a, JsVal b) => JsFun (a -> b) -> a -> IO b
 
 -- |
 -- Apply the given function, or equivalently
 --
 -- > f(a, b)
+--
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFun (a -> b -> c) -> a -> b -> IO c
 
 -- -- |
@@ -767,18 +799,21 @@ call2 f = callWith2 f null
 -- Apply the given function with the given @this@ value, or equivalently
 --
 -- > f.call(thisArg)
+--
 callWith :: JsVal a => JsFun a -> JsObject -> IO a
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
 --
 -- > f.call(thisArg, a)
+--
 callWith1 :: (JsVal a, JsVal b) => JsFun (a -> b) -> JsObject -> a -> IO b
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
 --
 -- > f.call(thisArg, a, b)
+--
 callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFun (a -> b -> c) -> JsObject -> a -> b -> IO c
 -- callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFun -> JsObject -> a -> b -> c -> IO d
 -- callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFun -> JsObject -> a -> b -> c -> d -> IO e
@@ -831,6 +866,7 @@ foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any
 -- Partially apply the given function, or equivalently
 --
 -- > f.bind(null, a)
+--
 bind :: JsVal a => JsFun (a -> b) -> a -> IO (JsFun b)
 bind  f = bindWith1 f null
 
@@ -838,12 +874,14 @@ bind  f = bindWith1 f null
 -- Partially apply the given function with the given @this@ value, or equivalently
 --
 -- > f.bind(thisArg)
+--
 bindWith :: JsFun a -> JsObject -> IO (JsFun a)
 
 -- |
 -- Partially apply the given function with the given @this@ value, or equivalently
 --
 -- > f.bind(thisArg, a)
+--
 bindWith1 :: JsVal a => JsFun (a -> b) -> JsObject -> a -> IO (JsFun b)
 
 bindWith f t = do
@@ -869,18 +907,22 @@ infixl 1 %%
 
 -- |
 -- Infix version of 'invoke'.
+--
 (%)   = invoke
 
 -- |
 -- Infix version of 'invoke1'.
+--
 (%.)  = invoke1
 
 -- |
 -- Infix version of 'invoke2'.
+--
 (%..) = invoke2
 
 -- |
 -- Infix version of 'get'.
+--
 (%%) = get
 
 
@@ -889,18 +931,21 @@ infixl 1 %%
 -- Invoke the method of the given name on the given object, or equivalently
 --
 -- > o.n()
+--
 invoke :: JsVal a => JsObject -> JsName -> IO a
 
 -- |
 -- Invoke the method of the given name on the given object, or equivalently
 --
 -- > o.n(a)
+--
 invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
 
 -- |
 -- Invoke the method of the given name on the given object, or equivalently
 --
 -- > o.n(a, b)
+--
 invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
 
 -- -- |
@@ -975,26 +1020,32 @@ foreign import ccall "aPrimLift2" liftJ2#  :: Any# -> Any#
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
+--
 pliftJ :: JsVal a => a -> JsFun a
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
+--
 pliftJ1 :: (JsVal a, JsVal b) => (a -> b) -> JsFun (a -> b)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
+--
 pliftJ2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFun (a -> b -> c)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
+--
 liftJ :: JsVal a => IO a -> JsFun a
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
+--
 liftJ1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFun (a -> b -> c)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
+--
 liftJ2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFun (a -> b -> c)
 
 
@@ -1042,16 +1093,19 @@ foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
 
 -- |
 -- Displays a modal window with the given text.
+--
 alert :: String -> IO ()
 alert str  = alert# (toJsString# $ str)
 
 -- |
 -- Posts a line to the web console.
+--
 printLog :: String -> IO ()
 printLog str = consoleLog# (toJsString# $ str)
 
 -- |
 -- Appends the given content at the end of the `body` element.
+--
 printDoc :: String -> IO ()
 printDoc str = documentWrite# (toJsString# $ str)
 
@@ -1059,6 +1113,7 @@ printDoc str = documentWrite# (toJsString# $ str)
 -- Activates the JavaScript debugger.
 --
 -- /ECMA-262 12.15/
+--
 debug :: IO ()
 debug = eval "debugger"
 {-# NOINLINE debug #-}
