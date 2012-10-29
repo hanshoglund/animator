@@ -23,19 +23,24 @@ function aInternalCheck(type, value, error) {
     }
 }
 
-function aPrimGlobal(_) {
-    return [1, _,
-        window
-    ];
-}
 function aPrimObj(_) {
     return [1, _,
         {}
     ];
 }
+function aPrimArr(_) {
+    return [1, _,
+        []
+    ];
+}
 function aPrimNull(_) {
     return [1, _,
         null
+    ];
+}
+function aPrimGlobal(_) {
+    return [1, _,
+        window
     ];
 }
 function aPrimAdd(a, b, _) {

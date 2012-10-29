@@ -59,8 +59,8 @@ testLookup = do
     x <- object
     set x "foo" (1::Int)
     y <- create x
-    printRepr x
-    printRepr y
+    printLog $ show (x `isPrototypeOf` y)
+    printLog $ show (y `isPrototypeOf` x)
 
 withGlobal :: (JsObject -> IO a) -> IO a
 withGlobal f = global >>= f

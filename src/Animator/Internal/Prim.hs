@@ -213,6 +213,10 @@ class JsVal a where
     --
     -- > typeof x
     --
+    -- By definition, this function returns one of the following strings:
+    --
+    -- > "undefined", "boolean", "number", "string", "object", "function"
+    -- 
     -- /ECMA-262 11.4.3/
     typeOf :: JsVal a => a -> String
     typeOf = fromJsString# . typeOf# . unsafeCoerce
@@ -300,6 +304,17 @@ lookupGlobal xs = do
     g <- global
     lookup g xs
 
+_Object             = unsafePerformIO $ lookupGlobal ["Object"]
+_Object_prototype   = unsafePerformIO $ lookupGlobal ["Object", "prototype"]
+_Array              = unsafePerformIO $ lookupGlobal ["Array"]
+_Array_prototype    = unsafePerformIO $ lookupGlobal ["Array", "prototype"]
+_Function           = unsafePerformIO $ lookupGlobal ["Function"]
+_Function_prototype = unsafePerformIO $ lookupGlobal ["Function", "prototype"]
+_String             = unsafePerformIO $ lookupGlobal ["String"]
+_String_prototype   = unsafePerformIO $ lookupGlobal ["String", "prototype"]
+_JSON               = unsafePerformIO $ lookupGlobal ["JSON"]
+
+
 -------------------------------------------------------------------------------------
 -- Objects
 -------------------------------------------------------------------------------------
@@ -313,15 +328,12 @@ foreign import ccall "aPrimInstanceOf" instanceOf#       :: Any# -> Any# -> Int
 -- A JavaScript object.
 --
 -- This type is disjoint from ordinary Haskell data types, which have a compiler-specific
--- internal representation. All JavaScript reference types can be converted to JsObject
+-- internal representation. All JavaScript reference types can be converted to this type
 -- using the 'JsRef' instancce.
 --
---  /ECMA-262 8.6/
+--  /ECMA-262 8.6, 15.2/
 --
 newtype JsObject = JsObject { getJsObject :: Any# }
-
-_Object           = unsafePerformIO $ lookupGlobal ["Object"]
-_Object_prototype = unsafePerformIO $ lookupGlobal ["Object", "prototype"]
 
 -- |
 -- Creates a new JavaScript object, or equivalently
@@ -355,22 +367,25 @@ global = global# >>= (return . JsObject)
 -- Returns true if the specified object is of the specified object type, or equivalently
 --
 -- > x instanceof y
-isInstanceOf :: JsObject -> JsObject -> Bool
-(JsObject x) `isInstanceOf` (JsObject y) = (/= 0) $ instanceOf# x y
+isInstanceOf :: JsObject -> JsObject -> Int
+x `isInstanceOf` y = p x `instanceOf#` p y 
+    where p = getJsObject
 
 -- |
 -- Returns
 --
 -- > x.isPrototypeOf(y)
-isPrototypeOf :: JsObject -> JsObject -> Bool
-isPrototypeOf = error "Not implemented"
-
+isPrototypeOf :: JsObject -> JsObject -> Int
+x `isPrototypeOf` y = q $ (x %. "isPrototypeOf") y
+    where q = unsafePerformIO
+    
 -- |
 -- Returns
 --
 -- > x.constructor
 constructor :: JsObject -> JsFunction
-constructor = error "Not implemented"
+constructor x = q $ x %% "constructor"
+    where q = unsafePerformIO
 
 -- |
 -- Deletes the property @n@ form object @o@, or equivalently
@@ -390,36 +405,40 @@ hasProperty = error "Not implemented"
 -- Returns
 --
 -- > x.hasOwnProperty(y)
-hasOwnProperty :: JsName -> JsObject -> IO Bool
-hasOwnProperty = error "Not implemented"
+hasOwnProperty :: JsObject -> JsName -> IO Int
+hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
 
 -- |
 -- Returns
 --
 -- > x.propertyIsEnumerable(y)
-propertyIsEnumerable :: JsName -> JsObject -> IO Bool
-propertyIsEnumerable = error "Not implemented"
+propertyIsEnumerable :: JsObject -> JsName -> IO Int
+propertyIsEnumerable x n = (x %. "propertyIsEnumerable") (toJsString n)
 
 -- |
 -- Returns
 --
 -- > x.toString(y)
 toString :: JsObject -> JsString
-toString = error "Not implemented"
+toString x = q $ (x % "toString")
+    where q = unsafePerformIO
+
 
 -- |
 -- Returns
 --
 -- > x.toLocaleString(y)
 toLocaleString :: JsObject -> JsString
-toLocaleString = error "Not implemented"
+toLocaleString x = q $ (x % "toLocaleString")
+    where q = unsafePerformIO
 
 -- |
 -- Returns
 --
 -- > x.valueOf(y)
 valueOf :: JsVal a => JsObject -> a
-valueOf = error "Not implemented"
+valueOf x = q $ (x % "valueOf")
+    where q = unsafePerformIO
 
 
 foreign import ccall "aPrimGet"       getInt#           :: Int -> Any# -> String# -> IO Int
@@ -489,12 +508,14 @@ instance JsProp JsFunction where
 -- Arrays
 -------------------------------------------------------------------------------------
 
+foreign import ccall "aPrimArr"       array#            :: IO Any#
 foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 
 -- |
 -- A JavaScript array.
 --
--- TODO doc
+--  /ECMA-262 15.4/
+--
 newtype JsArray = JsArray { getJsArray :: Any# }
 
 instance Semigroup JsArray where
@@ -514,14 +535,15 @@ instance Monoid JsArray where
 --
 -- > []
 array :: IO JsArray
-array = error "Not implemented"
+array = array# >>= (return . JsArray)
 
 -- |
 -- Returns the length of the given array, or equivalently
 --
 -- > xs.length
 length :: JsArray -> Int
-length = error "Not implemented"
+length xs = q $ (toObject xs) %% "length"
+    where q = unsafePerformIO
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
@@ -590,16 +612,16 @@ sliceArray = error "Not implemented"
 -- |
 -- A JavaScript string.
 --
--- This is an immutable sequence of Unicode characters using a representation specific
--- to the JavaScript engine. In many cases these will be much more efficent than Haskell
--- strings, on the other hand the full range of 'Data.Char' and 'Data.List' functions are
--- not available. Allthough JsString is normally used for text, any unsigned 16-bit value
--- can be stored using 'charAt' and 'fromCharCode'.
+-- Defined as an immutable sequence of Unicode characters. Allthough this type is
+-- normally used for text, it can be used to store any unsigned 16-bit value using
+-- 'charAt' and 'fromCharCode'. Operations on 'JsString' are normally magnitudes faster
+-- than the equivalent on 'String'; on the other hand the full range of 'Data.Char' and
+-- 'Data.List' functions are not available.
 --
 -- There is no 'Char' type in JavaScript, so functions dealing with single characters
 -- return singleton strings.
 --
--- /ECMA-262 8.4/
+-- /ECMA-262 8.4, 15.5/
 --
 newtype JsString = JsString { getJsString :: String# }
     deriving (Eq, Ord, Show)
@@ -689,7 +711,7 @@ foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 -- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
 -- internal representation. To convert between the two, use 'call', 'lift' or 'liftIO'.
 --
--- /ECMA-262 9.11/
+-- /ECMA-262 9.11, 15.3/
 --
 newtype JsFunction = JsFunction { getJsFunction :: Any# }
 
@@ -1060,7 +1082,7 @@ liftIO2 = JsFunction . lift2# . unsafeCoerce . toPtr#
 -- JSON
 -------------------------------------------------------------------------------------
 
--- TODO
+--  /ECMA-262 15.12/
 newtype JSON = JSON { getJSON :: JSON# }
 
 parse :: JsString -> JSON
