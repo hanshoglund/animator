@@ -1,7 +1,8 @@
 
 {-# LANGUAGE MagicHash, CPP, ForeignFunctionInterface, OverloadedStrings, 
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
-    NoMonomorphismRestriction #-}
+    NoMonomorphismRestriction,
+    FlexibleInstances #-}
 
 -------------------------------------------------------------------------------------
 
@@ -106,27 +107,27 @@ module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
         -- ** Functions
-        JsFunction,
-
+        JsFun,
         arity,
         call,
         call1,
         call2,
+        
+        -- *** Partial application
+        bind,
+
+        -- *** Lifting Haskell functions
+        liftJ,
+        liftJ1,
+        liftJ2,
+        pliftJ,
+        pliftJ1,
+        pliftJ2,
+
+        -- *** Method invokcation
         invoke,
         invoke1,
         invoke2,
-
-        -- *** Partial application
-        bind,
-        bind2,
-
-        -- *** Lifting Haskell functions
-        lift,
-        lift1,
-        lift2,
-        liftPure,
-        liftPure1,
-        liftPure2,
 
         -- *** With explicit 'this' argument
         bindWith,
@@ -239,7 +240,7 @@ instance JsVal JsObject where
     -- typeOf = default
 instance JsVal JsArray where
     typeOf _ = "object"
-instance JsVal JsFunction where
+instance JsVal (JsFun a) where
     typeOf _ = "function"
 instance JsVal (Ptr a) where -- TODO
     typeOf _ = "object"
@@ -249,7 +250,7 @@ instance JsVal (Ptr a) where -- TODO
 -- Class of JavaScript reference types.
 class JsVal a => JsRef a where
     toObject :: a -> JsObject
-instance JsRef JsFunction where
+instance JsRef (JsFun a) where
     toObject = unsafeCoerce
 instance JsRef JsArray where
     toObject = unsafeCoerce
@@ -383,7 +384,7 @@ x `isPrototypeOf` y = q $ (x %. "isPrototypeOf") y
 -- Returns
 --
 -- > x.constructor
-constructor :: JsObject -> JsFunction
+constructor :: (JsVal a, JsVal b) => JsObject -> JsFun (a -> b) 
 constructor x = q $ x %% "constructor"
     where q = unsafePerformIO
 
@@ -502,9 +503,9 @@ instance JsProp JsArray where
     get = get# (getAny# objectType#) JsArray
     set = set# (setAny# objectType#) getJsArray
 
-instance JsProp JsFunction where
-    get = get# (getAny# functionType#) JsFunction
-    set = set# (setAny# functionType#) getJsFunction
+instance JsProp (JsFun a) where
+    get = get# (getAny# functionType#) JsFun
+    set = set# (setAny# functionType#) getJsFun
 
 -- instance JsProp String where
 --     get = get# (getString# stringType#) fromJsString#
@@ -706,17 +707,17 @@ foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 -- A JavaScript function, i.e. a callable object.
 --
 -- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
--- internal representation. To convert between the two, use 'call', 'lift' or 'liftPure'.
+-- internal representation. To convert between the two, use 'call', 'liftJ' or 'pliftJ'.
 --
 -- /ECMA-262 9.11, 15.3/
 --
-newtype JsFunction = JsFunction { getJsFunction :: Any# }
+newtype JsFun a = JsFun { getJsFun :: Any# }
 
 -- |
 -- Returns the arity of the given function, or equivalently
 --
 -- > f.length
-arity :: JsFunction -> Int
+arity :: JsFun a -> Int
 arity = error "Not implemented"
 
 foreign import ccall "aPrimCall0" call#  :: Any# -> Any# -> IO Any#
@@ -730,94 +731,94 @@ foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any
 -- Apply the given function, or equivalently
 --
 -- > f()
-call :: JsVal a => JsFunction -> IO a
+call :: JsVal a => JsFun a -> IO a
 
 -- |
 -- Apply the given function, or equivalently
 --
 -- > f(a)
-call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
+call1 :: (JsVal a, JsVal b) => JsFun (a -> b) -> a -> IO b
 
 -- |
 -- Apply the given function, or equivalently
 --
 -- > f(a, b)
-call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
+call2 :: (JsVal a, JsVal b, JsVal c) => JsFun (a -> b -> c) -> a -> b -> IO c
 
--- |
--- Apply the given function, or equivalently
---
--- > f(a, b, c)
-call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> IO d
-
--- |
--- Apply the given function, or equivalently
---
--- > f(a, b, c, d)
-call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> a -> b -> c -> d -> IO e
+-- -- |
+-- -- Apply the given function, or equivalently
+-- --
+-- -- > f(a, b, c)
+-- call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFun (a -> b -> c -> d) -> a -> b -> c -> IO d
+-- 
+-- -- |
+-- -- Apply the given function, or equivalently
+-- --
+-- -- > f(a, b, c, d)
+-- call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFun (a -> b -> c -> d -> e) -> a -> b -> c -> d -> IO e
 
 call  f = callWith  f null
 call1 f = callWith1 f null
 call2 f = callWith2 f null
-call3 f = callWith3 f null
-call4 f = callWith4 f null
+-- call3 f = callWith3 f null
+-- call4 f = callWith4 f null
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
 --
 -- > f.call(thisArg)
-callWith :: JsVal a => JsFunction -> JsObject -> IO a
+callWith :: JsVal a => JsFun a -> JsObject -> IO a
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
 --
 -- > f.call(thisArg, a)
-callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
+callWith1 :: (JsVal a, JsVal b) => JsFun (a -> b) -> JsObject -> a -> IO b
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
 --
 -- > f.call(thisArg, a, b)
-callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
-callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> IO d
-callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> IO e
-callWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> a -> b -> c -> d -> e -> IO f
+callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFun (a -> b -> c) -> JsObject -> a -> b -> IO c
+-- callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFun -> JsObject -> a -> b -> c -> IO d
+-- callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFun -> JsObject -> a -> b -> c -> d -> IO e
+-- callWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFun -> JsObject -> a -> b -> c -> d -> e -> IO f
 
 callWith f t = do
-    r <- call# (getJsFunction f) (p t)
+    r <- call# (getJsFun f) (p t)
     return $ q r
     where
         (p,q) = callPrePost
 
 callWith1 f t a = do
-    r <- call1# (getJsFunction f) (p t) (p a)
+    r <- call1# (getJsFun f) (p t) (p a)
     return $ q r
     where
         (p,q) = callPrePost
 
 callWith2 f t a b = do
-    r <- call2# (getJsFunction f) (p t) (p a) (p b)
+    r <- call2# (getJsFun f) (p t) (p a) (p b)
     return $ q r
     where
         (p,q) = callPrePost
 
-callWith3 f t a b c = do
-    r <- call3# (getJsFunction f) (p t) (p a) (p b) (p c)
-    return $ q r
-    where
-        (p,q) = callPrePost
-
-callWith4 f t a b c d = do
-    r <- call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
-    return $ q r
-    where
-        (p,q) = callPrePost
-
-callWith5 f t a b c d e = do
-    r <- call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
-    return $ q r
-    where
-        (p,q) = callPrePost
+-- callWith3 f t a b c = do
+--     r <- call3# (getJsFun f) (p t) (p a) (p b) (p c)
+--     return $ q r
+--     where
+--         (p,q) = callPrePost
+-- 
+-- callWith4 f t a b c d = do
+--     r <- call4# (getJsFun f) (p t) (p a) (p b) (p c) (p d)
+--     return $ q r
+--     where
+--         (p,q) = callPrePost
+-- 
+-- callWith5 f t a b c d e = do
+--     r <- call5# (getJsFun f) (p t) (p a) (p b) (p c) (p d) (p e)
+--     return $ q r
+--     where
+--         (p,q) = callPrePost
 
 foreign import ccall "aPrimBind0" bind#  :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimBind1" bind1#  :: Any# -> Any# -> Any# -> IO Any#
@@ -830,99 +831,29 @@ foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any
 -- Partially apply the given function, or equivalently
 --
 -- > f.bind(null, a)
-bind :: JsVal a => JsFunction -> a -> IO JsFunction
-
--- |
--- Partially apply the given function, or equivalently
---
--- > f.bind(null, a, b)
-bind2 :: (JsVal a, JsVal b) => JsFunction -> a -> b -> IO JsFunction
-
--- |
--- Partially apply the given function, or equivalently
---
--- > f.bind(null, a, b, c)
-bind3 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> c -> IO JsFunction
-
--- |
--- Partially apply the given function, or equivalently
---
--- > f.bind(null, a, b, c, d)
-bind4 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> d -> IO JsFunction
-
+bind :: JsVal a => JsFun (a -> b) -> a -> IO (JsFun b)
 bind  f = bindWith1 f null
-bind2 f = bindWith2 f null
-bind3 f = bindWith3 f null
-bind4 f = bindWith4 f null
 
 -- |
 -- Partially apply the given function with the given @this@ value, or equivalently
 --
 -- > f.bind(thisArg)
-bindWith :: JsFunction -> JsObject -> IO JsFunction
+bindWith :: JsFun a -> JsObject -> IO (JsFun a)
 
 -- |
 -- Partially apply the given function with the given @this@ value, or equivalently
 --
 -- > f.bind(thisArg, a)
-bindWith1 :: JsVal a => JsFunction -> JsObject -> a -> IO JsFunction
-
--- |
--- Partially apply the given function with the given @this@ value, or equivalently
---
--- > f.bind(thisArg, a, b)
-bindWith2 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> b -> IO JsFunction
-
--- |
--- Partially apply the given function with the given @this@ value, or equivalently
---
--- > f.bind(thisArg, a, b, c)
-bindWith3 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> c -> IO JsFunction
-
--- |
--- Partially apply the given function with the given @this@ value, or equivalently
---
--- > f.bind(thisArg, a, b, c, d)
-bindWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> d -> IO JsFunction
-
--- |
--- Partially apply the given function with the given @this@ value, or equivalently
---
--- > f.bind(thisArg, a, b, c, d, e)
-bindWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> e -> IO JsFunction
+bindWith1 :: JsVal a => JsFun (a -> b) -> JsObject -> a -> IO (JsFun b)
 
 bindWith f t = do
-    r <- bind# (getJsFunction f) (p t)
+    r <- bind# (getJsFun f) (p t)
     return $ q r
     where
         (p,q) = bindPrePost
 
 bindWith1 f t a = do
-    r <- bind1# (getJsFunction f) (p t) (p a)
-    return $ q r
-    where
-        (p,q) = bindPrePost
-
-bindWith2 f t a b = do
-    r <- bind2# (getJsFunction f) (p t) (p a) (p b)
-    return $ q r
-    where
-        (p,q) = bindPrePost
-
-bindWith3 f t a b c = do
-    r <- bind3# (getJsFunction f) (p t) (p a) (p b) (p c)
-    return $ q r
-    where
-        (p,q) = bindPrePost
-
-bindWith4 f t a b c d = do
-    r <- bind4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
-    return $ q r
-    where
-        (p,q) = bindPrePost
-
-bindWith5 f t a b c d e = do
-    r <- bind5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
+    r <- bind1# (getJsFun f) (p t) (p a)
     return $ q r
     where
         (p,q) = bindPrePost
@@ -972,23 +903,23 @@ invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
 -- > o.n(a, b)
 invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
 
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n(a, b, c)
-invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> JsName -> a -> b -> c -> IO d
-
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n(a, b, c, d)
-invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> JsName -> a -> b -> c -> d -> IO e
-
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n(a, b, c, d, e)
-invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
+-- -- |
+-- -- Invoke the method of the given name on the given object, or equivalently
+-- --
+-- -- > o.n(a, b, c)
+-- invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> JsName -> a -> b -> c -> IO d
+-- 
+-- -- |
+-- -- Invoke the method of the given name on the given object, or equivalently
+-- --
+-- -- > o.n(a, b, c, d)
+-- invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> JsName -> a -> b -> c -> d -> IO e
+-- 
+-- -- |
+-- -- Invoke the method of the given name on the given object, or equivalently
+-- --
+-- -- > o.n(a, b, c, d, e)
+-- invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
 
 invoke o n = do
     f <- get o n
@@ -1002,77 +933,77 @@ invoke2 o n a b = do
     f <- get o n
     callWith2 f o a b
 
-invoke3 o n a b c = do
-    f <- get o n
-    callWith3 f o a b c
-
-invoke4 o n a b c d = do
-    f <- get o n
-    callWith4 f o a b c d
-
-invoke5 o n a b c d e = do
-    f <- get o n
-    callWith5 f o a b c d e
+-- invoke3 o n a b c = do
+--     f <- get o n
+--     callWith3 f o a b c
+-- 
+-- invoke4 o n a b c d = do
+--     f <- get o n
+--     callWith4 f o a b c d
+-- 
+-- invoke5 o n a b c d e = do
+--     f <- get o n
+--     callWith5 f o a b c d e
 
 -- -- |
 -- -- Partially apply the given function, or equivalently
 -- --
 -- -- > Function.prototype.bind.call(f, x, ... as)
--- bind :: JsVal a => JsFunction -> a -> [a] -> JsFunction
+-- bind :: JsVal a => JsFun -> a -> [a] -> JsFun
 -- bind = error "Not implemented"
 --
 -- -- |
 -- -- Apply the given function, or equivalently
 -- --
 -- -- > Function.prototype.apply.call(f, x, as)
--- apply :: JsVal a => JsFunction -> a -> [a] -> a
+-- apply :: JsVal a => JsFun -> a -> [a] -> a
 -- apply = error "Not implemented"
 --
 -- -- |
 -- -- Invokes the given function as a constructor, or equivalently
 -- --
 -- -- > new F(args)
--- new :: JsVal a => JsFunction -> [a] -> IO JsObject
+-- new :: JsVal a => JsFun -> [a] -> IO JsObject
 -- new = error "Not implemented"
 
-foreign import ccall "aPrimLiftPure0" liftPure#   :: Any# -> Any#
-foreign import ccall "aPrimLiftPure1" liftPure1#  :: Any# -> Any#
-foreign import ccall "aPrimLiftPure2" liftPure2#  :: Any# -> Any#
-foreign import ccall "aPrimLift0" lift#   :: Any# -> Any#
-foreign import ccall "aPrimLift1" lift1#  :: Any# -> Any#
-foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure0" pliftJ#   :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" pliftJ1#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" pliftJ2#  :: Any# -> Any#
+foreign import ccall "aPrimLift0" liftJ#   :: Any# -> Any#
+foreign import ccall "aPrimLift1" liftJ1#  :: Any# -> Any#
+foreign import ccall "aPrimLift2" liftJ2#  :: Any# -> Any#
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-liftPure :: JsVal a => a -> JsFunction
+pliftJ :: JsVal a => a -> JsFun a
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-liftPure1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
+pliftJ1 :: (JsVal a, JsVal b) => (a -> b) -> JsFun (a -> b)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-liftPure2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
+pliftJ2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFun (a -> b -> c)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift :: JsVal a => IO a -> JsFunction
+liftJ :: JsVal a => IO a -> JsFun a
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
+liftJ1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFun (a -> b -> c)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
+liftJ2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFun (a -> b -> c)
 
 
-liftPure  = JsFunction . liftPure#  . unsafeCoerce . toPtr#
-liftPure1 = JsFunction . liftPure1# . unsafeCoerce . toPtr#
-liftPure2 = JsFunction . liftPure2# . unsafeCoerce . toPtr#
-lift  = JsFunction . lift#  . unsafeCoerce . toPtr#
-lift1 = JsFunction . lift1# . unsafeCoerce . toPtr#
-lift2 = JsFunction . lift2# . unsafeCoerce . toPtr#
+pliftJ  = JsFun . pliftJ#  . unsafeCoerce . toPtr#
+pliftJ1 = JsFun . pliftJ1# . unsafeCoerce . toPtr#
+pliftJ2 = JsFun . pliftJ2# . unsafeCoerce . toPtr#
+liftJ  = JsFun . liftJ#  . unsafeCoerce . toPtr#
+liftJ1 = JsFun . liftJ1# . unsafeCoerce . toPtr#
+liftJ2 = JsFun . liftJ2# . unsafeCoerce . toPtr#
 
 
 -------------------------------------------------------------------------------------
