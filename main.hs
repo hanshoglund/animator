@@ -56,11 +56,18 @@ main = do
     
 testLift = do
     g <- global
+    as <- eval "([1,2,3])" :: IO JsObject
+    -- f  <- eval "(function(x) { return x + 10 })" :: IO JsFunction
+    let f = lift1 ((\x -> return $ x + 10)::Int -> IO Int)
+    bs <- invoke1 as "map" f :: IO JsArray
+    printRepr as
+    printRepr bs
+    
+    
     st <- get g "setTimeout"
-    -- f <- eval "(function(){ console.log('Hello!') })" :: IO JsFunction
+    f <- eval "(function(){ console.log('Hello!') })" :: IO JsFunction
     let f = lift $ printLog "Hello from Haskell!"
     call2 st f (1000::Int) :: IO ()
-    call2 st f (2000::Int) :: IO ()
 
 testPrim = do    
     printRepr $ (False::Bool)

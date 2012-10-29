@@ -148,7 +148,7 @@ function aPrimLift0(f, _) {
     return [1, _,
         function () {
             var r = A(f, [_]);
-            return r[2];
+            return E(r[2])[1];
         }
     ];
 }
@@ -156,7 +156,7 @@ function aPrimLift1(f, _) {
     return [1, _,
         function (a) {
             var r = A(f, [[1,a], _]);
-            return r[2];
+            return E(r[2])[1];
         }
     ];
 }
@@ -164,7 +164,7 @@ function aPrimLift2(f, _) {
     return [1, _,
         function (a, b) {
             var r = A(f, [[1,a], [1,b], _]);
-            return r[2];
+            return E(r[2])[1];
         }
     ];
 }
