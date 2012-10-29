@@ -33,8 +33,7 @@ module Animator.Internal.Prim (
 
         -- *** Property assignment
         JsProp(..),
-
-
+        (%%),
 
         -- ** Objects
         JsObject,
@@ -122,9 +121,9 @@ module Animator.Internal.Prim (
         lift,
         lift1,
         lift2,
-        lift',
-        lift1',
-        lift2',
+        liftIO,
+        liftIO1,
+        liftIO2,
 
         -- *** With explicit this argument
         callWith,
@@ -860,9 +859,25 @@ bindPrePost = (unsafeCoerce, unsafeCoerce)
 infixl 1 %
 infixl 1 %.
 infixl 1 %..
+infixl 1 %%
+
+-- |
+-- Infix version of 'invoke'.
 (%)   = invoke
+
+-- |
+-- Infix version of 'invoke1'.
 (%.)  = invoke1
+
+-- |
+-- Infix version of 'invoke2'.
 (%..) = invoke2
+
+-- |
+-- Infix version of 'get'.
+(%%) = get
+
+
 
 -- |
 -- Invoke the method of the given name on the given object, or equivalently
@@ -966,23 +981,23 @@ lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift' :: JsVal a => IO a -> JsFunction
+liftIO :: JsVal a => IO a -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift1' :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
+liftIO1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift2' :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
+liftIO2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
 
 
 lift  = JsFunction . liftPure#  . unsafeCoerce . toPtr#
 lift1 = JsFunction . liftPure1# . unsafeCoerce . toPtr#
 lift2 = JsFunction . liftPure2# . unsafeCoerce . toPtr#
-lift'  = JsFunction . lift#  . unsafeCoerce . toPtr#
-lift1' = JsFunction . lift1# . unsafeCoerce . toPtr#
-lift2' = JsFunction . lift2# . unsafeCoerce . toPtr#
+liftIO  = JsFunction . lift#  . unsafeCoerce . toPtr#
+liftIO1 = JsFunction . lift1# . unsafeCoerce . toPtr#
+liftIO2 = JsFunction . lift2# . unsafeCoerce . toPtr#
        
 
 -------------------------------------------------------------------------------------

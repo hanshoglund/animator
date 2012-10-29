@@ -59,7 +59,7 @@ withGlobal f = global >>= f
 
 setTimeout :: Int -> IO () -> IO ()
 setTimeout t x = withGlobal $ 
-    \g -> (g %.. "setTimeout") (lift' x) t
+    \g -> (g %.. "setTimeout") (liftIO x) t
     
 testLift = do
     g <- global
