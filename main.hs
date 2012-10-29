@@ -56,17 +56,27 @@ main = do
     
 testLift = do
     g <- global
+
     as <- eval "([1,2,3])" :: IO JsObject
     -- f  <- eval "(function(x) { return x + 10 })" :: IO JsFunction
-    let f = lift1 ((\x -> return $ x + 10)::Int -> IO Int)
+    -- let f = lift1' ((\x -> return $ x + 10)::Int -> IO Int)
+    let f = lift1 ((\x -> x + 10)::Int -> Int)
     bs <- invoke1 as "map" f :: IO JsArray
     printRepr as
     printRepr bs
+
+    cs <- eval "([5,5,6])" :: IO JsObject
+    -- h  <- eval "(function(x,y) { return x + y; })" :: IO JsFunction
+    let h = lift2 ((\x y -> x + y) :: Int -> Int -> Int)
+    ds <- invoke2 cs "reduce" h (0::Int) :: IO JsArray
+    printRepr cs
+    printRepr ds
+
     
     
     st <- get g "setTimeout"
     f <- eval "(function(){ console.log('Hello!') })" :: IO JsFunction
-    let f = lift $ printLog "Hello from Haskell!"
+    let f = lift' $ printLog "Hello from Haskell!"
     call2 st f (1000::Int) :: IO ()
 
 testPrim = do    

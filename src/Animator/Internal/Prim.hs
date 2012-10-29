@@ -122,6 +122,9 @@ module Animator.Internal.Prim (
         lift,
         lift1,
         lift2,
+        lift',
+        lift1',
+        lift2',
 
         -- *** With explicit this argument
         callWith,
@@ -942,26 +945,44 @@ invoke5 o n a b c d e = do
 -- new :: JsVal a => JsFunction -> [a] -> IO JsObject
 -- new = error "Not implemented"
 
+foreign import ccall "aPrimLiftPure0" liftPure#   :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" liftPure1#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" liftPure2#  :: Any# -> Any#
 foreign import ccall "aPrimLift0" lift#   :: Any# -> Any#
 foreign import ccall "aPrimLift1" lift1#  :: Any# -> Any#
 foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift :: JsVal a => IO a -> JsFunction
+lift :: JsVal a => a -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
+lift1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
+lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
+
+-- |
+-- Lift the given Haskell function into a JavaScript function
+lift' :: JsVal a => IO a -> JsFunction
+
+-- |
+-- Lift the given Haskell function into a JavaScript function
+lift1' :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
+
+-- |
+-- Lift the given Haskell function into a JavaScript function
+lift2' :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
 
 
-lift  = JsFunction . lift#  . unsafeCoerce . toPtr#
-lift1 = JsFunction . lift1# . unsafeCoerce . toPtr#
-lift2 = JsFunction . lift2# . unsafeCoerce . toPtr#
+lift  = JsFunction . liftPure#  . unsafeCoerce . toPtr#
+lift1 = JsFunction . liftPure1# . unsafeCoerce . toPtr#
+lift2 = JsFunction . liftPure2# . unsafeCoerce . toPtr#
+lift'  = JsFunction . lift#  . unsafeCoerce . toPtr#
+lift1' = JsFunction . lift1# . unsafeCoerce . toPtr#
+lift2' = JsFunction . lift2# . unsafeCoerce . toPtr#
        
 
 -------------------------------------------------------------------------------------

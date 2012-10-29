@@ -168,6 +168,30 @@ function aPrimLift2(f, _) {
         }
     ];
 }
+function aPrimLiftPure0(f, _) {
+    return [1, _,
+        function () {
+            var r = A(f, [_]);
+            return r[1];
+        }
+    ];
+}
+function aPrimLiftPure1(f, _) {
+    return [1, _,
+        function (a) {
+            var r = A(f, [[1,a], _]);
+            return r[1];
+        }
+    ];
+}
+function aPrimLiftPure2(f, _) {
+    return [1, _,
+        function (a, b) {
+            var r = A(f, [[1,a], [1,b], _]);
+            return r[1];
+        }
+    ];
+}
 
 function foo(x) {
     window.console.log("----------")
