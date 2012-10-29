@@ -21,49 +21,84 @@
 --      Required for String instance of JsProp, can we rethink this?
 
 module Animator.Internal.Prim (
+
+        -- ** Classes
+        -- *** All types
         JsVal(..),
         eval,
 
+        -- *** Reference types
         JsRef(..),
         JsName,
+
+        -- *** Property assignment
         JsProp(..),
+
+
 
         -- ** Objects
         JsObject,
-        -- undef,
+
+        -- *** Creation and access
         object,
         create,
         null,
         global,
+
+        -- *** Prototype hierarchy
         isInstanceOf,
         isPrototypeOf,
         constructor,
+
+        -- *** Properties
+        delete,
+        hasProperty,
         hasOwnProperty,
         propertyIsEnumerable,
 
+        -- *** Conversion
+        toString,
+        toLocaleString,
+        valueOf,
+
+
+
         -- ** Arrays
         JsArray,
+
+        -- *** Creation and access
+        array,
         push,
         pop,
         shift,
         unshift,
+
+        -- *** Manipulation and conversion
         reverse,
         sort,
         -- splice,
         join,
         sliceArray,
                         
+
+
         -- ** Strings
         JsString,
+
+        -- *** Creation and access
         toJsString,
         fromJsString,
         charAt,
+
+        -- *** Searching
         indexOf,
         lastIndexOf,
         -- match
         -- replace
         -- search
         -- split
+
+        -- *** Manipulation and conversion
         sliceString,
         toLower,
         toUpper,
@@ -74,29 +109,23 @@ module Animator.Internal.Prim (
         call,
         call1,
         call2,
-        -- call3,
-        -- call4,
         invoke,
         invoke1,
         invoke2,
-        -- invoke3,
-        -- invoke4,
         bind,
         bind2,
-        -- bind3,
-        -- bind4,
+        -- lift,
+        -- lift1,
+        -- lift2,
 
         -- ** With object
         callWith,
         callWith1,
         callWith2,
-        -- callWith3,
-        -- callWith4,
+        
         bindWith,
         bindWith1,
         bindWith2,
-        -- bindWith3,
-        -- bindWith4,
 
         -- ** Infix operators
         (%%),
@@ -112,8 +141,8 @@ module Animator.Internal.Prim (
 
         -- ** Utility
         alert,
-        windowConsoleLog,
-        windowDocumentWrite,        
+        printLog,
+        printDoc,        
         printRepr,
   ) where
 
@@ -158,8 +187,6 @@ functionType# = 3
 
 
 
-
-
 foreign import ccall "aPrimTypeOf"    typeOf#           :: Any# -> String#
 foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
 
@@ -198,11 +225,13 @@ instance JsVal Double where
 instance JsVal JsString where
     typeOf _ = "string"
 instance JsVal JsObject where
-    typeOf _ = "object"
+    typeOf _ = "object" -- TODO error if it is a function
 instance JsVal JsArray where
     typeOf _ = "object"
 instance JsVal JsFunction where
     typeOf _ = "function"
+-- instance JsVal (Ptr a) where -- TODO
+--     typeOf _ = "object"
     
 -- |
 -- Class of JavaScript reference types.
@@ -302,7 +331,7 @@ isPrototypeOf = error "Not implemented"
 -- |
 -- Returns
 --
--- > x.constructor(y)
+-- > x.constructor
 constructor :: JsObject -> JsFunction
 constructor = error "Not implemented"
 
@@ -317,7 +346,7 @@ delete = error "Not implemented"
 -- | 
 -- Returns
 --
--- > delete o.n
+-- > o.n !== undefined
 hasProperty :: JsObject -> JsName -> IO Bool
 hasProperty = error "Not implemented"
 
@@ -441,6 +470,13 @@ instance Monoid JsArray where
 -- Functor
 -- Semigroup
 -- Foldable
+
+-- |
+-- Returns 
+--
+-- > []
+array :: IO JsArray
+array = error "Not implemented"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
@@ -887,7 +923,88 @@ invoke5 o n a b c d e = do
 -- new :: JsVal a => JsFunction -> [a] -> IO JsObject
 -- new = error "Not implemented"
 
-
+-- foreign import ccall "aPrimLift0" call#  :: Any# -> Any# -> IO Any#
+-- foreign import ccall "aPrimLift1" call1#  :: Any# -> Any# -> Any# -> IO Any#
+-- foreign import ccall "aPrimLift2" call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
+-- 
+-- -- |
+-- -- Apply the given function, or equivalently
+-- --
+-- -- > f()
+-- call :: JsVal a => JsFunction -> IO a
+-- 
+-- -- |
+-- -- Apply the given function, or equivalently
+-- --
+-- -- > f(a)
+-- call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
+-- 
+-- -- |
+-- -- Apply the given function, or equivalently
+-- --
+-- -- > f(a, b)
+-- call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
+-- 
+-- -- |
+-- -- Apply the given function, or equivalently
+-- --
+-- -- > f(a, b, c)
+-- call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> IO d
+-- 
+-- -- |
+-- -- Apply the given function, or equivalently
+-- --
+-- -- > f(a, b, c, d)
+-- call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> a -> b -> c -> d -> IO e
+-- 
+-- call  f = callWith  f null
+-- call1 f = callWith1 f null
+-- call2 f = callWith2 f null
+-- call3 f = callWith3 f null
+-- call4 f = callWith4 f null
+-- 
+-- callWith :: JsVal a => JsFunction -> JsObject -> IO a
+-- callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
+-- callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
+-- callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> IO d
+-- callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> IO e
+-- callWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFunction -> JsObject -> a -> b -> c -> d -> e -> IO f
+-- 
+-- callWith f t = do
+--     r <- call# (getJsFunction f) (p t)
+--     return $ q r
+--     where 
+--         (p,q) = callPrePost
+-- 
+-- callWith1 f t a = do
+--     r <- call1# (getJsFunction f) (p t) (p a)
+--     return $ q r
+--     where 
+--         (p,q) = callPrePost
+-- 
+-- callWith2 f t a b = do
+--     r <- call2# (getJsFunction f) (p t) (p a) (p b)
+--     return $ q r
+--     where 
+--         (p,q) = callPrePost
+-- 
+-- callWith3 f t a b c = do
+--     r <- call3# (getJsFunction f) (p t) (p a) (p b) (p c)
+--     return $ q r
+--     where 
+--         (p,q) = callPrePost
+-- 
+-- callWith4 f t a b c d = do
+--     r <- call4# (getJsFunction f) (p t) (p a) (p b) (p c) (p d)
+--     return $ q r
+--     where 
+--         (p,q) = callPrePost
+-- 
+-- callWith5 f t a b c d e = do
+--     r <- call5# (getJsFunction f) (p t) (p a) (p b) (p c) (p d) (p e)
+--     return $ q r
+--     where 
+--         (p,q) = callPrePost       
 
 -------------------------------------------------------------------------------------
 -- JSON
@@ -926,12 +1043,12 @@ alert str  = alert# (toJsString# $ str)
 
 -- |
 -- Posts a line to the web console.
-windowConsoleLog :: String -> IO ()
-windowConsoleLog str = consoleLog# (toJsString# $ str)
+printLog :: String -> IO ()
+printLog str = consoleLog# (toJsString# $ str)
 
 -- |
 -- Appends the given content at the end of the `body` element.
-windowDocumentWrite :: String -> IO ()
-windowDocumentWrite str = documentWrite# (toJsString# $ str)
+printDoc :: String -> IO ()
+printDoc str = documentWrite# (toJsString# $ str)
 
 
