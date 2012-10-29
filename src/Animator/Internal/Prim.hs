@@ -105,6 +105,7 @@ module Animator.Internal.Prim (
 
         -- ** Functions
         JsFunction,
+
         arity,
         call,
         call1,
@@ -112,13 +113,17 @@ module Animator.Internal.Prim (
         invoke,
         invoke1,
         invoke2,
+
+        -- *** Partial application
         bind,
         bind2,
+
+        -- *** Lifting Haskell functions
         lift,
         lift1,
         lift2,
 
-        -- ** With object
+        -- *** With explicit this argument
         callWith,
         callWith1,
         callWith2,
@@ -127,7 +132,7 @@ module Animator.Internal.Prim (
         bindWith1,
         bindWith2,
 
-        -- ** Infix operators
+        -- *** Infix versions
         (%%),
         (%%!),
         (%%!!),
@@ -680,8 +685,22 @@ call2 f = callWith2 f null
 call3 f = callWith3 f null
 call4 f = callWith4 f null
 
+-- |
+-- Apply the given function with the given @this@ value, or equivalently
+--
+-- > f.call(thisArg)
 callWith :: JsVal a => JsFunction -> JsObject -> IO a
+
+-- |
+-- Apply the given function with the given @this@ value, or equivalently
+--
+-- > f.call(thisArg, a)
 callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
+
+-- |
+-- Apply the given function with the given @this@ value, or equivalently
+--
+-- > f.call(thisArg, a, b)
 callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
 callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> IO d
 callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> IO e
@@ -928,21 +947,15 @@ foreign import ccall "aPrimLift1" lift1#  :: Any# -> Any#
 foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
 
 -- |
--- Apply the given function, or equivalently
---
--- > f()
+-- Lift the given Haskell function into a JavaScript function
 lift :: JsVal a => IO a -> JsFunction
 
 -- |
--- Apply the given function, or equivalently
---
--- > f(a)
+-- Lift the given Haskell function into a JavaScript function
 lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
 
 -- |
--- Apply the given function, or equivalently
---
--- > f(a, b)
+-- Lift the given Haskell function into a JavaScript function
 lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
 
 

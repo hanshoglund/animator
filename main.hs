@@ -50,7 +50,17 @@ Polymorhism requirements:
         f(x,y,z)
 -}
 
-main = testJQuery   
+main = do
+    testJQuery
+    testLift
+    
+testLift = do
+    g <- global
+    st <- get g "setTimeout"
+    -- f <- eval "(function(){ console.log('Hello!') })" :: IO JsFunction
+    let f = lift $ printLog "Hello from Haskell!"
+    call2 st f (1000::Int) :: IO ()
+    call2 st f (2000::Int) :: IO ()
 
 testPrim = do    
     printRepr $ (False::Bool)
