@@ -305,17 +305,8 @@ lookup' o (x:xs) = do
     o' <- lookup' o xs
     get o' x 
 
-_lookupGlobal xs = unsafePerformIO $ global >>= \g -> lookup g xs
-
-_Object             = _lookupGlobal ["Object"]
-_Object_prototype   = _lookupGlobal ["Object", "prototype"]
-_Array              = _lookupGlobal ["Array"]
-_Array_prototype    = _lookupGlobal ["Array", "prototype"]
-_Function           = _lookupGlobal ["Function"]
-_Function_prototype = _lookupGlobal ["Function", "prototype"]
-_String             = _lookupGlobal ["String"]
-_String_prototype   = _lookupGlobal ["String", "prototype"]
-_JSON               = _lookupGlobal ["JSON"]
+unsafeGlobal = unsafePerformIO $ global
+unsafeLookup = unsafePerformIO . lookup unsafeGlobal
 
 
 -------------------------------------------------------------------------------------
@@ -369,7 +360,7 @@ global = global# >>= (return . JsObject)
 --
 --
 create :: JsObject -> IO JsObject
-create = _Object %. "create"
+create = (unsafeLookup ["Object"]) %. "create"
 
 -- |
 -- Return true if object @x@ is an instance created by @y@, or equivalently
@@ -386,8 +377,7 @@ x `isInstanceOf` y = p x `instanceOf#` p y
 -- > x.isPrototypeOf(y)
 --
 isPrototypeOf :: JsObject -> JsObject -> Int
-x `isPrototypeOf` y = q $ (x %. "isPrototypeOf") y
-    where q = unsafePerformIO
+x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
     
 -- |
 -- Returns the constructor of object @x@, or equivalently
@@ -395,8 +385,7 @@ x `isPrototypeOf` y = q $ (x %. "isPrototypeOf") y
 -- > x.constructor
 --
 constructor :: (JsVal a, JsVal b) => JsObject -> JsFun (a -> b) 
-constructor x = q $ x %% "constructor"
-    where q = unsafePerformIO
+constructor x = unsafePerformIO (x %% "constructor")
 
 -- |
 -- Deletes the property @n@ form object @o@, or equivalently
