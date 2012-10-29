@@ -136,9 +136,9 @@ module Animator.Internal.Prim (
         bindWith2,
 
         -- *** Infix versions
-        (%%),
-        (%%!),
-        (%%!!),
+        (%),
+        (%.),
+        (%..),
         -- apply,
         -- new,
 
@@ -857,12 +857,12 @@ callPrePost = (unsafeCoerce, unsafeCoerce)
 bindPrePost = (unsafeCoerce, unsafeCoerce)
 
 
-infixl 9 %%
-infixl 9 %%!
-infixl 9 %%!!
-(%%)   = invoke
-(%%!)  = invoke1
-(%%!!) = invoke2
+infixl 1 %
+infixl 1 %.
+infixl 1 %..
+(%)   = invoke
+(%.)  = invoke1
+(%..) = invoke2
 
 -- |
 -- Invoke the method of the given name on the given object, or equivalently

@@ -53,31 +53,31 @@ Polymorhism requirements:
 main = do
     testJQuery
     testLift
+
+withGlobal :: (JsObject -> IO a) -> IO a
+withGlobal f = global >>= f
+
+setTimeout :: Int -> IO () -> IO ()
+setTimeout t x = withGlobal $ 
+    \g -> (g %.. "setTimeout") (lift' x) t
     
 testLift = do
     g <- global
 
     as <- eval "([1,2,3])" :: IO JsObject
-    -- f  <- eval "(function(x) { return x + 10 })" :: IO JsFunction
-    -- let f = lift1' ((\x -> return $ x + 10)::Int -> IO Int)
-    let f = lift1 ((\x -> x + 10)::Int -> Int)
-    bs <- invoke1 as "map" f :: IO JsArray
+    let f = lift1 ((+ 10) ::Int -> Int)
+    bs <- as %. "map" $ f :: IO JsArray
     printRepr as
     printRepr bs
 
     cs <- eval "([5,5,6])" :: IO JsObject
-    -- h  <- eval "(function(x,y) { return x + y; })" :: IO JsFunction
-    let h = lift2 ((\x y -> x + y) :: Int -> Int -> Int)
-    ds <- invoke2 cs "reduce" h (0::Int) :: IO JsArray
+    let h = lift2 ((+) :: Int -> Int -> Int)
+    ds <- (cs %.. "reduce") h (0::Int) :: IO JsArray
     printRepr cs
     printRepr ds
+    
+    setTimeout 1000 $ printLog "Hello from Haskell!"
 
-    
-    
-    st <- get g "setTimeout"
-    f <- eval "(function(){ console.log('Hello!') })" :: IO JsFunction
-    let f = lift' $ printLog "Hello from Haskell!"
-    call2 st f (1000::Int) :: IO ()
 
 testPrim = do    
     printRepr $ (False::Bool)
@@ -111,13 +111,13 @@ testJQuery = do
     jq <- get g "jQuery"
 
     r1 <- call1 jq ("#div1"::JsString)
-    r1 %% "fadeIn" :: IO ()
+    r1 % "fadeIn" :: IO ()
 
     r2 <- call1 jq ("#div2"::JsString)
-    (r2 %%! "fadeIn") ("slow"::JsString) :: IO ()
+    r2 %. "fadeIn" $ ("slow"::JsString) :: IO ()
 
     r3 <- call1 jq ("#div3"::JsString)
-    (r3 %%! "fadeIn") (5000::Double) :: IO ()
+    r3 %. "fadeIn" $ (5000::Double) :: IO ()
 
 
     -- object % "x" := 1
