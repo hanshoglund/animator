@@ -63,19 +63,19 @@ withGlobal f = global >>= f
 
 setTimeout :: Int -> IO () -> IO ()
 setTimeout t x = withGlobal $ 
-    \g -> (g %.. "setTimeout") (liftJ x) t
+    \g -> (g %.. "setTimeout") (liftJs x) t
     
 testLift = do
     g <- global
 
     as <- eval "([1,2,3])" :: IO JsObject
-    let f = pliftJ1 ((+ 10) ::Int -> Int)
+    let f = pliftJs1 ((+ 10) ::Int -> Int)
     bs <- as %. "map" $ f :: IO JsArray
     printRepr as
     printRepr bs
 
     cs <- eval "([5,5,6])" :: IO JsObject
-    let add = pliftJ2 (+)  :: JsFun (Int -> Int -> Int) 
+    let add = pliftJs2 (+)  :: JsFun (Int -> Int -> Int) 
     ds <- (cs %.. "reduce") add (0::Int) :: IO JsArray
     printRepr cs
     printRepr ds

@@ -117,12 +117,12 @@ module Animator.Internal.Prim (
         bind,
 
         -- *** Lifting Haskell functions
-        liftJ,
-        liftJ1,
-        liftJ2,
-        pliftJ,
-        pliftJ1,
-        pliftJ2,
+        liftJs,
+        liftJs1,
+        liftJs2,
+        pliftJs,
+        pliftJs1,
+        pliftJs2,
 
         -- *** Method invokcation
         invoke,
@@ -724,7 +724,7 @@ foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 -- A JavaScript function, i.e. a callable object.
 --
 -- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
--- internal representation. To convert between the two, use 'call', 'liftJ' or 'pliftJ'.
+-- internal representation. To convert between the two, use 'call', 'liftJs' or 'pliftJs'.
 --
 -- /ECMA-262 9.11, 15.3/
 --
@@ -1000,50 +1000,50 @@ invoke2 o n a b = do
 -- new :: JsVal a => JsFun -> [a] -> IO JsObject
 -- new = error "Not implemented"
 
-foreign import ccall "aPrimLiftPure0" pliftJ#   :: Any# -> Any#
-foreign import ccall "aPrimLiftPure1" pliftJ1#  :: Any# -> Any#
-foreign import ccall "aPrimLiftPure2" pliftJ2#  :: Any# -> Any#
-foreign import ccall "aPrimLift0" liftJ#   :: Any# -> Any#
-foreign import ccall "aPrimLift1" liftJ1#  :: Any# -> Any#
-foreign import ccall "aPrimLift2" liftJ2#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure0" pliftJs#   :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" pliftJs1#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" pliftJs2#  :: Any# -> Any#
+foreign import ccall "aPrimLift0" liftJs#   :: Any# -> Any#
+foreign import ccall "aPrimLift1" liftJs1#  :: Any# -> Any#
+foreign import ccall "aPrimLift2" liftJs2#  :: Any# -> Any#
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
 --
-pliftJ :: JsVal a => a -> JsFun a
+pliftJs :: JsVal a => a -> JsFun a
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
 --
-pliftJ1 :: (JsVal a, JsVal b) => (a -> b) -> JsFun (a -> b)
+pliftJs1 :: (JsVal a, JsVal b) => (a -> b) -> JsFun (a -> b)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
 --
-pliftJ2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFun (a -> b -> c)
+pliftJs2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFun (a -> b -> c)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
 --
-liftJ :: JsVal a => IO a -> JsFun a
+liftJs :: JsVal a => IO a -> JsFun a
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
 --
-liftJ1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFun (a -> b -> c)
+liftJs1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFun (a -> b -> c)
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
 --
-liftJ2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFun (a -> b -> c)
+liftJs2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFun (a -> b -> c)
 
 
-pliftJ  = JsFun . pliftJ#  . unsafeCoerce . toPtr#
-pliftJ1 = JsFun . pliftJ1# . unsafeCoerce . toPtr#
-pliftJ2 = JsFun . pliftJ2# . unsafeCoerce . toPtr#
-liftJ  = JsFun . liftJ#  . unsafeCoerce . toPtr#
-liftJ1 = JsFun . liftJ1# . unsafeCoerce . toPtr#
-liftJ2 = JsFun . liftJ2# . unsafeCoerce . toPtr#
+pliftJs  = JsFun . pliftJs#  . unsafeCoerce . toPtr#
+pliftJs1 = JsFun . pliftJs1# . unsafeCoerce . toPtr#
+pliftJs2 = JsFun . pliftJs2# . unsafeCoerce . toPtr#
+liftJs  = JsFun . liftJs#  . unsafeCoerce . toPtr#
+liftJs1 = JsFun . liftJs1# . unsafeCoerce . toPtr#
+liftJs2 = JsFun . liftJs2# . unsafeCoerce . toPtr#
 
 
 -------------------------------------------------------------------------------------
