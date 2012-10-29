@@ -118,21 +118,21 @@ module Animator.Internal.Prim (
         bind2,
 
         -- *** Lifting Haskell functions
+        liftPure,
+        liftPure1,
+        liftPure2,
         lift,
         lift1,
         lift2,
-        liftIO,
-        liftIO1,
-        liftIO2,
 
         -- *** With explicit this argument
-        callWith,
-        callWith1,
-        callWith2,
+        -- callWith,
+        -- callWith1,
+        -- callWith2,
 
         bindWith,
-        bindWith1,
-        bindWith2,
+        -- bindWith1,
+        -- bindWith2,
 
         -- *** Infix versions
         (%),
@@ -704,7 +704,7 @@ foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 -- A JavaScript function, i.e. a callable object.
 --
 -- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
--- internal representation. To convert between the two, use 'call', 'lift' or 'liftIO'.
+-- internal representation. To convert between the two, use 'call', 'lift' or 'liftPure'.
 --
 -- /ECMA-262 9.11, 15.3/
 --
@@ -1042,35 +1042,35 @@ foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift :: JsVal a => a -> JsFunction
+liftPure :: JsVal a => a -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
+liftPure1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
+liftPure2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-liftIO :: JsVal a => IO a -> JsFunction
+lift :: JsVal a => IO a -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-liftIO1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
+lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
 
 -- |
 -- Lift the given Haskell function into a JavaScript function
-liftIO2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
+lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
 
 
-lift  = JsFunction . liftPure#  . unsafeCoerce . toPtr#
-lift1 = JsFunction . liftPure1# . unsafeCoerce . toPtr#
-lift2 = JsFunction . liftPure2# . unsafeCoerce . toPtr#
-liftIO  = JsFunction . lift#  . unsafeCoerce . toPtr#
-liftIO1 = JsFunction . lift1# . unsafeCoerce . toPtr#
-liftIO2 = JsFunction . lift2# . unsafeCoerce . toPtr#
+liftPure  = JsFunction . liftPure#  . unsafeCoerce . toPtr#
+liftPure1 = JsFunction . liftPure1# . unsafeCoerce . toPtr#
+liftPure2 = JsFunction . liftPure2# . unsafeCoerce . toPtr#
+lift  = JsFunction . lift#  . unsafeCoerce . toPtr#
+lift1 = JsFunction . lift1# . unsafeCoerce . toPtr#
+lift2 = JsFunction . lift2# . unsafeCoerce . toPtr#
 
 
 -------------------------------------------------------------------------------------
