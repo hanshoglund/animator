@@ -34,12 +34,10 @@ module Animator.Internal.Prim (
         JsSeq(..),
 
         -- *** Property types
-        JsProp(..),
         JsName,
-        lookup,
-
-        --- **** Infix version
+        JsProp(..),
         (%%),
+        lookup,
 
         -- ------------------------------------------------------------
         -- ** Objects
@@ -79,20 +77,18 @@ module Animator.Internal.Prim (
         shift,
         unshift,
 
-        -- *** Manipulation and conversion
+        -- *** Manipulation
         reverse,
         sort,
-        -- splice,
+        copy,
+        slice,
         join,
-        sliceArray,
 
         -- ------------------------------------------------------------
         -- ** Strings
         JsString,
 
         -- *** Creation and access
-        toJsString,
-        fromJsString,
         fromCharCode,
         charAt,
         charCodeAt,
@@ -109,6 +105,8 @@ module Animator.Internal.Prim (
         sliceString,
         toLower,
         toUpper,
+        toJsString,
+        fromJsString,
 
         -- ------------------------------------------------------------
         -- ** Functions
@@ -572,8 +570,6 @@ foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 -- |
 -- A JavaScript array.
 --
--- Informally, arrays are objects with dense numeric indices.
---
 --  /ECMA-262 15.4/
 --
 newtype JsArray = JsArray { getJsArray :: Any# }
@@ -627,7 +623,7 @@ unshift :: JsProp a => JsArray -> a -> IO JsArray
 unshift x = toObject x %. "unshift"
 
 -- |
--- Returns a string describing a type of the given object, or equivalently
+-- Returns
 --
 -- > x.reverse()
 --
@@ -635,7 +631,7 @@ reverse :: JsArray -> IO JsArray
 reverse x = toObject x % "reverse"
 
 -- |
--- Returns a string describing a type of the given object, or equivalently
+-- Returns
 --
 -- > x.sort()
 --
@@ -645,20 +641,29 @@ sort x = toObject x % "sort"
 -- splice
 
 -- |
--- Returns a string describing a type of the given object, or equivalently
+-- Returns
 --
--- > Array.prototype.join.call(x, s)
+-- > x.slice()
 --
-join :: JsArray -> JsString -> JsString
-join x = unsafePerformIO . (toObject x %. "join")
+copy :: JsArray -> IO JsArray
+copy x = toObject x % "slice"
+
+-- |
+-- Returns
+--
+-- > x.slice(a, b)
+--
+slice :: JsArray -> Int -> Int -> IO JsArray
+slice x a b = (toObject x %.. "slice") a b
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > x.slice(a, b)
+-- > Array.prototype.join.call(x, s)
 --
-sliceArray :: JsArray -> Int -> Int -> JsArray
-sliceArray x a b = unsafePerformIO $ (toObject x %.. "slice") a b
+join :: JsArray -> JsString -> IO JsString
+join x = toObject x %. "join"
+
 
 
 
