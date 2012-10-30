@@ -53,6 +53,13 @@ main = do
     -- testLift  
     -- testLookup
     testBool
+    testString
+
+testString = do
+    printRepr $! "hans" `charAt` 0
+    printRepr $! "hans" `charCodeAt` 0    
+    printRepr $! "hans" `lastIndexOf` "ans"
+    printRepr $! "hans" `lastIndexOf` "anx"
 
 testBool = do
     x <- object

@@ -93,7 +93,9 @@ module Animator.Internal.Prim (
         -- *** Creation and access
         toJsString,
         fromJsString,
+        fromCharCode,
         charAt,
+        charCodeAt,
 
         -- *** Searching
         indexOf,
@@ -101,7 +103,7 @@ module Animator.Internal.Prim (
         -- match
         -- replace
         -- search
-        -- split
+        split,
 
         -- *** Manipulation and conversion
         sliceString,
@@ -214,9 +216,8 @@ foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
 class JsVal a where
             
     toAny :: a -> Any#
-    toAny = unsafeCoerce
-
     fromAny :: Any# -> a
+    toAny  = unsafeCoerce
     fromAny = unsafeCoerce
     
     -- | 
@@ -230,13 +231,12 @@ class JsVal a where
     -- 
     typeOf :: JsVal a => a -> JsString
 
--- In JavaScript undefined is really (), not _|_
+-- In JavaScript @undefined@ is really (), not _|_
 --
 -- The result of the void operator, the debugger statement and functions without return 
--- values is 'undefined', which should be IO () in Haskell.
+-- values is @undefined@, which should be IO () in Haskell.
 instance JsVal () where
     typeOf () = "undefined"
-
 instance JsVal Bool where
     toAny   = unsafeCoerce . toPtr#
     fromAny = unsafeCoerce . fromPtr#
@@ -255,14 +255,14 @@ instance JsVal Double where
     typeOf _ = "number"
 instance JsVal JsString where
     typeOf _ = "string"
-instance JsVal JsObject where
-    typeOf = JsString . typeOf# . getJsObject
 instance JsVal JsArray where
     typeOf _ = "object"
 instance JsVal (JsFun a) where
     typeOf _ = "function"
 instance JsVal (Ptr a) where
     typeOf _ = "object"
+instance JsVal JsObject where
+    typeOf = JsString . typeOf# . getJsObject
 
 
 -- |
@@ -274,6 +274,8 @@ instance JsRef (JsFun a) where
     toObject = JsObject . getJsFun
 instance JsRef JsArray where
     toObject = JsObject . getJsArray
+instance JsRef JsString where
+    toObject = JsObject . unsafeCoerce . getJsString
 instance JsRef JsObject where
     toObject = id
 
@@ -298,18 +300,20 @@ type JsName = String
 -- containing a string) results in a runtime error.
 --
 class JsVal a => JsProp a where
-    -- | Fetch the value of property @n@ in object @o@, or equivalently
+    -- | 
+    -- Fetch the value of property @n@ in object @o@, or equivalently
     --
     -- > o.n
     get :: JsObject -> JsName -> IO a
 
-    -- | Assign the property @n@ to @x@ in object @o@, or equivalently
+    -- | 
+    -- Assign the property @n@ to @x@ in object @o@, or equivalently
     --
     -- > o.n = x
     set :: JsObject -> JsName -> a -> IO ()
 
-    -- | Updates the value named @n@ in object @o@ by applying the function f,
-    --   or equivalently
+    -- | 
+    -- Updates the value named @n@ in object @o@ by applying the function f, or equivalently
     --
     -- > x.n = f(x.n)
     update :: JsObject -> JsName -> (a -> a) -> IO ()
@@ -388,7 +392,7 @@ global = global# >>= (return . JsObject)
 --
 --
 create :: JsObject -> IO JsObject
-create = (unsafeLookup ["Object"]) %. "create"
+create = unsafeLookup ["Object"] %. "create"
 
 -- |
 -- Return true if object @x@ is an instance created by @y@, or equivalently
@@ -585,58 +589,58 @@ array = array# >>= (return . JsArray)
 -- |
 -- Returns the length of the given array, or equivalently
 --
--- > xs.length
+-- > x.length
 --
 length :: JsArray -> IO Int
-length xs = (toObject xs) %% "length"
+length x = toObject x %% "length"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > xs.push(x)
+-- > x.push(x)
 --
 push :: JsProp a => JsArray -> a -> IO JsArray
-push xs = (toObject xs) %. "push"
+push x = toObject x %. "push"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > xs.pop()
+-- > x.pop()
 --
 pop :: JsProp a => JsArray -> IO a
-pop xs = (toObject xs) % "pop"
+pop x = toObject x % "pop"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > xs.shift()
+-- > x.shift()
 --
 shift :: JsProp a => JsArray -> IO a
-shift xs = (toObject xs) % "shift"
+shift x = toObject x % "shift"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > xs.shift(x)
+-- > x.shift(x)
 --
 unshift :: JsProp a => JsArray -> a -> IO JsArray
-unshift xs = (toObject xs) %. "unshift"
+unshift x = toObject x %. "unshift"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > xs.reverse()
+-- > x.reverse()
 --
 reverse :: JsArray -> IO JsArray
-reverse xs = (toObject xs) % "reverse"
+reverse x = toObject x % "reverse"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > xs.sort()
+-- > x.sort()
 --
 sort :: JsArray -> IO JsArray
-sort xs = (toObject xs) % "sort"
+sort x = toObject x % "sort"
 
 -- splice
 
@@ -645,16 +649,16 @@ sort xs = (toObject xs) % "sort"
 --
 -- > Array.prototype.join.call(x, s)
 --
-join :: JsArray -> JsString -> IO JsString
-join xs = (toObject xs) %. "join"
+join :: JsArray -> JsString -> JsString
+join x = unsafePerformIO . (toObject x %. "join")
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > Array.prototype.slice.call(x, a, b)
+-- > x.slice(a, b)
 --
-sliceArray :: JsArray -> Int -> Int -> IO JsArray
-sliceArray xs = (toObject xs) %.. "slice"
+sliceArray :: JsArray -> Int -> Int -> JsArray
+sliceArray x a b = unsafePerformIO $ (toObject x %.. "slice") a b
 
 
 
@@ -704,12 +708,28 @@ fromJsString :: JsString -> String
 fromJsString = fromJsString# . getJsString
 
 -- |
+-- Returns
+--
+-- > String.fromCharCode(a)
+--
+fromCharCode :: Int -> JsString
+fromCharCode = unsafePerformIO . (unsafeLookup ["String"] %. "fromCharCode")
+
+-- |
 -- Returns the JavaScript global object, or equivalently
 --
--- > String.prototype.charAt.call(s, i)
+-- > x.charAt(a)
 --
-charAt :: Int -> JsString -> JsString
-charAt = error "Not implemented"
+charAt :: JsString -> Int -> JsString
+charAt x = unsafePerformIO . (toObject x %. "charAt")
+
+-- |
+-- Returns the JavaScript global object, or equivalently
+--
+-- > x.charCodeAt(a)
+--
+charCodeAt :: JsString -> Int -> Int
+charCodeAt x = unsafePerformIO . (toObject x %. "charCodeAt")
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -717,7 +737,7 @@ charAt = error "Not implemented"
 -- > String.prototype.indexOf.call(s, c)
 --
 indexOf :: JsString -> JsString -> Int
-indexOf = error "Not implemented"
+indexOf x = unsafePerformIO . (toObject x %. "indexOf")
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -725,36 +745,43 @@ indexOf = error "Not implemented"
 -- > String.prototype.lastIndexOf.call(s, c)
 --
 lastIndexOf :: JsString -> JsString -> Int
-lastIndexOf = error "Not implemented"
+lastIndexOf x = unsafePerformIO . (toObject x %. "lastIndexOf")
 
 -- match
 -- replace
 -- search
--- split
 
 -- |
--- Returns the JavaScript global object, or equivalently
+-- Returns
 --
--- > String.prototype.slice.call(s, a, b)
+-- > x.split(q)
 --
-sliceString :: Int -> Int -> JsString -> JsString
-sliceString = error "Not implemented"
+split :: JsString -> JsString -> JsArray
+split x = unsafePerformIO . (toObject x %. "split")
 
 -- |
--- Returns the JavaScript global object, or equivalently
+-- Returns
 --
--- > String.prototype.toLowerCase.call(s)
+-- > x.slice(a, b)
+--
+sliceString :: JsString -> Int -> Int -> JsString
+sliceString x a b = unsafePerformIO $ (toObject x %.. "slice") a b
+
+-- |
+-- Returns
+--
+-- > x.toLower()
 --
 toLower :: JsString -> JsString
-toLower = error "Not implemented"
+toLower x = unsafePerformIO $ (toObject x % "toLower")
 
 -- |
--- Returns the JavaScript global object, or equivalently
+-- Returns
 --
--- > String.prototype.toUpperCase.call(s)
+-- > x.toUpper()
 --
 toUpper :: JsString -> JsString
-toUpper = error "Not implemented"
+toUpper x = unsafePerformIO $ (toObject x % "toUpper")
 
 
 
@@ -780,7 +807,7 @@ newtype JsFun a = JsFun { getJsFun :: Any# }
 -- > f.length
 --
 arity :: JsFun a -> Int
-arity = error "Not implemented"
+arity x = unsafePerformIO $ (toObject x %% "length")
 
 foreign import ccall "aPrimCall0" call#  :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1" call1#  :: Any# -> Any# -> Any# -> IO Any#
@@ -888,10 +915,10 @@ bindWith1 f t a = JsFun $ bind1# (getJsFun f) (p t) (p a)
         p = toAny
 
 
-infixl 1 %
-infixl 1 %.
-infixl 1 %..
-infixl 1 %%
+infixl 9 %
+infixl 9 %.
+infixl 9 %..
+infixl 9 %%
 
 -- |
 -- Infix version of 'invoke'.
