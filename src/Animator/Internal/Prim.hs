@@ -23,16 +23,19 @@
 module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
-        -- ** JavaScript types
+        -- ** JavaScript type classes
         -- *** All types
         JsVal(..),
 
         -- *** Reference types
         JsRef(..),
-        JsName,
+
+        -- *** Sequence types
+        JsSeq(..),
 
         -- *** Property types
         JsProp(..),
+        JsName,
         lookup,
 
         --- **** Infix version
@@ -117,12 +120,12 @@ module Animator.Internal.Prim (
         bind,
 
         -- *** Lifting Haskell functions
-        liftJs,
-        liftJs1,
-        liftJs2,
-        pliftJs,
-        pliftJs1,
-        pliftJs2,
+        lift,
+        lift1,
+        lift2,
+        liftPure,
+        liftPure1,
+        liftPure2,
 
         -- *** Method invokcation
         invoke,
@@ -201,13 +204,14 @@ toPtr#        = undefined
 #endif __HASTE__
 
 
-
-foreign import ccall "aPrimTypeOf"    typeOf#           :: Any# -> String#
+foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
 
 -- |
 -- Class of JavaScript types.
+--
 class JsVal a where
-    -- | Returns a string describing a type of the given value, or equivalently
+    -- | 
+    -- Returns a string describing a type of the given value, or equivalently
     --
     -- > typeof x
     --
@@ -215,9 +219,7 @@ class JsVal a where
     --
     -- > "undefined", "boolean", "number", "string", "object", "function"
     -- 
-    -- /ECMA-262 11.4.3/
-    typeOf :: JsVal a => a -> String
-    typeOf = fromJsString# . typeOf# . unsafeCoerce
+    typeOf :: JsVal a => a -> JsString
 
 instance JsVal () where
     typeOf () = "object"
@@ -237,25 +239,34 @@ instance JsVal Double where
 instance JsVal JsString where
     typeOf _ = "string"
 instance JsVal JsObject where
-    -- typeOf = default
+    typeOf = JsString . typeOf# . getJsObject
 instance JsVal JsArray where
     typeOf _ = "object"
 instance JsVal (JsFun a) where
     typeOf _ = "function"
-instance JsVal (Ptr a) where -- TODO
+instance JsVal (Ptr a) where
     typeOf _ = "object"
 
 
 -- |
 -- Class of JavaScript reference types.
+--
 class JsVal a => JsRef a where
     toObject :: a -> JsObject
 instance JsRef (JsFun a) where
-    toObject = unsafeCoerce
+    toObject = JsObject . getJsFun
 instance JsRef JsArray where
-    toObject = unsafeCoerce
+    toObject = JsObject . getJsArray
 instance JsRef JsObject where
     toObject = id
+
+-- |
+-- Class of JavaScript sequence types.
+--
+class JsRef a => JsSeq a where
+    toArray :: a -> JsArray
+instance JsSeq JsArray where
+    toArray = id
 
 
 -- |
@@ -724,7 +735,7 @@ foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 -- A JavaScript function, i.e. a callable object.
 --
 -- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
--- internal representation. To convert between the two, use 'call', 'liftJs' or 'pliftJs'.
+-- internal representation. To convert between the two, use 'call', 'lift' or 'liftPure'.
 --
 -- /ECMA-262 9.11, 15.3/
 --
@@ -1000,50 +1011,28 @@ invoke2 o n a b = do
 -- new :: JsVal a => JsFun -> [a] -> IO JsObject
 -- new = error "Not implemented"
 
-foreign import ccall "aPrimLiftPure0" pliftJs#   :: Any# -> Any#
-foreign import ccall "aPrimLiftPure1" pliftJs1#  :: Any# -> Any#
-foreign import ccall "aPrimLiftPure2" pliftJs2#  :: Any# -> Any#
-foreign import ccall "aPrimLift0" liftJs#   :: Any# -> Any#
-foreign import ccall "aPrimLift1" liftJs1#  :: Any# -> Any#
-foreign import ccall "aPrimLift2" liftJs2#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure0" liftPure#   :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" liftPure1#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" liftPure2#  :: Any# -> Any#
+foreign import ccall "aPrimLift0" lift#   :: Any# -> Any#
+foreign import ccall "aPrimLift1" lift1#  :: Any# -> Any#
+foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
 
--- |
--- Lift the given Haskell function into a JavaScript function
---
-pliftJs :: JsVal a => a -> JsFun a
+liftPure :: JsVal a => a -> JsFun a
+liftPure1 :: (JsVal a, JsVal b) => (a -> b) -> JsFun (a -> b)
+liftPure2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFun (a -> b -> c)
 
--- |
--- Lift the given Haskell function into a JavaScript function
---
-pliftJs1 :: (JsVal a, JsVal b) => (a -> b) -> JsFun (a -> b)
-
--- |
--- Lift the given Haskell function into a JavaScript function
---
-pliftJs2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFun (a -> b -> c)
-
--- |
--- Lift the given Haskell function into a JavaScript function
---
-liftJs :: JsVal a => IO a -> JsFun a
-
--- |
--- Lift the given Haskell function into a JavaScript function
---
-liftJs1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFun (a -> b -> c)
-
--- |
--- Lift the given Haskell function into a JavaScript function
---
-liftJs2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFun (a -> b -> c)
+lift :: JsVal a => IO a -> JsFun a
+lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFun (a -> b -> c)
+lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFun (a -> b -> c)
 
 
-pliftJs  = JsFun . pliftJs#  . unsafeCoerce . toPtr#
-pliftJs1 = JsFun . pliftJs1# . unsafeCoerce . toPtr#
-pliftJs2 = JsFun . pliftJs2# . unsafeCoerce . toPtr#
-liftJs  = JsFun . liftJs#  . unsafeCoerce . toPtr#
-liftJs1 = JsFun . liftJs1# . unsafeCoerce . toPtr#
-liftJs2 = JsFun . liftJs2# . unsafeCoerce . toPtr#
+liftPure  = JsFun . liftPure#  . unsafeCoerce . toPtr#
+liftPure1 = JsFun . liftPure1# . unsafeCoerce . toPtr#
+liftPure2 = JsFun . liftPure2# . unsafeCoerce . toPtr#
+lift  = JsFun . lift#  . unsafeCoerce . toPtr#
+lift1 = JsFun . lift1# . unsafeCoerce . toPtr#
+lift2 = JsFun . lift2# . unsafeCoerce . toPtr#
 
 
 -------------------------------------------------------------------------------------
