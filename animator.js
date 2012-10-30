@@ -20,6 +20,12 @@ function aInternalCheck(type, value, error) {
         case 2:
             if (typeof type !== "object") throw error;
             break;
+        case 3:
+            if (typeof type !== "function") throw error;
+            break;
+        case 4:
+            if (typeof type !== "boolean") throw error;
+            break;
     }
 }
 

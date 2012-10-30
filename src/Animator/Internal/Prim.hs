@@ -25,7 +25,7 @@ module Animator.Internal.Prim (
         -- ------------------------------------------------------------
         -- ** JavaScript type classes
         -- *** All types
-        JsVal(..),
+        JsVal( typeOf ),
 
         -- *** Reference types
         JsRef(..),
@@ -191,6 +191,7 @@ type JSON#    = HJ.JSON
 toJsString#   = H.toJSStr
 fromJsString# = H.fromJSStr
 toPtr#        = H.toPtr
+fromPtr#      = H.fromPtr
 
 #else
 
@@ -200,6 +201,7 @@ type JSON#    = Int
 toJsString#   = undefined
 fromJsString# = undefined
 toPtr#        = undefined
+fromPtr#      = undefined
 
 #endif __HASTE__
 
@@ -210,7 +212,7 @@ foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
 -- Class of JavaScript types.
 --
 class JsVal a where
-    
+            
     toAny :: a -> Any#
     toAny = unsafeCoerce
 
@@ -235,7 +237,10 @@ class JsVal a where
 instance JsVal () where
     typeOf () = "undefined"
 
--- instance JsVal Bool where -- TODO
+instance JsVal Bool where
+    toAny   = unsafeCoerce . toPtr#
+    fromAny = unsafeCoerce . fromPtr#
+    typeOf _ = "boolean"
 instance JsVal Int where
     typeOf _ = "number"
 instance JsVal Int32 where
@@ -339,7 +344,7 @@ unsafeLookup = unsafePerformIO . lookup unsafeGlobal
 foreign import ccall "aPrimNull"       null#             :: Any#
 foreign import ccall "aPrimObj"        object#           :: IO Any#
 foreign import ccall "aPrimGlobal"     global#           :: IO Any#
-foreign import ccall "aPrimInstanceOf" instanceOf#       :: Any# -> Any# -> Int
+foreign import ccall "aPrimInstanceOf" instanceOf#       :: Any# -> Any# -> Bool
 
 -- |
 -- A JavaScript object.
@@ -393,7 +398,7 @@ create = (unsafeLookup ["Object"]) %. "create"
 -- This function is pure, as the prototype of an object is not supposed to
 -- change, at least not as far as the standard is concerned.
 --
-isInstanceOf :: JsObject -> JsObject -> Int
+isInstanceOf :: JsObject -> JsObject -> Bool
 x `isInstanceOf` y = p x `instanceOf#` p y 
     where p = getJsObject
 
@@ -405,7 +410,7 @@ x `isInstanceOf` y = p x `instanceOf#` p y
 -- This function is pure, as the prototype of an object is not supposed to
 -- change, at least not as far as the standard is concerned.
 -- 
-isPrototypeOf :: JsObject -> JsObject -> Int
+isPrototypeOf :: JsObject -> JsObject -> Bool
 x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
     
 -- |
@@ -432,7 +437,7 @@ delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
 --
 -- > o.n !== undefined
 --
-hasProperty :: JsObject -> JsName -> IO Int
+hasProperty :: JsObject -> JsName -> IO Bool
 hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
 
 -- |
@@ -440,7 +445,7 @@ hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
 --
 -- > x.hasOwnProperty(y)
 --
-hasOwnProperty :: JsObject -> JsName -> IO Int
+hasOwnProperty :: JsObject -> JsName -> IO Bool
 hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
 
 -- |
@@ -448,7 +453,7 @@ hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
 --
 -- > x.propertyIsEnumerable(y)
 --
-propertyIsEnumerable :: JsObject -> JsName -> IO Int
+propertyIsEnumerable :: JsObject -> JsName -> IO Bool
 propertyIsEnumerable x n = (x %. "propertyIsEnumerable") (toJsString n)
 
 
@@ -476,9 +481,10 @@ toLocaleString x = x % "toLocaleString"
 valueOf :: JsVal a => JsObject -> IO a
 valueOf x = x % "valueOf"
 
-foreign import ccall "aPrimHas"       has#              :: Int -> Any# -> String# -> IO Int
-foreign import ccall "aPrimDelete"    delete#           :: Int -> Any# -> String# -> IO Int
+foreign import ccall "aPrimHas"       has#              :: Int -> Any# -> String# -> IO Bool
+foreign import ccall "aPrimDelete"    delete#           :: Int -> Any# -> String# -> IO Bool
 
+foreign import ccall "aPrimGet"       getBool#          :: Int -> Any# -> String# -> IO Bool
 foreign import ccall "aPrimGet"       getInt#           :: Int -> Any# -> String# -> IO Int
 foreign import ccall "aPrimGet"       getWord#          :: Int -> Any# -> String# -> IO Word
 foreign import ccall "aPrimGet"       getInt32#         :: Int -> Any# -> String# -> IO Int32
@@ -488,6 +494,7 @@ foreign import ccall "aPrimGet"       getDouble#        :: Int -> Any# -> String
 foreign import ccall "aPrimGet"       getString#        :: Int -> Any# -> String# -> IO String#
 foreign import ccall "aPrimGet"       getAny#           :: Int -> Any# -> String# -> IO Any#
 
+foreign import ccall "aPrimSet"       setBool#          :: Int -> Any# -> String# -> Bool    -> IO ()
 foreign import ccall "aPrimSet"       setInt#           :: Int -> Any# -> String# -> Int     -> IO ()
 foreign import ccall "aPrimSet"       setWord#          :: Int -> Any# -> String# -> Word    -> IO ()
 foreign import ccall "aPrimSet"       setInt32#         :: Int -> Any# -> String# -> Int32   -> IO ()
@@ -504,6 +511,11 @@ numberType#    = 0
 stringType#    = 1
 objectType#    = 2
 functionType#  = 3
+booleanType#   = 4
+
+instance JsProp Bool where
+    get = get# (getBool# booleanType#) id
+    set = set# (setBool# booleanType#) id
 
 instance JsProp Int where
     get = get# (getInt# numberType#) id

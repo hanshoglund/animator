@@ -1,7 +1,8 @@
 
 {-# LANGUAGE MagicHash, CPP, ForeignFunctionInterface, OverloadedStrings, 
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
-    NoMonomorphismRestriction #-}
+    NoMonomorphismRestriction,
+    BangPatterns #-}
 
 module Main where
 
@@ -47,9 +48,18 @@ Polymorhism requirements:
 -}
 
 main = do
-    testJQuery
-    testLift  
-    testLookup
+    -- testJQuery
+    -- testPrim
+    -- testLift  
+    -- testLookup
+    testBool
+
+testBool = do
+    x <- object
+    y <- create x
+    let !r = isPrototypeOf x y
+    let !u = isPrototypeOf y x
+    printRepr $ (r, u)
 
 testLookup = do
     x <- object
