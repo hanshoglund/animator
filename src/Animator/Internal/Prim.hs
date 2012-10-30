@@ -210,6 +210,13 @@ foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
 -- Class of JavaScript types.
 --
 class JsVal a where
+    
+    toAny :: a -> Any#
+    toAny = unsafeCoerce
+
+    fromAny :: Any# -> a
+    fromAny = unsafeCoerce
+    
     -- | 
     -- Returns a string describing a type of the given value, or equivalently
     --
@@ -221,8 +228,13 @@ class JsVal a where
     -- 
     typeOf :: JsVal a => a -> JsString
 
+-- In JavaScript undefined is really (), not _|_
+--
+-- The result of the void operator, the debugger statement and functions without return 
+-- values is 'undefined', which should be IO () in Haskell.
 instance JsVal () where
-    typeOf () = "object"
+    typeOf () = "undefined"
+
 -- instance JsVal Bool where -- TODO
 instance JsVal Int where
     typeOf _ = "number"
@@ -378,6 +390,9 @@ create = (unsafeLookup ["Object"]) %. "create"
 --
 -- > x instanceof y
 --
+-- This function is pure, as the prototype of an object is not supposed to
+-- change, at least not as far as the standard is concerned.
+--
 isInstanceOf :: JsObject -> JsObject -> Int
 x `isInstanceOf` y = p x `instanceOf#` p y 
     where p = getJsObject
@@ -386,7 +401,10 @@ x `isInstanceOf` y = p x `instanceOf#` p y
 -- Return true if object @x@ is the prototype of object @y@, or equivalently
 --
 -- > x.isPrototypeOf(y)
---
+-- 
+-- This function is pure, as the prototype of an object is not supposed to
+-- change, at least not as far as the standard is concerned.
+-- 
 isPrototypeOf :: JsObject -> JsObject -> Int
 x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
     
@@ -395,7 +413,10 @@ x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
 --
 -- > x.constructor
 --
-constructor :: (JsVal a, JsVal b) => JsObject -> JsFun (a -> b) 
+-- This function is pure, as the constructor of an object is not supposed to
+-- change.
+--
+constructor :: JsObject -> JsFun a
 constructor x = unsafePerformIO (x %% "constructor")
 
 -- |
@@ -752,9 +773,6 @@ arity = error "Not implemented"
 foreign import ccall "aPrimCall0" call#  :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1" call1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall2" call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall3" call3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall4" call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall5" call5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
 -- |
 -- Apply the given function, or equivalently
@@ -777,23 +795,9 @@ call1 :: (JsVal a, JsVal b) => JsFun (a -> b) -> a -> IO b
 --
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFun (a -> b -> c) -> a -> b -> IO c
 
--- -- |
--- -- Apply the given function, or equivalently
--- --
--- -- > f(a, b, c)
--- call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFun (a -> b -> c -> d) -> a -> b -> c -> IO d
--- 
--- -- |
--- -- Apply the given function, or equivalently
--- --
--- -- > f(a, b, c, d)
--- call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFun (a -> b -> c -> d -> e) -> a -> b -> c -> d -> IO e
-
 call  f = callWith  f null
 call1 f = callWith1 f null
 call2 f = callWith2 f null
--- call3 f = callWith3 f null
--- call4 f = callWith4 f null
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
@@ -815,59 +819,38 @@ callWith1 :: (JsVal a, JsVal b) => JsFun (a -> b) -> JsObject -> a -> IO b
 -- > f.call(thisArg, a, b)
 --
 callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFun (a -> b -> c) -> JsObject -> a -> b -> IO c
--- callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFun -> JsObject -> a -> b -> c -> IO d
--- callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFun -> JsObject -> a -> b -> c -> d -> IO e
--- callWith5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsFun -> JsObject -> a -> b -> c -> d -> e -> IO f
 
 callWith f t = do
     r <- call# (getJsFun f) (p t)
     return $ q r
     where
-        (p,q) = callPrePost
+        p = toAny
+        q = fromAny
 
 callWith1 f t a = do
     r <- call1# (getJsFun f) (p t) (p a)
     return $ q r
     where
-        (p,q) = callPrePost
+        p = toAny
+        q = fromAny
 
 callWith2 f t a b = do
     r <- call2# (getJsFun f) (p t) (p a) (p b)
     return $ q r
     where
-        (p,q) = callPrePost
+        p = toAny
+        q = fromAny
 
--- callWith3 f t a b c = do
---     r <- call3# (getJsFun f) (p t) (p a) (p b) (p c)
---     return $ q r
---     where
---         (p,q) = callPrePost
--- 
--- callWith4 f t a b c d = do
---     r <- call4# (getJsFun f) (p t) (p a) (p b) (p c) (p d)
---     return $ q r
---     where
---         (p,q) = callPrePost
--- 
--- callWith5 f t a b c d e = do
---     r <- call5# (getJsFun f) (p t) (p a) (p b) (p c) (p d) (p e)
---     return $ q r
---     where
---         (p,q) = callPrePost
 
-foreign import ccall "aPrimBind0" bind#  :: Any# -> Any# -> IO Any#
-foreign import ccall "aPrimBind1" bind1#  :: Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimBind2" bind2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimBind3" bind3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimBind4" bind4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimBind5" bind5#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimBind0" bind#  :: Any# -> Any# -> Any#
+foreign import ccall "aPrimBind1" bind1#  :: Any# -> Any# -> Any# -> Any#
 
 -- |
 -- Partially apply the given function, or equivalently
 --
 -- > f.bind(null, a)
 --
-bind :: JsVal a => JsFun (a -> b) -> a -> IO (JsFun b)
+bind :: JsVal a => JsFun (a -> b) -> a -> (JsFun b)
 bind  f = bindWith1 f null
 
 -- |
@@ -875,29 +858,22 @@ bind  f = bindWith1 f null
 --
 -- > f.bind(thisArg)
 --
-bindWith :: JsFun a -> JsObject -> IO (JsFun a)
+bindWith :: JsFun a -> JsObject -> (JsFun a)
 
 -- |
 -- Partially apply the given function with the given @this@ value, or equivalently
 --
 -- > f.bind(thisArg, a)
 --
-bindWith1 :: JsVal a => JsFun (a -> b) -> JsObject -> a -> IO (JsFun b)
+bindWith1 :: JsVal a => JsFun (a -> b) -> JsObject -> a -> (JsFun b)
 
-bindWith f t = do
-    r <- bind# (getJsFun f) (p t)
-    return $ q r
+bindWith f t = JsFun $ bind# (getJsFun f) (p t)
     where
-        (p,q) = bindPrePost
+        p = toAny
 
-bindWith1 f t a = do
-    r <- bind1# (getJsFun f) (p t) (p a)
-    return $ q r
+bindWith1 f t a = JsFun $ bind1# (getJsFun f) (p t) (p a)
     where
-        (p,q) = bindPrePost
-
-callPrePost = (unsafeCoerce, unsafeCoerce)
-bindPrePost = (unsafeCoerce, unsafeCoerce)
+        p = toAny
 
 
 infixl 1 %
@@ -1054,7 +1030,7 @@ stringify = error "Not implemented"
 -- Utility
 -------------------------------------------------------------------------------------
 
-foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
+foreign import ccall "aPrimEval" eval#  :: String# -> IO Any#
 
 -- |
 -- Evaluates the given string as JavaScript.
@@ -1062,7 +1038,7 @@ foreign import ccall "aPrimEval"      eval#             :: String# -> IO Any#
 -- /ECMA-262 15.1.2.1/
 --
 eval :: JsVal a => JsString -> IO a
-eval = unsafeCoerce . eval# . getJsString
+eval = fmap fromAny . eval# . getJsString
 
 
 foreign import ccall "aPrimWrite"     documentWrite#    :: String# -> IO ()
