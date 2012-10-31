@@ -255,8 +255,8 @@ foreign import ccall "aPrimSet"    setDouble#   :: Int -> Any# -> String# -> Dou
 foreign import ccall "aPrimSet"    setString#   :: Int -> Any# -> String# -> String# -> IO ()
 foreign import ccall "aPrimSet"    setAny#      :: Int -> Any# -> String# -> Any#    -> IO ()
 
-mkGet# i c x n   = i (getJsObject x) (toJsString# n)  >>= (return . c)
-mkSet# o c x n v = o (getJsObject x) (toJsString# n) (c v)
+mkGet# i c x n   = i (getJsObject x) (getJsString n)  >>= (return . c)
+mkSet# o c x n v = o (getJsObject x) (getJsString n) (c v)
 
 numberType#    = 0
 stringType#    = 1
@@ -375,7 +375,7 @@ instance JsSeq JsArray where
 --
 -- This type is disjoint from ordinary Haskell data types, which have a compiler-specific
 -- internal representation. All JavaScript reference types can be converted to this type
--- using the 'JsRef' instancce.
+-- using the 'JsRef' class.
 --
 --  /ECMA-262 8.6, 15.2/
 --
@@ -385,7 +385,7 @@ newtype JsObject = JsObject { getJsObject :: Any# }
 -- |
 -- A JavaScript property name, or object key.
 --
-type JsName = String
+type JsName = JsString
 
 -- | 
 -- Fetch the value of property @n@ in object @o@, or equivalently
@@ -414,7 +414,7 @@ update n o f = get n o >>= set n o . f
 -- > delete o.n
 --
 delete :: JsObject -> JsName -> IO ()
-delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
+delete x n = delete# 0 (getJsObject x) (getJsString n) >> return ()
 
 -- |
 -- Returns
@@ -422,7 +422,7 @@ delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
 -- > "n" in o
 --
 hasProperty :: JsObject -> JsName -> IO Bool
-hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
+hasProperty x n = has# 0 (getJsObject x) (getJsString n)
 
 -- | 
 -- Recursively traverse an object hierarchy using 'get'.
@@ -529,7 +529,7 @@ constructor x = unsafePerformIO (x %% "constructor")
 -- > x.hasOwnProperty(y)
 --
 hasOwnProperty :: JsObject -> JsName -> IO Bool
-hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
+hasOwnProperty x n = (x %. "hasOwnProperty") n
 
 -- |
 -- Returns
@@ -537,7 +537,7 @@ hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
 -- > x.propertyIsEnumerable(y)
 --
 propertyIsEnumerable :: JsObject -> JsName -> IO Bool
-propertyIsEnumerable x n = (x %. "propertyIsEnumerable") (toJsString n)
+propertyIsEnumerable x n = (x %. "propertyIsEnumerable") n
 
 -------------------------------------------------------------------------------------
 
@@ -1142,20 +1142,20 @@ foreign import ccall "aPrimAlert"     alert#            :: String# -> IO ()
 -- |
 -- Displays a modal window with the given text.
 --
-alert :: String -> IO ()
-alert str  = alert# (toJsString# $ str)
+alert :: JsString -> IO ()
+alert str  = alert# (getJsString $ str)
 
 -- |
 -- Posts a line to the web console.
 --
-printLog :: String -> IO ()
-printLog str = consoleLog# (toJsString# $ str)
+printLog :: JsString -> IO ()
+printLog str = consoleLog# (getJsString $ str)
 
 -- |
 -- Appends the given content at the end of the `body` element.
 --
-printDoc :: String -> IO ()
-printDoc str = documentWrite# (toJsString# $ str)
+printDoc :: JsString -> IO ()
+printDoc str = documentWrite# (getJsString $ str)
 
 -- |
 -- Activates the JavaScript debugger, if there is one.

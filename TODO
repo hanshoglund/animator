@@ -4,5 +4,6 @@
 - Remove phantom type from JsFun (and rename back to JsFunction)
 - Make wrapper ImmutableArray type (also with phantom types?)
 
+- What about read/show?
 - Split Prim module
     - How?

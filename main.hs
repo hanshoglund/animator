@@ -51,11 +51,11 @@ Polymorhism requirements:
 main = do
     testFib
     testJQuery
-    -- testPrim
-    -- testLift  
-    -- testLookup
-    -- testBool
-    -- testString
+    testPrim
+    testLift  
+    testLookup
+    testBool
+    testString
 
 testFib = do
     printRepr $! fib 10
@@ -81,8 +81,8 @@ testLookup = do
     x <- object
     set x "foo" (1::Int)
     y <- create x
-    printLog $ show (x `isPrototypeOf` y)
-    printLog $ show (y `isPrototypeOf` x)
+    printLog . toJsString . show $ (x `isPrototypeOf` y)
+    printLog . toJsString . show $ (y `isPrototypeOf` x)
 
 withGlobal :: (JsObject -> IO a) -> IO a
 withGlobal f = global >>= f
