@@ -114,7 +114,7 @@ module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
         -- ** Functions
-        JsFun,
+        JsFunction,
         arity,
         call,
         call1,
@@ -300,10 +300,10 @@ instance JsVal JsArray where
     typeOf _    = "object"
     get#        = mkGet# (getAny# objectType#) JsArray
     set#        = mkSet# (setAny# objectType#) getJsArray
-instance JsVal (JsFun a) where
+instance JsVal JsFunction where
     typeOf _    = "function"
-    get#        = mkGet# (getAny# functionType#) JsFun
-    set#        = mkSet# (setAny# functionType#) getJsFun
+    get#        = mkGet# (getAny# functionType#) JsFunction
+    set#        = mkSet# (setAny# functionType#) getJsFunction
 instance JsVal (Ptr a) where
     typeOf _    = "object"
     get#        = mkGet# (getAny# objectType#) unsafeCoerce -- TODO problem?
@@ -314,8 +314,8 @@ instance JsVal (Ptr a) where
 --
 class JsVal a => JsRef a where
     toObject :: a -> JsObject
-instance JsRef (JsFun a) where
-    toObject = JsObject . getJsFun
+instance JsRef JsFunction where
+    toObject = JsObject . getJsFunction
 instance JsRef JsArray where
     toObject = JsObject . getJsArray
 instance JsRef JsString where
@@ -481,7 +481,7 @@ x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
 --
 -- > x.constructor
 --
-constructor :: JsObject -> JsFun a
+constructor :: JsObject -> JsFunction
 constructor x = unsafePerformIO (x %% "constructor")
 
 -------------------------------------------------------------------------------------
@@ -810,14 +810,14 @@ toUpper x = toObject x & "toUpper"
 --
 -- /ECMA-262 9.11, 15.3/
 --
-newtype JsFun a = JsFun { getJsFun :: Any# }
+newtype JsFunction = JsFunction { getJsFunction :: Any# }
 
 -- |
 -- Returns the arity of the given function, or equivalently
 --
 -- > f.length
 --
-arity :: JsFun a -> Int
+arity :: JsFunction -> Int
 arity x = unsafePerformIO $ (toObject x %% "length")
 
 foreign import ccall "aPrimCall0" call#  :: Any# -> Any# -> IO Any#
@@ -829,21 +829,21 @@ foreign import ccall "aPrimCall2" call2#  :: Any# -> Any# -> Any# -> Any# -> IO 
 --
 -- > f()
 --
-call :: JsVal a => JsFun a -> IO a
+call :: JsVal a => JsFunction -> IO a
 
 -- |
 -- Apply the given function, or equivalently
 --
 -- > f(a)
 --
-call1 :: (JsVal a, JsVal b) => JsFun (a -> b) -> a -> IO b
+call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
 
 -- |
 -- Apply the given function, or equivalently
 --
 -- > f(a, b)
 --
-call2 :: (JsVal a, JsVal b, JsVal c) => JsFun (a -> b -> c) -> a -> b -> IO c
+call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
 
 call  f = callWith  f null
 call1 f = callWith1 f null
@@ -854,38 +854,38 @@ call2 f = callWith2 f null
 --
 -- > f.call(thisArg)
 --
-callWith :: JsVal a => JsFun a -> JsObject -> IO a
+callWith :: JsVal a => JsFunction -> JsObject -> IO a
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
 --
 -- > f.call(thisArg, a)
 --
-callWith1 :: (JsVal a, JsVal b) => JsFun (a -> b) -> JsObject -> a -> IO b
+callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
 --
 -- > f.call(thisArg, a, b)
 --
-callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFun (a -> b -> c) -> JsObject -> a -> b -> IO c
+callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
 
 callWith f t = do
-    r <- call# (getJsFun f) (p t)
+    r <- call# (getJsFunction f) (p t)
     return $ q r
     where
         p = toAny#
         q = fromAny#
 
 callWith1 f t a = do
-    r <- call1# (getJsFun f) (p t) (p a)
+    r <- call1# (getJsFunction f) (p t) (p a)
     return $ q r
     where
         p = toAny#
         q = fromAny#
 
 callWith2 f t a b = do
-    r <- call2# (getJsFun f) (p t) (p a) (p b)
+    r <- call2# (getJsFunction f) (p t) (p a) (p b)
     return $ q r
     where
         p = toAny#
@@ -900,7 +900,7 @@ foreign import ccall "aPrimBind1" bind1#  :: Any# -> Any# -> Any# -> Any#
 --
 -- > f.bind(null, a)
 --
-bind :: JsVal a => JsFun (a -> b) -> a -> (JsFun b)
+bind :: JsVal a => JsFunction -> a -> JsFunction
 bind  f = bindWith1 f null
 
 -- |
@@ -908,20 +908,20 @@ bind  f = bindWith1 f null
 --
 -- > f.bind(thisArg)
 --
-bindWith :: JsFun a -> JsObject -> (JsFun a)
+bindWith :: JsFunction -> JsObject -> JsFunction
 
 -- |
 -- Partially apply the given function with the given @this@ value, or equivalently
 --
 -- > f.bind(thisArg, a)
 --
-bindWith1 :: JsVal a => JsFun (a -> b) -> JsObject -> a -> (JsFun b)
+bindWith1 :: JsVal a => JsFunction -> JsObject -> a -> JsFunction
 
-bindWith f t = JsFun $ bind# (getJsFun f) (p t)
+bindWith f t = JsFunction $ bind# (getJsFunction f) (p t)
     where
         p = toAny#
 
-bindWith1 f t a = JsFun $ bind1# (getJsFun f) (p t) (p a)
+bindWith1 f t a = JsFunction $ bind1# (getJsFunction f) (p t) (p a)
     where
         p = toAny#
 
@@ -1037,21 +1037,21 @@ foreign import ccall "aPrimLift0" lift#   :: Any# -> Any#
 foreign import ccall "aPrimLift1" lift1#  :: Any# -> Any#
 foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
 
-liftPure :: JsVal a => a -> JsFun a
-liftPure1 :: (JsVal a, JsVal b) => (a -> b) -> JsFun (a -> b)
-liftPure2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFun (a -> b -> c)
+liftPure :: JsVal a => a -> JsFunction
+liftPure1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
+liftPure2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
 
-lift :: JsVal a => IO a -> JsFun a
-lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFun (a -> b -> c)
-lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFun (a -> b -> c)
+lift :: JsVal a => IO a -> JsFunction
+lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
+lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
 
 
-liftPure  = JsFun . liftPure#  . unsafeCoerce . toPtr#
-liftPure1 = JsFun . liftPure1# . unsafeCoerce . toPtr#
-liftPure2 = JsFun . liftPure2# . unsafeCoerce . toPtr#
-lift      = JsFun . lift#  . unsafeCoerce . toPtr#
-lift1     = JsFun . lift1# . unsafeCoerce . toPtr#
-lift2     = JsFun . lift2# . unsafeCoerce . toPtr#
+liftPure  = JsFunction . liftPure#  . unsafeCoerce . toPtr#
+liftPure1 = JsFunction . liftPure1# . unsafeCoerce . toPtr#
+liftPure2 = JsFunction . liftPure2# . unsafeCoerce . toPtr#
+lift      = JsFunction . lift#  . unsafeCoerce . toPtr#
+lift1     = JsFunction . lift1# . unsafeCoerce . toPtr#
+lift2     = JsFunction . lift2# . unsafeCoerce . toPtr#
 
 
 -------------------------------------------------------------------------------------

@@ -101,7 +101,7 @@ testLift = do
     printRepr bs
 
     cs <- eval "([5,5,6])" :: IO JsObject
-    let add = liftPure2 (+)  :: JsFun (Int -> Int -> Int) 
+    let add = liftPure2 ((+) :: Int -> Int -> Int) 
     ds <- (cs %.. "reduce") add (0::Int) :: IO JsArray
     printRepr cs
     printRepr ds
@@ -114,7 +114,7 @@ testPrim = do
     printRepr $ (123::Int)
     printRepr $ ("foo"::JsString)
 
-    jf <- eval "(function(x){return x+x;})" :: IO (JsFun (a -> a))
+    jf <- eval "(function(x){return x+x;})" :: IO JsFunction
     printRepr $ jf
 
     jo <- eval "({foo:123,bar:function(x){return x}})" :: IO JsObject
