@@ -95,13 +95,13 @@ testLift = do
     g <- global
 
     as <- eval "([1,2,3])" :: IO JsObject
-    let f = liftPure1 ((+ 10) ::Int -> Int)
+    let f = liftp1 ((+ 10) ::Int -> Int)
     bs <- as %. "map" $ f :: IO JsArray
     printRepr as
     printRepr bs
 
     cs <- eval "([5,5,6])" :: IO JsObject
-    let add = liftPure2 ((+) :: Int -> Int -> Int) 
+    let add = liftp2 ((+) :: Int -> Int -> Int) 
     ds <- (cs %.. "reduce") add (0::Int) :: IO JsArray
     printRepr cs
     printRepr ds

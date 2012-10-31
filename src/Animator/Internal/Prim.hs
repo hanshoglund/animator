@@ -128,12 +128,13 @@ module Animator.Internal.Prim (
         bind,
 
         -- *** Lifting Haskell functions
+        -- $lifting
         lift,
         lift1,
         lift2,
-        liftPure,
-        liftPure1,
-        liftPure2,
+        liftp,
+        liftp1,
+        liftp2,
 
         -- *** Method invocation
         invoke,
@@ -844,7 +845,7 @@ toUpper x = toObject x & "toUpper"
 -- A JavaScript function, i.e. a callable object.
 --
 -- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
--- internal representation. To convert between the two, use 'call', 'lift' or 'liftPure'.
+-- internal representation. To convert between the two, use 'call', 'lift' or 'liftp'.
 --
 -- /ECMA-262 9.11, 15.3/
 --
@@ -991,19 +992,19 @@ infixl 9 ?%
 (%..) = invoke2
 
 -- |
--- Infix version of 'invokePure'.
+-- Infix version of 'invokep'.
 --
-(&)   = invokePure
+(&)   = invokep
 
 -- |
--- Infix version of 'invokePure1'.
+-- Infix version of 'invokep1'.
 --
-(&.)  = invokePure1
+(&.)  = invokep1
 
 -- |
--- Infix version of 'invokePure2'.
+-- Infix version of 'invokep2'.
 --
-(&..) = invokePure2
+(&..) = invokep2
 
 -- |
 -- Infix version of 'get'.
@@ -1066,46 +1067,58 @@ invoke2 o n a b = do
 --
 -- > o.n()
 --
-invokePure :: JsVal a => JsObject -> JsName -> a
+invokep :: JsVal a => JsObject -> JsName -> a
 
 -- |
 -- Invoke the method of the given name on the given object, or equivalently
 --
 -- > o.n(a)
 --
-invokePure1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> b
+invokep1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> b
 
 -- |
 -- Invoke the method of the given name on the given object, or equivalently
 --
 -- > o.n(a, b)
 --
-invokePure2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> c
+invokep2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> c
 
-invokePure  o n     = unsafePerformIO $ invoke  o n
-invokePure1 o n a   = unsafePerformIO $ invoke1 o n a
-invokePure2 o n a b = unsafePerformIO $ invoke2 o n a b
+invokep  o n     = unsafePerformIO $ invoke  o n
+invokep1 o n a   = unsafePerformIO $ invoke1 o n a
+invokep2 o n a b = unsafePerformIO $ invoke2 o n a b
 
 
-foreign import ccall "aPrimLiftPure0" liftPure#   :: Any# -> Any#
-foreign import ccall "aPrimLiftPure1" liftPure1#  :: Any# -> Any#
-foreign import ccall "aPrimLiftPure2" liftPure2#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure0" liftp#   :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" liftp1#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" liftp2#  :: Any# -> Any#
 foreign import ccall "aPrimLift0" lift#   :: Any# -> Any#
 foreign import ccall "aPrimLift1" lift1#  :: Any# -> Any#
 foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
 
-liftPure :: JsVal a => a -> JsFunction
-liftPure1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
-liftPure2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
+--
+-- $lifting
+--
+-- The following law hold for all functions:
+--
+-- > lift . call  = liftM id
+-- > pure . apply = id
+--
+
+-- |
+-- Lift the given Haskell function to JavaScript.
+--
+liftp :: JsVal a => a -> JsFunction
+liftp1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
+liftp2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
 
 lift :: JsVal a => IO a -> JsFunction
 lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
 lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
 
 
-liftPure  = JsFunction . liftPure#  . unsafeCoerce . toPtr#
-liftPure1 = JsFunction . liftPure1# . unsafeCoerce . toPtr#
-liftPure2 = JsFunction . liftPure2# . unsafeCoerce . toPtr#
+liftp  = JsFunction . liftp#  . unsafeCoerce . toPtr#
+liftp1 = JsFunction . liftp1# . unsafeCoerce . toPtr#
+liftp2 = JsFunction . liftp2# . unsafeCoerce . toPtr#
 lift      = JsFunction . lift#  . unsafeCoerce . toPtr#
 lift1     = JsFunction . lift1# . unsafeCoerce . toPtr#
 lift2     = JsFunction . lift2# . unsafeCoerce . toPtr#
@@ -1127,19 +1140,6 @@ stringify = error "Not implemented"
 
 -------------------------------------------------------------------------------------
 -- Utility
--------------------------------------------------------------------------------------
-
-foreign import ccall "aPrimEval"  eval#  :: String# -> IO Any#
-foreign import ccall "aPrimDebug" debug# :: IO ()
-
--- |
--- Evaluates the given string as JavaScript.
---
--- /ECMA-262 15.1.2.1/
---
-eval :: JsVal a => JsString -> IO a
-eval = fmap fromAny# . eval# . getJsString
-
 -------------------------------------------------------------------------------------
 
 foreign import ccall "aPrimWrite"     documentWrite#    :: String# -> IO ()
@@ -1164,17 +1164,22 @@ printLog str = consoleLog# (getJsString $ str)
 printDoc :: JsString -> IO ()
 printDoc str = documentWrite# (getJsString $ str)
 
+-------------------------------------------------------------------------------------
+
+foreign import ccall "aPrimEval"  eval#  :: String# -> IO Any#
+
 -- |
--- Activates the JavaScript debugger, if there is one.
+-- Evaluates the given string as JavaScript.
 --
--- /ECMA-262 12.15/
+-- /ECMA-262 15.1.2.1/
 --
-debug :: IO ()
-debug = debug#
+eval :: JsVal a => JsString -> IO a
+eval = fmap fromAny# . eval# . getJsString
 
 -------------------------------------------------------------------------------------
 
-foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
+foreign import ccall "aPrimLog"   printRepr# :: Any# -> IO ()
+foreign import ccall "aPrimDebug" debug#     :: IO ()
 
 -- |
 -- Prints the JavaScript representation of the given Haskell value.                  
@@ -1187,4 +1192,13 @@ foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
 printRepr :: a -> IO ()
 printRepr = printRepr# . unsafeCoerce . toPtr#
 {-# NOINLINE printRepr #-}
+
+-- |
+-- Activates the JavaScript debugger, if there is one.
+--
+-- /ECMA-262 12.15/
+--
+debug :: IO ()
+debug = debug#
+{-# NOINLINE debug #-}
 
