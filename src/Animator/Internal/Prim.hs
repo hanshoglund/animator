@@ -31,7 +31,6 @@ module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
         -- ** Objects
-        JsName,
         JsObject,
 
         -- *** Creation and access
@@ -40,7 +39,14 @@ module Animator.Internal.Prim (
         global,
         null,
 
+        -- *** Prototype hierarchy
+        -- $prototypeHierarchy
+        isInstanceOf,
+        isPrototypeOf,
+        constructor,
+
         -- *** Properties
+        JsName,
         get,
         set,
         update,
@@ -50,12 +56,9 @@ module Animator.Internal.Prim (
         propertyIsEnumerable,
         lookup,
         (%%),
+        (%?),
+        (?%),
 
-        -- *** Prototype hierarchy
-        -- $proto
-        isInstanceOf,
-        isPrototypeOf,
-        constructor,
         -- *** Conversion
         toString,
         toLocaleString,
@@ -265,45 +268,74 @@ booleanType#   = 4
 --
 -- The result of the void operator, the debugger statement and functions without return 
 -- values is @undefined@, which should be IO () in Haskell.
+
+-- | 
+-- Represented by @undefined@.
 instance JsVal () where
     typeOf ()   = "undefined"
     get# _ _    = return ()
     set# _ _ () = return ()
     -- TODO what happens if undefined is passed or returned?
+
+-- | 
+-- Represented by @boolean@ values.
 instance JsVal Bool where
     typeOf _    = "boolean"
     get#        = mkGet# (getBool# booleanType#) id
     set#        = mkSet# (setBool# booleanType#) id
     toAny#       = unsafeCoerce . toPtr#
     fromAny#     = unsafeCoerce . fromPtr#
+
+-- | 
+-- Represented by @number@ values.
 instance JsVal Int where
     typeOf _    = "number"
     get#        = mkGet# (getInt# numberType#) id
     set#        = mkSet# (setInt# numberType#) id
+
+-- | 
+-- Represented by @number@ values.
 instance JsVal Word where
     typeOf _    = "number"
     get#        = mkGet# (getWord# numberType#) id
     set#        = mkSet# (setWord# numberType#) id
+
+-- | 
+-- Represented by @number@ values.
 instance JsVal Double where
     typeOf _    = "number"
     get#        = mkGet# (getDouble# numberType#) id
     set#        = mkSet# (setDouble# numberType#) id
+
+-- | 
+-- Represented by @string@ values.
 instance JsVal JsString where
     typeOf _    = "string"
     get#        = mkGet# (getString# stringType#) JsString
     set#        = mkSet# (setString# stringType#) getJsString
+
+-- | 
+-- Represented by @object@ values whose prototype chain include @Object.prototype@.
 instance JsVal JsObject where
     typeOf      = JsString . typeOf# . getJsObject
     get#        = mkGet# (getAny# objectType#) JsObject
     set#        = mkSet# (setAny# objectType#) getJsObject
+
+-- | 
+-- Represented by @number@ values whose prototype chain include @Array.prototype@.
 instance JsVal JsArray where
     typeOf _    = "object"
     get#        = mkGet# (getAny# objectType#) JsArray
     set#        = mkSet# (setAny# objectType#) getJsArray
+
+-- | 
+-- Represented by @function@ values whose prototype chain include @Function.prototype@.
 instance JsVal JsFunction where
     typeOf _    = "function"
     get#        = mkGet# (getAny# functionType#) JsFunction
     set#        = mkSet# (setAny# functionType#) getJsFunction
+
+-- | Represented by @object@ values.
 instance JsVal (Ptr a) where
     typeOf _    = "object"
     get#        = mkGet# (getAny# objectType#) unsafeCoerce -- TODO problem?
@@ -313,6 +345,7 @@ instance JsVal (Ptr a) where
 -- Class of JavaScript reference types.
 --
 class JsVal a => JsRef a where
+    -- | Cast an object descended from @Object.prototype@.
     toObject :: a -> JsObject
 instance JsRef JsObject where
     toObject = id
@@ -327,15 +360,11 @@ instance JsRef JsString where
 -- Class of JavaScript sequence types.
 --
 class JsRef a => JsSeq a where
+    -- | Cast an object descended from @Array.prototype@.
     toArray :: a -> JsArray
 instance JsSeq JsArray where
     toArray = id
-
--- |
--- A JavaScript property name.
---
-type JsName = String
-
+    
 
 -------------------------------------------------------------------------------------
 -- Objects
@@ -351,6 +380,12 @@ type JsName = String
 --  /ECMA-262 8.6, 15.2/
 --
 newtype JsObject = JsObject { getJsObject :: Any# }
+
+
+-- |
+-- A JavaScript property name, or object key.
+--
+type JsName = String
 
 -- | 
 -- Fetch the value of property @n@ in object @o@, or equivalently
@@ -453,10 +488,12 @@ create = unsafeLookup ["Object"] %. "create"
 
 -------------------------------------------------------------------------------------
 -- 
--- $proto
--- These functions allow introspection of the prototype hierarchy. Note that allthough
--- some implementations allow mutation of the prototype, this behavior is not supported
--- by the standard and should not be used.
+-- $prototypeHierarchy
+--
+-- These functions allow introspection of the prototype hierarchy. They are pure as the prototype
+-- chain is immutable as far as the standard is concerned. Some implementations (notably Firefox
+-- and Chrome) expose the prototype as a mutable property, but this is almost certainly a
+-- misfeature.
 --
 
 -- |
@@ -933,6 +970,8 @@ infixl 9 %
 infixl 9 %.
 infixl 9 %..
 infixl 9 %%
+infixl 9 %?
+infixl 9 ?%
 
 -- |
 -- Infix version of 'invoke'.
@@ -968,6 +1007,17 @@ infixl 9 %%
 -- Infix version of 'get'.
 --
 (%%) = get
+
+-- |
+-- Infix version of 'hasProperty'.
+--
+(%?) = hasProperty
+
+-- |
+-- Inverse infix version of 'hasProperty'.
+--
+(?%) = flip hasProperty
+
 
 
 
@@ -1108,7 +1158,7 @@ printDoc :: String -> IO ()
 printDoc str = documentWrite# (toJsString# $ str)
 
 -- |
--- Activates the JavaScript debugger.
+-- Activates the JavaScript debugger, if there is one.
 --
 -- /ECMA-262 12.15/
 --
@@ -1122,8 +1172,10 @@ foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
 -- |
 -- Prints the JavaScript representation of the given Haskell value.                  
 --
--- The representation of an arbitrary object is should not be relied upon. However, it
--- may be useful in certain situations (such as reading JavaScript error messages).
+-- The JavaScript representation of an arbitrary Haskell type (that is, one that is not an instance
+-- of 'JsVal') is implementation-specific and should not be relied upon. However, it may be useful
+-- to be able to inspect it in certain situations.
+--
 --
 printRepr :: a -> IO ()
 printRepr = printRepr# . unsafeCoerce . toPtr#
