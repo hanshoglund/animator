@@ -135,7 +135,7 @@ module Animator.Internal.Prim (
         liftPure1,
         liftPure2,
 
-        -- *** Method invokcation
+        -- *** Method invocation
         invoke,
         invoke1,
         invoke2,
