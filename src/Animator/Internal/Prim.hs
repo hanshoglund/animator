@@ -13,20 +13,6 @@
 -- partially applied or passed to other JavaScript functions. Haskell functions can be converted
 -- to JavaScript functions for use as callbacks in the host environment.
 --
--- This package is loosely based on "Foreign.C" and its descendants. There are some fundamental
--- differences due to the difference in the task of interfacing with a dynamic loosely-typed
--- host language versus a static unchecked language. Most notably:
---
--- * No special numeric types. 'Bool', 'Int', 'Word', 'Float' and 'Double' are represented
---   as directly as their host language counterparts.
---
--- * No foreign imports: functions can be imported and called at runtime.
---
--- * The 'JsStorable' class converts between Haskell values and JavaScript values, instead of
---   between Haskell values and byte sequences.
---
--- * The special types 'JsString', 'JsObject' and 'JsArray' represent compound object.
---
 
 -------------------------------------------------------------------------------------
 
@@ -62,8 +48,8 @@ module Animator.Internal.Prim (
         hasProperty,
         hasOwnProperty,
         propertyIsEnumerable,
-        (%%),
         lookup,
+        (%%),
 
         -- *** Prototype hierarchy
         -- $proto
@@ -223,6 +209,30 @@ fromPtr#      = undefined
 
 #endif __HASTE__
 
+-- |
+-- Class of JavaScript types.
+--
+class JsVal a where            
+    toAny# :: a -> Any#
+    toAny#  = unsafeCoerce
+
+    fromAny# :: Any# -> a
+    fromAny# = unsafeCoerce
+    
+    get# :: JsObject -> JsName -> IO a
+    set# :: JsObject -> JsName -> a -> IO ()
+    
+    -- | 
+    -- Returns a string describing a type of the given value, or equivalently
+    --
+    -- > typeof x
+    --
+    -- By definition, this function returns one of the following strings:
+    --
+    -- > "undefined", "boolean", "number", "string", "object", "function"
+    -- 
+    typeOf :: JsVal a => a -> JsString
+
 foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
 
 foreign import ccall "aPrimHas"    has#         :: Int -> Any# -> String# -> IO Bool
@@ -242,89 +252,62 @@ foreign import ccall "aPrimSet"    setDouble#   :: Int -> Any# -> String# -> Dou
 foreign import ccall "aPrimSet"    setString#   :: Int -> Any# -> String# -> String# -> IO ()
 foreign import ccall "aPrimSet"    setAny#      :: Int -> Any# -> String# -> Any#    -> IO ()
 
-
-
-get# i c x n   = i (getJsObject x) (toJsString# n)  >>= (return . c)
-set# o c x n v = o (getJsObject x) (toJsString# n) (c v)
+mkGet# i c x n   = i (getJsObject x) (toJsString# n)  >>= (return . c)
+mkSet# o c x n v = o (getJsObject x) (toJsString# n) (c v)
 
 numberType#    = 0
 stringType#    = 1
 objectType#    = 2
 functionType#  = 3
-booleanType#   = 4
-
--- |
--- Class of JavaScript types.
---
-class JsVal a where
-            
-    toAny :: a -> Any#
-    toAny  = unsafeCoerce
-
-    fromAny :: Any# -> a
-    fromAny = unsafeCoerce
-    
-    getter :: JsObject -> JsName -> IO a
-    setter :: JsObject -> JsName -> a -> IO ()
-    
-    -- | 
-    -- Returns a string describing a type of the given value, or equivalently
-    --
-    -- > typeof x
-    --
-    -- By definition, this function returns one of the following strings:
-    --
-    -- > "undefined", "boolean", "number", "string", "object", "function"
-    -- 
-    typeOf :: JsVal a => a -> JsString
+booleanType#   = 4    
 
 -- In JavaScript @undefined@ is really (), not _|_
 --
 -- The result of the void operator, the debugger statement and functions without return 
 -- values is @undefined@, which should be IO () in Haskell.
 instance JsVal () where
-    typeOf () = "undefined"
+    typeOf ()   = "undefined"
+    get# _ _    = return ()
+    set# _ _ () = return ()
     -- TODO what happens if undefined is passed or returned?
-    getter _ _    = return ()
-    setter _ _ () = return ()
 instance JsVal Bool where
-    typeOf _ = "boolean"
-    getter   = get# (getBool# booleanType#) id
-    setter   = set# (setBool# booleanType#) id
-    toAny    = unsafeCoerce . toPtr#
-    fromAny  = unsafeCoerce . fromPtr#
+    typeOf _    = "boolean"
+    get#        = mkGet# (getBool# booleanType#) id
+    set#        = mkSet# (setBool# booleanType#) id
+    toAny#       = unsafeCoerce . toPtr#
+    fromAny#     = unsafeCoerce . fromPtr#
 instance JsVal Int where
-    typeOf _ = "number"
-    getter = get# (getInt# numberType#) id
-    setter = set# (setInt# numberType#) id
+    typeOf _    = "number"
+    get#        = mkGet# (getInt# numberType#) id
+    set#        = mkSet# (setInt# numberType#) id
 instance JsVal Word where
-    typeOf _ = "number"
-    getter = get# (getWord# numberType#) id
-    setter = set# (setWord# numberType#) id
+    typeOf _    = "number"
+    get#        = mkGet# (getWord# numberType#) id
+    set#        = mkSet# (setWord# numberType#) id
 instance JsVal Double where
-    typeOf _ = "number"
-    getter = get# (getDouble# numberType#) id
-    setter = set# (setDouble# numberType#) id
+    typeOf _    = "number"
+    get#        = mkGet# (getDouble# numberType#) id
+    set#        = mkSet# (setDouble# numberType#) id
 instance JsVal JsString where
-    typeOf _ = "string"
-    getter = get# (getString# stringType#) JsString
-    setter = set# (setString# stringType#) getJsString
+    typeOf _    = "string"
+    get#        = mkGet# (getString# stringType#) JsString
+    set#        = mkSet# (setString# stringType#) getJsString
 instance JsVal JsObject where
-    typeOf = JsString . typeOf# . getJsObject
-    getter = get# (getAny# objectType#) JsObject
-    setter = set# (setAny# objectType#) getJsObject
+    typeOf      = JsString . typeOf# . getJsObject
+    get#        = mkGet# (getAny# objectType#) JsObject
+    set#        = mkSet# (setAny# objectType#) getJsObject
 instance JsVal JsArray where
-    typeOf _ = "object"
-    getter = get# (getAny# objectType#) JsArray
-    setter = set# (setAny# objectType#) getJsArray
+    typeOf _    = "object"
+    get#        = mkGet# (getAny# objectType#) JsArray
+    set#        = mkSet# (setAny# objectType#) getJsArray
 instance JsVal (JsFun a) where
-    typeOf _ = "function"
-    getter = get# (getAny# functionType#) JsFun
-    setter = set# (setAny# functionType#) getJsFun
+    typeOf _    = "function"
+    get#        = mkGet# (getAny# functionType#) JsFun
+    set#        = mkSet# (setAny# functionType#) getJsFun
 instance JsVal (Ptr a) where
-    typeOf _ = "object"
-    getter = get# (getAny# objectType#) unsafeCoerce -- TODO problem?
-    setter = set# (setAny# objectType#) unsafeCoerce
+    typeOf _    = "object"
+    get#        = mkGet# (getAny# objectType#) unsafeCoerce -- TODO problem?
+    set#        = mkSet# (setAny# objectType#) unsafeCoerce
 
 -- |
 -- Class of JavaScript reference types.
@@ -348,7 +331,6 @@ class JsRef a => JsSeq a where
 instance JsSeq JsArray where
     toArray = id
 
-
 -- |
 -- A JavaScript property name.
 --
@@ -370,20 +352,19 @@ type JsName = String
 --
 newtype JsObject = JsObject { getJsObject :: Any# }
 
-
 -- | 
 -- Fetch the value of property @n@ in object @o@, or equivalently
 --
 -- > o.n
 get :: JsVal a => JsObject -> JsName -> IO a
-get = getter
+get = get#
 
 -- | 
 -- Assign the property @n@ to @x@ in object @o@, or equivalently
 --
 -- > o.n = x
 set :: JsVal a => JsObject -> JsName -> a -> IO ()
-set = setter
+set = set#
 
 -- | 
 -- Updates the value named @n@ in object @o@ by applying the function f, or equivalently
@@ -691,7 +672,6 @@ fromString :: JsString -> JsArray
 fromString = split ""
 
 
-
 -------------------------------------------------------------------------------------
 -- Strings
 -------------------------------------------------------------------------------------
@@ -818,7 +798,6 @@ toUpper :: JsString -> JsString
 toUpper x = toObject x & "toUpper"
 
 
-
 -------------------------------------------------------------------------------------
 -- Functions
 -------------------------------------------------------------------------------------
@@ -895,22 +874,22 @@ callWith f t = do
     r <- call# (getJsFun f) (p t)
     return $ q r
     where
-        p = toAny
-        q = fromAny
+        p = toAny#
+        q = fromAny#
 
 callWith1 f t a = do
     r <- call1# (getJsFun f) (p t) (p a)
     return $ q r
     where
-        p = toAny
-        q = fromAny
+        p = toAny#
+        q = fromAny#
 
 callWith2 f t a b = do
     r <- call2# (getJsFun f) (p t) (p a) (p b)
     return $ q r
     where
-        p = toAny
-        q = fromAny
+        p = toAny#
+        q = fromAny#
 
 
 foreign import ccall "aPrimBind0" bind#  :: Any# -> Any# -> Any#
@@ -940,11 +919,11 @@ bindWith1 :: JsVal a => JsFun (a -> b) -> JsObject -> a -> (JsFun b)
 
 bindWith f t = JsFun $ bind# (getJsFun f) (p t)
     where
-        p = toAny
+        p = toAny#
 
 bindWith1 f t a = JsFun $ bind1# (getJsFun f) (p t) (p a)
     where
-        p = toAny
+        p = toAny#
 
 
 infixl 9 &
@@ -1070,9 +1049,9 @@ lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFun (a -> b -> c)
 liftPure  = JsFun . liftPure#  . unsafeCoerce . toPtr#
 liftPure1 = JsFun . liftPure1# . unsafeCoerce . toPtr#
 liftPure2 = JsFun . liftPure2# . unsafeCoerce . toPtr#
-lift  = JsFun . lift#  . unsafeCoerce . toPtr#
-lift1 = JsFun . lift1# . unsafeCoerce . toPtr#
-lift2 = JsFun . lift2# . unsafeCoerce . toPtr#
+lift      = JsFun . lift#  . unsafeCoerce . toPtr#
+lift1     = JsFun . lift1# . unsafeCoerce . toPtr#
+lift2     = JsFun . lift2# . unsafeCoerce . toPtr#
 
 
 -------------------------------------------------------------------------------------
@@ -1089,7 +1068,6 @@ stringify :: JSON -> JsString
 stringify = error "Not implemented"
 
 
-
 -------------------------------------------------------------------------------------
 -- Utility
 -------------------------------------------------------------------------------------
@@ -1103,8 +1081,9 @@ foreign import ccall "aPrimDebug" debug# :: IO ()
 -- /ECMA-262 15.1.2.1/
 --
 eval :: JsVal a => JsString -> IO a
-eval = fmap fromAny . eval# . getJsString
+eval = fmap fromAny# . eval# . getJsString
 
+-------------------------------------------------------------------------------------
 
 foreign import ccall "aPrimWrite"     documentWrite#    :: String# -> IO ()
 foreign import ccall "aPrimLog"       consoleLog#       :: String# -> IO ()
@@ -1136,6 +1115,7 @@ printDoc str = documentWrite# (toJsString# $ str)
 debug :: IO ()
 debug = debug#
 
+-------------------------------------------------------------------------------------
 
 foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
 
