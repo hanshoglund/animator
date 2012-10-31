@@ -58,6 +58,7 @@ module Animator.Internal.Prim (
         (%%),
         (%?),
         (?%),
+        (%%%),
 
         -- *** Conversion
         toString,
@@ -970,6 +971,7 @@ infixl 9 %
 infixl 9 %.
 infixl 9 %..
 infixl 9 %%
+infixl 9 %%%
 infixl 9 %?
 infixl 9 ?%
 
@@ -1014,7 +1016,12 @@ infixl 9 ?%
 (%?) = hasProperty
 
 -- |
--- Inverse infix version of 'hasProperty'.
+-- Reverse infix version of 'get'.
+--
+(%%%) = flip get
+
+-- |
+-- Reverse infix version of 'hasProperty'.
 --
 (?%) = flip hasProperty
 
