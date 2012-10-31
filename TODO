@@ -1,0 +1,8 @@
+
+- JsProp class should go away, make functions associated with JsObject instead
+- Lift property related stuff + invoke from JsObject to (JsRef a) => a?
+- Remove phantom type from JsFun (and rename back to JsFunction)
+- Make wrapper ImmutableArray type (also with phantom types?)
+
+- Split Prim module
+    - How?
