@@ -1,8 +1,7 @@
 
 {-# LANGUAGE MagicHash, CPP, ForeignFunctionInterface, OverloadedStrings, 
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
-    NoMonomorphismRestriction,
-    FlexibleInstances #-}
+    NoMonomorphismRestriction #-}
 
 -------------------------------------------------------------------------------------
 
@@ -31,9 +30,6 @@
 
 -------------------------------------------------------------------------------------
 
--- TODO Remove TypeSynonymInstances, FlexibleInstances?
---      Required for String instance of JsProp, can we rethink this?
-
 module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
@@ -47,14 +43,9 @@ module Animator.Internal.Prim (
         -- *** Sequence types
         JsSeq(..),
 
-        -- *** Property types
-        JsName,
-        JsProp(..),
-        (%%),
-        lookup,
-
         -- ------------------------------------------------------------
         -- ** Objects
+        JsName,
         JsObject,
 
         -- *** Creation and access
@@ -63,18 +54,22 @@ module Animator.Internal.Prim (
         global,
         null,
 
+        -- *** Properties
+        get,
+        set,
+        update,
+        delete,
+        hasProperty,
+        hasOwnProperty,
+        propertyIsEnumerable,
+        (%%),
+        lookup,
+
         -- *** Prototype hierarchy
         -- $proto
         isInstanceOf,
         isPrototypeOf,
         constructor,
-
-        -- *** Properties
-        delete,
-        hasProperty,
-        hasOwnProperty,
-        propertyIsEnumerable,
-
         -- *** Conversion
         toString,
         toLocaleString,
@@ -228,8 +223,35 @@ fromPtr#      = undefined
 
 #endif __HASTE__
 
-
 foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
+
+foreign import ccall "aPrimHas"    has#         :: Int -> Any# -> String# -> IO Bool
+foreign import ccall "aPrimDelete" delete#      :: Int -> Any# -> String# -> IO Bool
+                                                
+foreign import ccall "aPrimGet"    getBool#     :: Int -> Any# -> String# -> IO Bool
+foreign import ccall "aPrimGet"    getInt#      :: Int -> Any# -> String# -> IO Int
+foreign import ccall "aPrimGet"    getWord#     :: Int -> Any# -> String# -> IO Word
+foreign import ccall "aPrimGet"    getDouble#   :: Int -> Any# -> String# -> IO Double
+foreign import ccall "aPrimGet"    getString#   :: Int -> Any# -> String# -> IO String#
+foreign import ccall "aPrimGet"    getAny#      :: Int -> Any# -> String# -> IO Any#
+                                                
+foreign import ccall "aPrimSet"    setBool#     :: Int -> Any# -> String# -> Bool    -> IO ()
+foreign import ccall "aPrimSet"    setInt#      :: Int -> Any# -> String# -> Int     -> IO ()
+foreign import ccall "aPrimSet"    setWord#     :: Int -> Any# -> String# -> Word    -> IO ()
+foreign import ccall "aPrimSet"    setDouble#   :: Int -> Any# -> String# -> Double  -> IO ()
+foreign import ccall "aPrimSet"    setString#   :: Int -> Any# -> String# -> String# -> IO ()
+foreign import ccall "aPrimSet"    setAny#      :: Int -> Any# -> String# -> Any#    -> IO ()
+
+
+
+get# i c x n   = i (getJsObject x) (toJsString# n)  >>= (return . c)
+set# o c x n v = o (getJsObject x) (toJsString# n) (c v)
+
+numberType#    = 0
+stringType#    = 1
+objectType#    = 2
+functionType#  = 3
+booleanType#   = 4
 
 -- |
 -- Class of JavaScript types.
@@ -237,9 +259,13 @@ foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
 class JsVal a where
             
     toAny :: a -> Any#
-    fromAny :: Any# -> a
     toAny  = unsafeCoerce
+
+    fromAny :: Any# -> a
     fromAny = unsafeCoerce
+    
+    getter :: JsObject -> JsName -> IO a
+    setter :: JsObject -> JsName -> a -> IO ()
     
     -- | 
     -- Returns a string describing a type of the given value, or equivalently
@@ -258,33 +284,47 @@ class JsVal a where
 -- values is @undefined@, which should be IO () in Haskell.
 instance JsVal () where
     typeOf () = "undefined"
+    -- TODO what happens if undefined is passed or returned?
+    getter _ _    = return ()
+    setter _ _ () = return ()
 instance JsVal Bool where
-    toAny   = unsafeCoerce . toPtr#
-    fromAny = unsafeCoerce . fromPtr#
     typeOf _ = "boolean"
+    getter   = get# (getBool# booleanType#) id
+    setter   = set# (setBool# booleanType#) id
+    toAny    = unsafeCoerce . toPtr#
+    fromAny  = unsafeCoerce . fromPtr#
 instance JsVal Int where
     typeOf _ = "number"
-instance JsVal Int32 where
-    typeOf _ = "number"
+    getter = get# (getInt# numberType#) id
+    setter = set# (setInt# numberType#) id
 instance JsVal Word where
     typeOf _ = "number"
-instance JsVal Word32 where
-    typeOf _ = "number"
-instance JsVal Float where
-    typeOf _ = "number"
+    getter = get# (getWord# numberType#) id
+    setter = set# (setWord# numberType#) id
 instance JsVal Double where
     typeOf _ = "number"
+    getter = get# (getDouble# numberType#) id
+    setter = set# (setDouble# numberType#) id
 instance JsVal JsString where
     typeOf _ = "string"
-instance JsVal JsArray where
-    typeOf _ = "object"
-instance JsVal (JsFun a) where
-    typeOf _ = "function"
-instance JsVal (Ptr a) where
-    typeOf _ = "object"
+    getter = get# (getString# stringType#) JsString
+    setter = set# (setString# stringType#) getJsString
 instance JsVal JsObject where
     typeOf = JsString . typeOf# . getJsObject
-
+    getter = get# (getAny# objectType#) JsObject
+    setter = set# (setAny# objectType#) getJsObject
+instance JsVal JsArray where
+    typeOf _ = "object"
+    getter = get# (getAny# objectType#) JsArray
+    setter = set# (setAny# objectType#) getJsArray
+instance JsVal (JsFun a) where
+    typeOf _ = "function"
+    getter = get# (getAny# functionType#) JsFun
+    setter = set# (setAny# functionType#) getJsFun
+instance JsVal (Ptr a) where
+    typeOf _ = "object"
+    getter = get# (getAny# objectType#) unsafeCoerce -- TODO problem?
+    setter = set# (setAny# objectType#) unsafeCoerce
 
 -- |
 -- Class of JavaScript reference types.
@@ -314,31 +354,59 @@ instance JsSeq JsArray where
 --
 type JsName = String
 
+
+-------------------------------------------------------------------------------------
+-- Objects
+-------------------------------------------------------------------------------------
+
 -- |
--- Class of types that can be properties of a 'JsObject'.
+-- A JavaScript object.
 --
--- Retrieving a value of the wrong type (for example, reading an 'Int' from a field
--- containing a string) results in a runtime error.
+-- This type is disjoint from ordinary Haskell data types, which have a compiler-specific
+-- internal representation. All JavaScript reference types can be converted to this type
+-- using the 'JsRef' instancce.
 --
-class JsVal a => JsProp a where
-    -- | 
-    -- Fetch the value of property @n@ in object @o@, or equivalently
-    --
-    -- > o.n
-    get :: JsObject -> JsName -> IO a
+--  /ECMA-262 8.6, 15.2/
+--
+newtype JsObject = JsObject { getJsObject :: Any# }
 
-    -- | 
-    -- Assign the property @n@ to @x@ in object @o@, or equivalently
-    --
-    -- > o.n = x
-    set :: JsObject -> JsName -> a -> IO ()
 
-    -- | 
-    -- Updates the value named @n@ in object @o@ by applying the function f, or equivalently
-    --
-    -- > x.n = f(x.n)
-    update :: JsObject -> JsName -> (a -> a) -> IO ()
-    update n o f = get n o >>= set n o . f
+-- | 
+-- Fetch the value of property @n@ in object @o@, or equivalently
+--
+-- > o.n
+get :: JsVal a => JsObject -> JsName -> IO a
+get = getter
+
+-- | 
+-- Assign the property @n@ to @x@ in object @o@, or equivalently
+--
+-- > o.n = x
+set :: JsVal a => JsObject -> JsName -> a -> IO ()
+set = setter
+
+-- | 
+-- Updates the value named @n@ in object @o@ by applying the function f, or equivalently
+--
+-- > x.n = f(x.n)
+update :: (JsVal a, JsVal b) => JsObject -> JsName -> (a -> b) -> IO ()
+update n o f = get n o >>= set n o . f  
+
+-- |
+-- Deletes the property @n@ form object @o@, or equivalently
+--
+-- > delete o.n
+--
+delete :: JsObject -> JsName -> IO ()
+delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
+
+-- |
+-- Returns
+--
+-- > "n" in o
+--
+hasProperty :: JsObject -> JsName -> IO Bool
+hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
 
 -- | 
 -- Recursively traverse an object hierarchy using 'get'.
@@ -346,7 +414,7 @@ class JsVal a => JsProp a where
 -- @lookup o [a1,a2, ... an]@ is equivalent to
 --
 -- > o.a1.a2. ... an
-lookup :: JsProp a => JsObject -> [JsName] -> IO a
+lookup :: JsVal a => JsObject -> [JsName] -> IO a
 lookup o [] = error "lookup: Empty list"
 lookup o (x:xs) = do
     o' <- lookup' o xs
@@ -361,26 +429,12 @@ lookup' o (x:xs) = do
 unsafeGlobal = unsafePerformIO $ global
 unsafeLookup = unsafePerformIO . lookup unsafeGlobal
 
-
--------------------------------------------------------------------------------------
--- Objects
 -------------------------------------------------------------------------------------
 
 foreign import ccall "aPrimNull"       null#             :: Any#
 foreign import ccall "aPrimObj"        object#           :: IO Any#
 foreign import ccall "aPrimGlobal"     global#           :: IO Any#
 foreign import ccall "aPrimInstanceOf" instanceOf#       :: Any# -> Any# -> Bool
-
--- |
--- A JavaScript object.
---
--- This type is disjoint from ordinary Haskell data types, which have a compiler-specific
--- internal representation. All JavaScript reference types can be converted to this type
--- using the 'JsRef' instancce.
---
---  /ECMA-262 8.6, 15.2/
---
-newtype JsObject = JsObject { getJsObject :: Any# }
 
 -- |
 -- Return the JavaScript null object, or equivalently
@@ -452,22 +506,6 @@ constructor x = unsafePerformIO (x %% "constructor")
 -------------------------------------------------------------------------------------
 
 -- |
--- Deletes the property @n@ form object @o@, or equivalently
---
--- > delete o.n
---
-delete :: JsObject -> JsName -> IO ()
-delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
-
--- |
--- Returns
---
--- > "n" in o
---
-hasProperty :: JsObject -> JsName -> IO Bool
-hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
-
--- |
 -- Returns
 --
 -- > x.hasOwnProperty(y)
@@ -483,6 +521,7 @@ hasOwnProperty x n = (x %. "hasOwnProperty") (toJsString n)
 propertyIsEnumerable :: JsObject -> JsName -> IO Bool
 propertyIsEnumerable x n = (x %. "propertyIsEnumerable") (toJsString n)
 
+-------------------------------------------------------------------------------------
 
 -- |
 -- Returns
@@ -508,89 +547,10 @@ toLocaleString x = x % "toLocaleString"
 valueOf :: JsVal a => JsObject -> IO a
 valueOf x = x % "valueOf"
 
-foreign import ccall "aPrimHas"       has#              :: Int -> Any# -> String# -> IO Bool
-foreign import ccall "aPrimDelete"    delete#           :: Int -> Any# -> String# -> IO Bool
-
-foreign import ccall "aPrimGet"       getBool#          :: Int -> Any# -> String# -> IO Bool
-foreign import ccall "aPrimGet"       getInt#           :: Int -> Any# -> String# -> IO Int
-foreign import ccall "aPrimGet"       getWord#          :: Int -> Any# -> String# -> IO Word
-foreign import ccall "aPrimGet"       getInt32#         :: Int -> Any# -> String# -> IO Int32
-foreign import ccall "aPrimGet"       getWord32#        :: Int -> Any# -> String# -> IO Word32
-foreign import ccall "aPrimGet"       getFloat#         :: Int -> Any# -> String# -> IO Float
-foreign import ccall "aPrimGet"       getDouble#        :: Int -> Any# -> String# -> IO Double
-foreign import ccall "aPrimGet"       getString#        :: Int -> Any# -> String# -> IO String#
-foreign import ccall "aPrimGet"       getAny#           :: Int -> Any# -> String# -> IO Any#
-
-foreign import ccall "aPrimSet"       setBool#          :: Int -> Any# -> String# -> Bool    -> IO ()
-foreign import ccall "aPrimSet"       setInt#           :: Int -> Any# -> String# -> Int     -> IO ()
-foreign import ccall "aPrimSet"       setWord#          :: Int -> Any# -> String# -> Word    -> IO ()
-foreign import ccall "aPrimSet"       setInt32#         :: Int -> Any# -> String# -> Int32   -> IO ()
-foreign import ccall "aPrimSet"       setWord32#        :: Int -> Any# -> String# -> Word32  -> IO ()
-foreign import ccall "aPrimSet"       setFloat#         :: Int -> Any# -> String# -> Float   -> IO ()
-foreign import ccall "aPrimSet"       setDouble#        :: Int -> Any# -> String# -> Double  -> IO ()
-foreign import ccall "aPrimSet"       setString#        :: Int -> Any# -> String# -> String# -> IO ()
-foreign import ccall "aPrimSet"       setAny#           :: Int -> Any# -> String# -> Any#    -> IO ()
-
-get# i c x n   = i (getJsObject x) (toJsString# n)  >>= (return . c)
-set# o c x n v = o (getJsObject x) (toJsString# n) (c v)
-
-numberType#    = 0
-stringType#    = 1
-objectType#    = 2
-functionType#  = 3
-booleanType#   = 4
-
-instance JsProp Bool where
-    get = get# (getBool# booleanType#) id
-    set = set# (setBool# booleanType#) id
-
-instance JsProp Int where
-    get = get# (getInt# numberType#) id
-    set = set# (setInt# numberType#) id
-
-instance JsProp Word where
-    get = get# (getWord# numberType#) id
-    set = set# (setWord# numberType#) id
-
-instance JsProp Int32 where
-    get = get# (getInt32# numberType#) id
-    set = set# (setInt32# numberType#) id
-
-instance JsProp Word32 where
-    get = get# (getWord32# numberType#) id
-    set = set# (setWord32# numberType#) id
-
-instance JsProp Float where
-    get = get# (getFloat# numberType#) id
-    set = set# (setFloat# numberType#) id
-
-instance JsProp Double where
-    get = get# (getDouble# numberType#) id
-    set = set# (setDouble# numberType#) id
-
-instance JsProp JsString where
-    get = get# (getString# stringType#) JsString
-    set = set# (setString# stringType#) getJsString
-
-instance JsProp JsObject where
-    get = get# (getAny# objectType#) JsObject
-    set = set# (setAny# objectType#) getJsObject
-
-instance JsProp JsArray where
-    get = get# (getAny# objectType#) JsArray
-    set = set# (setAny# objectType#) getJsArray
-
-instance JsProp (JsFun a) where
-    get = get# (getAny# functionType#) JsFun
-    set = set# (setAny# functionType#) getJsFun
-
 
 -------------------------------------------------------------------------------------
 -- Arrays
 -------------------------------------------------------------------------------------
-
-foreign import ccall "aPrimArr"       array#            :: IO Any#
-foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 
 -- |
 -- A JavaScript array.
@@ -598,6 +558,8 @@ foreign import ccall "aPrimArrConcat" concatArray#      :: Any# -> Any# -> Any#
 --  /ECMA-262 15.4/
 --
 newtype JsArray = JsArray { getJsArray :: Any# }
+
+foreign import ccall "aPrimArr"    array#   :: IO Any#
 
 -- |
 -- Returns
@@ -713,11 +675,9 @@ slice x a b = (toObject x %.. "slice") a b
 --   
 join :: JsString -> JsArray -> IO JsString
 join = flip join'
+    where
+        join' x = toObject x %. "join"
 
-join' x = toObject x %. "join"
-
-
--- TODO this should be IO-free, will only work with immutable arrays
 -- |
 -- Convert an array of (singleton) strings to a string
 --   
@@ -735,6 +695,8 @@ fromString = split ""
 -------------------------------------------------------------------------------------
 -- Strings
 -------------------------------------------------------------------------------------
+
+foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 
 -- |
 -- A JavaScript string.
@@ -828,8 +790,8 @@ lastIndexOf x = toObject x &. "lastIndexOf"
 --
 split :: JsString -> JsString -> JsArray
 split = flip split'
- 
-split' x = toObject x &. "split"
+    where
+        split' x = toObject x &. "split"
 
 -- |
 -- Returns
@@ -860,8 +822,6 @@ toUpper x = toObject x & "toUpper"
 -------------------------------------------------------------------------------------
 -- Functions
 -------------------------------------------------------------------------------------
-
-foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 
 -- |
 -- A JavaScript function, i.e. a callable object.

@@ -69,6 +69,10 @@ function aPrimEval(s, _) {
         eval(s)
     ];
 }
+function aPrimDebug(s, _) {
+    debugger;
+    return [1, _];
+}
 
 
 function aPrimGet(type, obj, name, _) {
@@ -209,16 +213,9 @@ function aPrimLiftPure2(f, _) {
     ];
 }
 
-function foo(x) {
-    window.console.log("----------")
-    aPrimLog(this);
-    aPrimLog(x);
-    window.console.log("----------")
-    return x;
-}
 
 
-// TODO Must these be primitives (?)
+
 
 function aPrimLog(text, _) {
     window.console.log(typeof text);
