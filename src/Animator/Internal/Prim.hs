@@ -1134,7 +1134,8 @@ stringify = error "Not implemented"
 -- Utility
 -------------------------------------------------------------------------------------
 
-foreign import ccall "aPrimEval" eval#  :: String# -> IO Any#
+foreign import ccall "aPrimEval"  eval#  :: String# -> IO Any#
+foreign import ccall "aPrimDebug" debug# :: IO ()
 
 -- |
 -- Evaluates the given string as JavaScript.
@@ -1173,8 +1174,7 @@ printDoc str = documentWrite# (toJsString# $ str)
 -- /ECMA-262 12.15/
 --
 debug :: IO ()
-debug = eval "debugger"
-{-# NOINLINE debug #-}
+debug = debug#
 
 
 foreign import ccall "aPrimLog"       printRepr#        :: Any#    -> IO ()
