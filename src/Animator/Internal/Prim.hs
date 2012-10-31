@@ -14,6 +14,20 @@
 -- partially applied or passed to other JavaScript functions. Haskell functions can be converted
 -- to JavaScript functions for use as callbacks in the host environment.
 --
+-- This package is loosely based on "Foreign.C" and its descendants. There are some fundamental
+-- differences due to the difference in the task of interfacing with a dynamic loosely-typed
+-- host language versus a static unchecked language. Most notably:
+--
+-- * No special numeric types. 'Bool', 'Int', 'Word', 'Float' and 'Double' are represented
+--   as directly as their host language counterparts.
+--
+-- * No foreign imports: functions can be imported and called at runtime.
+--
+-- * The 'JsStorable' class converts between Haskell values and JavaScript values, instead of
+--   between Haskell values and byte sequences.
+--
+-- * The special types 'JsString', 'JsObject' and 'JsArray' represent compound object.
+--
 
 -------------------------------------------------------------------------------------
 
@@ -46,10 +60,11 @@ module Animator.Internal.Prim (
         -- *** Creation and access
         object,
         create,
-        null,
         global,
+        null,
 
         -- *** Prototype hierarchy
+        -- $proto
         isInstanceOf,
         isPrototypeOf,
         constructor,
@@ -81,12 +96,19 @@ module Animator.Internal.Prim (
         reverse,
         sort,
         copy,
+        take,
+        drop,
         slice,
+        
+        -- *** Array to string
+        -- $stringToArray
         join,
 
         -- ------------------------------------------------------------
         -- ** Strings
         JsString,
+        toJsString,
+        fromJsString,
 
         -- *** Creation and access
         fromCharCode,
@@ -98,15 +120,16 @@ module Animator.Internal.Prim (
         lastIndexOf,
         -- match
         -- replace
-        -- search
-        split,
-
+        -- search   
+        
         -- *** Manipulation and conversion
         sliceString,
         toLower,
         toUpper,
-        toJsString,
-        fromJsString,
+
+        -- *** String to array
+        -- $stringToArray
+        split,
 
         -- ------------------------------------------------------------
         -- ** Functions
@@ -163,7 +186,7 @@ module Animator.Internal.Prim (
         debug
   ) where
 
-import Prelude hiding (reverse, null, length, lookup)
+import Prelude hiding (reverse, null, length, lookup, take, drop)
 
 import Data.Int
 import Data.Word
@@ -383,6 +406,7 @@ object = object# >>= (return . JsObject)
 global :: IO JsObject
 global = global# >>= (return . JsObject)
 
+
 -- |
 -- Create a new JavaScript object using the given object as prototype, or equivalently
 --
@@ -392,13 +416,18 @@ global = global# >>= (return . JsObject)
 create :: JsObject -> IO JsObject
 create = unsafeLookup ["Object"] %. "create"
 
+-------------------------------------------------------------------------------------
+-- 
+-- $proto
+-- These functions allow introspection of the prototype hierarchy. Note that allthough
+-- some implementations allow mutation of the prototype, this behavior is not supported
+-- by the standard and should not be used.
+--
+
 -- |
 -- Return true if object @x@ is an instance created by @y@, or equivalently
 --
 -- > x instanceof y
---
--- This function is pure, as the prototype of an object is not supposed to
--- change, at least not as far as the standard is concerned.
 --
 isInstanceOf :: JsObject -> JsObject -> Bool
 x `isInstanceOf` y = p x `instanceOf#` p y 
@@ -409,9 +438,6 @@ x `isInstanceOf` y = p x `instanceOf#` p y
 --
 -- > x.isPrototypeOf(y)
 -- 
--- This function is pure, as the prototype of an object is not supposed to
--- change, at least not as far as the standard is concerned.
--- 
 isPrototypeOf :: JsObject -> JsObject -> Bool
 x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
     
@@ -420,11 +446,10 @@ x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
 --
 -- > x.constructor
 --
--- This function is pure, as the constructor of an object is not supposed to
--- change.
---
 constructor :: JsObject -> JsFun a
 constructor x = unsafePerformIO (x %% "constructor")
+
+-------------------------------------------------------------------------------------
 
 -- |
 -- Deletes the property @n@ form object @o@, or equivalently
@@ -437,7 +462,7 @@ delete x n = delete# 0 (getJsObject x) (toJsString# n) >> return ()
 -- |
 -- Returns
 --
--- > o.n !== undefined
+-- > "n" in o
 --
 hasProperty :: JsObject -> JsName -> IO Bool
 hasProperty x n = has# 0 (getJsObject x) (toJsString# n)
@@ -595,7 +620,7 @@ length x = toObject x %% "length"
 --
 -- > x.push(x)
 --
-push :: JsProp a => JsArray -> a -> IO JsArray
+push :: JsVal a => JsArray -> a -> IO JsArray
 push x = toObject x %. "push"
 
 -- |
@@ -603,7 +628,7 @@ push x = toObject x %. "push"
 --
 -- > x.pop()
 --
-pop :: JsProp a => JsArray -> IO a
+pop :: JsVal a => JsArray -> IO a
 pop x = toObject x % "pop"
 
 -- |
@@ -611,7 +636,7 @@ pop x = toObject x % "pop"
 --
 -- > x.shift()
 --
-shift :: JsProp a => JsArray -> IO a
+shift :: JsVal a => JsArray -> IO a
 shift x = toObject x % "shift"
 
 -- |
@@ -619,7 +644,7 @@ shift x = toObject x % "shift"
 --
 -- > x.shift(x)
 --
-unshift :: JsProp a => JsArray -> a -> IO JsArray
+unshift :: JsVal a => JsArray -> a -> IO JsArray
 unshift x = toObject x %. "unshift"
 
 -- |
@@ -646,7 +671,23 @@ sort x = toObject x % "sort"
 -- > x.slice()
 --
 copy :: JsArray -> IO JsArray
-copy x = toObject x % "slice"
+copy x = drop x 0
+
+-- |
+-- Returns
+--
+-- > x.slice(0,a)
+--
+take :: JsArray -> Int -> IO JsArray
+take x = slice x 0
+
+-- |
+-- Returns
+--
+-- > x.slice(a)
+--
+drop :: JsArray -> Int -> IO JsArray
+drop x = toObject x %. "slice"
 
 -- |
 -- Returns
@@ -656,14 +697,38 @@ copy x = toObject x % "slice"
 slice :: JsArray -> Int -> Int -> IO JsArray
 slice x a b = (toObject x %.. "slice") a b
 
+--
+-- $stringToArray
+--
+-- The following law holds for all strings @s@ and @t@
+--
+-- > join t . split t = id
+-- > split t . join t = id
+--
+
 -- |
 -- Returns a string describing a type of the given object, or equivalently
 --
--- > Array.prototype.join.call(x, s)
---
-join :: JsArray -> JsString -> IO JsString
-join x = toObject x %. "join"
+-- > x.join(s)
+--   
+join :: JsString -> JsArray -> IO JsString
+join = flip join'
 
+join' x = toObject x %. "join"
+
+
+-- TODO this should be IO-free, will only work with immutable arrays
+-- |
+-- Convert an array of (singleton) strings to a string
+--   
+fromArray :: JsArray -> IO JsString
+fromArray = join ""
+
+-- |
+-- Convert aa string to an array of (singleton) strings
+--   
+fromString :: JsString -> JsArray
+fromString = split ""
 
 
 
@@ -718,7 +783,7 @@ fromJsString = fromJsString# . getJsString
 -- > String.fromCharCode(a)
 --
 fromCharCode :: Int -> JsString
-fromCharCode = unsafePerformIO . (unsafeLookup ["String"] %. "fromCharCode")
+fromCharCode = unsafeLookup ["String"] &. "fromCharCode"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -726,7 +791,7 @@ fromCharCode = unsafePerformIO . (unsafeLookup ["String"] %. "fromCharCode")
 -- > x.charAt(a)
 --
 charAt :: JsString -> Int -> JsString
-charAt x = unsafePerformIO . (toObject x %. "charAt")
+charAt x = toObject x &. "charAt"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -734,7 +799,7 @@ charAt x = unsafePerformIO . (toObject x %. "charAt")
 -- > x.charCodeAt(a)
 --
 charCodeAt :: JsString -> Int -> Int
-charCodeAt x = unsafePerformIO . (toObject x %. "charCodeAt")
+charCodeAt x = toObject x &. "charCodeAt"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -742,7 +807,7 @@ charCodeAt x = unsafePerformIO . (toObject x %. "charCodeAt")
 -- > String.prototype.indexOf.call(s, c)
 --
 indexOf :: JsString -> JsString -> Int
-indexOf x = unsafePerformIO . (toObject x %. "indexOf")
+indexOf x = toObject x &. "indexOf"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -750,7 +815,7 @@ indexOf x = unsafePerformIO . (toObject x %. "indexOf")
 -- > String.prototype.lastIndexOf.call(s, c)
 --
 lastIndexOf :: JsString -> JsString -> Int
-lastIndexOf x = unsafePerformIO . (toObject x %. "lastIndexOf")
+lastIndexOf x = toObject x &. "lastIndexOf"
 
 -- match
 -- replace
@@ -759,10 +824,12 @@ lastIndexOf x = unsafePerformIO . (toObject x %. "lastIndexOf")
 -- |
 -- Returns
 --
--- > x.split(q)
+-- > x.split(t)
 --
 split :: JsString -> JsString -> JsArray
-split x = unsafePerformIO . (toObject x %. "split")
+split = flip split'
+ 
+split' x = toObject x &. "split"
 
 -- |
 -- Returns
@@ -770,7 +837,7 @@ split x = unsafePerformIO . (toObject x %. "split")
 -- > x.slice(a, b)
 --
 sliceString :: JsString -> Int -> Int -> JsString
-sliceString x a b = unsafePerformIO $ (toObject x %.. "slice") a b
+sliceString x a b = (toObject x &.. "slice") a b
 
 -- |
 -- Returns
@@ -778,7 +845,7 @@ sliceString x a b = unsafePerformIO $ (toObject x %.. "slice") a b
 -- > x.toLower()
 --
 toLower :: JsString -> JsString
-toLower x = unsafePerformIO $ (toObject x % "toLower")
+toLower x = toObject x & "toLower"
 
 -- |
 -- Returns
@@ -786,7 +853,7 @@ toLower x = unsafePerformIO $ (toObject x % "toLower")
 -- > x.toUpper()
 --
 toUpper :: JsString -> JsString
-toUpper x = unsafePerformIO $ (toObject x % "toUpper")
+toUpper x = toObject x & "toUpper"
 
 
 
@@ -920,6 +987,9 @@ bindWith1 f t a = JsFun $ bind1# (getJsFun f) (p t) (p a)
         p = toAny
 
 
+infixl 9 &
+infixl 9 &.
+infixl 9 &..
 infixl 9 %
 infixl 9 %.
 infixl 9 %..
@@ -939,6 +1009,21 @@ infixl 9 %%
 -- Infix version of 'invoke2'.
 --
 (%..) = invoke2
+
+-- |
+-- Infix version of 'invokePure'.
+--
+(&)   = invokePure
+
+-- |
+-- Infix version of 'invokePure1'.
+--
+(&.)  = invokePure1
+
+-- |
+-- Infix version of 'invokePure2'.
+--
+(&..) = invokePure2
 
 -- |
 -- Infix version of 'get'.
@@ -968,24 +1053,6 @@ invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
 --
 invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
 
--- -- |
--- -- Invoke the method of the given name on the given object, or equivalently
--- --
--- -- > o.n(a, b, c)
--- invoke3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsObject -> JsName -> a -> b -> c -> IO d
--- 
--- -- |
--- -- Invoke the method of the given name on the given object, or equivalently
--- --
--- -- > o.n(a, b, c, d)
--- invoke4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsObject -> JsName -> a -> b -> c -> d -> IO e
--- 
--- -- |
--- -- Invoke the method of the given name on the given object, or equivalently
--- --
--- -- > o.n(a, b, c, d, e)
--- invoke5 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e, JsVal f) => JsObject -> JsName -> a -> b -> c -> d -> e -> IO f
-
 invoke o n = do
     f <- get o n
     callWith f o
@@ -998,38 +1065,31 @@ invoke2 o n a b = do
     f <- get o n
     callWith2 f o a b
 
--- invoke3 o n a b c = do
---     f <- get o n
---     callWith3 f o a b c
--- 
--- invoke4 o n a b c d = do
---     f <- get o n
---     callWith4 f o a b c d
--- 
--- invoke5 o n a b c d e = do
---     f <- get o n
---     callWith5 f o a b c d e
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n()
+--
+invokePure :: JsVal a => JsObject -> JsName -> a
 
--- -- |
--- -- Partially apply the given function, or equivalently
--- --
--- -- > Function.prototype.bind.call(f, x, ... as)
--- bind :: JsVal a => JsFun -> a -> [a] -> JsFun
--- bind = error "Not implemented"
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
 --
--- -- |
--- -- Apply the given function, or equivalently
--- --
--- -- > Function.prototype.apply.call(f, x, as)
--- apply :: JsVal a => JsFun -> a -> [a] -> a
--- apply = error "Not implemented"
+-- > o.n(a)
 --
--- -- |
--- -- Invokes the given function as a constructor, or equivalently
--- --
--- -- > new F(args)
--- new :: JsVal a => JsFun -> [a] -> IO JsObject
--- new = error "Not implemented"
+invokePure1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> b
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a, b)
+--
+invokePure2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> c
+
+invokePure  o n     = unsafePerformIO $ invoke  o n
+invokePure1 o n a   = unsafePerformIO $ invoke1 o n a
+invokePure2 o n a b = unsafePerformIO $ invoke2 o n a b
+
 
 foreign import ccall "aPrimLiftPure0" liftPure#   :: Any# -> Any#
 foreign import ccall "aPrimLiftPure1" liftPure1#  :: Any# -> Any#

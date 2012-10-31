@@ -13,6 +13,7 @@ import Haste.Prim(toPtr, fromPtr)
 import GHC.Prim
 import Data.Foldable 
 import Prelude hiding (null)
+import qualified Data.Aeson
 
 {-
 
@@ -48,12 +49,20 @@ Polymorhism requirements:
 -}
 
 main = do
-    -- testJQuery
+    testFib
+    testJQuery
     -- testPrim
     -- testLift  
     -- testLookup
-    testBool
-    testString
+    -- testBool
+    -- testString
+
+testFib = do
+    printRepr $! fib 10
+    where
+        fib !0 = 0
+        fib !1 = 1
+        fib !n = fib (n - 1) + fib (n - 2)
 
 testString = do
     printRepr $! "hans" `charAt` 0
