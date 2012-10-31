@@ -314,14 +314,14 @@ instance JsVal (Ptr a) where
 --
 class JsVal a => JsRef a where
     toObject :: a -> JsObject
-instance JsRef JsFunction where
-    toObject = JsObject . getJsFunction
-instance JsRef JsArray where
-    toObject = JsObject . getJsArray
-instance JsRef JsString where
-    toObject = JsObject . unsafeCoerce . getJsString
 instance JsRef JsObject where
     toObject = id
+instance JsRef JsArray where
+    toObject = JsObject . getJsArray
+instance JsRef JsFunction where
+    toObject = JsObject . getJsFunction
+instance JsRef JsString where
+    toObject = JsObject . unsafeCoerce . getJsString
 
 -- |
 -- Class of JavaScript sequence types.
