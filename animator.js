@@ -7,24 +7,34 @@
             - Primitive functions must be global
  */
 
-// TODO hide
-function aInternalCheck(type, value, error) {
-    switch(type)
-    {
-        case 0:
+function aPrimTypeCheck(type, value, error) {
+
+    // Keep in sync with prim module
+    var booleanType   = 0;
+    var numberType    = 1;
+    var stringType    = 2;
+    var objectType    = 3;
+    var functionType  = 4;
+    var undefinedType = 5;
+    
+    switch (type) {
+        case booleanType:
+            if (typeof type !== "boolean") throw error;
+            break;
+        case numberType:
             if (typeof value !== "number") throw error;
             break;
-        case 1:
+        case stringType:
             if (typeof value !== "string") throw error;
             break;
-        case 2:
+        case objectType:
             if (typeof type !== "object") throw error;
             break;
-        case 3:
+        case functionType:
             if (typeof type !== "function") throw error;
             break;
-        case 4:
-            if (typeof type !== "boolean") throw error;
+        case undefinedType:
+            if (typeof type !== "undefined") throw error;
             break;
     }
 }
@@ -76,19 +86,19 @@ function aPrimDebug(s, _) {
 
 
 function aPrimGet(type, obj, name, _) {
-    // aInternalCheck(type, obj[name], "Animator: Type error");
+    // aPrimTypeCheck(type, obj[name], "Animator: Type error");
     return [1, _,
         obj[name]
     ];
 }
 function aPrimHas(type, obj, name, _) {
-    // aInternalCheck(type, obj[name], "Animator: Type error");
+    // aPrimTypeCheck(type, obj[name], "Animator: Type error");
     return [1, _,
         (obj[name] !== undefined)
     ];
 }
 function aPrimSet(type, obj, name, value, _) {
-    // aInternalCheck(type, value, "Animator: Type error");
+    // aPrimTypeCheck(type, value, "Animator: Type error");
     obj[name] = value;
     return [1, _];
 }
@@ -115,24 +125,7 @@ function aPrimCall2(f, t, a, b, _) {
         f.call(t, a, b)
     ];
 }
-function aPrimCall3(f, t, a, b, c, _) {
-    return [1, _,
-        // f(a, b, c)
-        f.call(t, a, b, c)
-    ];
-}
-function aPrimCall4(f, t, a, b, c, d, _) {
-    return [1, _,
-        // f(a, b, c, d)
-        f.call(t, a, b, c, d)
-    ];
-}
-function aPrimCall5(f, t, a, b, c, d, e, _) {
-    return [1, _,
-        // f(a, b, c, d, e)
-        f.call(t, a, b, c, d, e)
-    ];
-}
+
 function aPrimBind0(f, t, _) {
     return [1, _,
         f.bind(t)
@@ -143,26 +136,7 @@ function aPrimBind1(f, t, a, _) {
         f.bind(t, a)
     ];
 }
-function aPrimBind2(f, t, a, b, _) {
-    return [1, _,
-        f.bind(t, a, b)
-    ];
-}
-function aPrimBind3(f, t, a, b, c, _) {
-    return [1, _,
-        f.bind(t, a, b, c)
-    ];
-}
-function aPrimBind4(f, t, a, b, c, d, _) {
-    return [1, _,
-        f.bind(t, a, b, c, d)
-    ];
-}
-function aPrimBind5(f, t, a, b, c, d, e, _) {
-    return [1, _,
-        f.bind(t, a, b, c, d, e)
-    ];
-}
+
 
 function aPrimLift0(f, _) {
     return [1, _,
@@ -188,6 +162,7 @@ function aPrimLift2(f, _) {
         }
     ];
 }
+
 function aPrimLiftPure0(f, _) {
     return [1, _,
         function () {
@@ -212,9 +187,6 @@ function aPrimLiftPure2(f, _) {
         }
     ];
 }
-
-
-
 
 
 function aPrimLog(text, _) {

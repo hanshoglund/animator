@@ -270,11 +270,13 @@ foreign import ccall "aPrimSet"    setAny#      :: Int -> Any# -> String# -> Any
 mkGet# i c x n   = i (getJsObject x) (getJsString n)  >>= (return . c)
 mkSet# o c x n v = o (getJsObject x) (getJsString n) (c v)
 
-numberType#    = 0
-stringType#    = 1
-objectType#    = 2
-functionType#  = 3
-booleanType#   = 4    
+-- Keep in synch with aPrimTypeCheck
+booleanType#   = 0
+numberType#    = 1
+stringType#    = 2
+objectType#    = 3
+functionType#  = 4
+undefinedType# = 5
 
 -- In JavaScript @undefined@ is really (), not _|_
 --
@@ -884,9 +886,17 @@ newtype JsFunction = JsFunction { getJsFunction :: Any# }
 arity :: JsFunction -> Int
 arity x = unsafePerformIO $ (toObject x %% "length")
 
-foreign import ccall "aPrimCall0" call#  :: Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall1" call1#  :: Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall2" call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall0" call#       :: Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall1" call1#      :: Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall2" call2#      :: Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimBind0" bind#       :: Any# -> Any# -> Any#
+foreign import ccall "aPrimBind1" bind1#      :: Any# -> Any# -> Any# -> Any#
+foreign import ccall "aPrimLiftPure0" liftp#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" liftp1# :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" liftp2# :: Any# -> Any#
+foreign import ccall "aPrimLift0" lift#       :: Any# -> Any#
+foreign import ccall "aPrimLift1" lift1#      :: Any# -> Any#
+foreign import ccall "aPrimLift2" lift2#      :: Any# -> Any#
 
 -- |
 -- Apply the given function, or equivalently
@@ -956,8 +966,6 @@ callWith2 f t a b = do
         q = fromAny#
 
 
-foreign import ccall "aPrimBind0" bind#  :: Any# -> Any# -> Any#
-foreign import ccall "aPrimBind1" bind1#  :: Any# -> Any# -> Any# -> Any#
 
 -- |
 -- Partially apply the given function, or equivalently
@@ -1121,14 +1129,6 @@ invokep2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> c
 invokep  o n     = unsafePerformIO $ invoke  o n
 invokep1 o n a   = unsafePerformIO $ invoke1 o n a
 invokep2 o n a b = unsafePerformIO $ invoke2 o n a b
-
-
-foreign import ccall "aPrimLiftPure0" liftp#   :: Any# -> Any#
-foreign import ccall "aPrimLiftPure1" liftp1#  :: Any# -> Any#
-foreign import ccall "aPrimLiftPure2" liftp2#  :: Any# -> Any#
-foreign import ccall "aPrimLift0" lift#   :: Any# -> Any#
-foreign import ccall "aPrimLift1" lift1#  :: Any# -> Any#
-foreign import ccall "aPrimLift2" lift2#  :: Any# -> Any#
 
 --
 -- $lifting
