@@ -89,7 +89,7 @@ module Animator.Internal.Prim (
         slice,
         
         -- *** Array to string
-        -- $stringToArray
+        -- $StringToArray
         join,
 
         -- ------------------------------------------------------------
@@ -117,7 +117,7 @@ module Animator.Internal.Prim (
         toUpper,
 
         -- *** String to array
-        -- $stringToArray
+        -- $StringToArray
         split,
 
         -- ------------------------------------------------------------
@@ -224,6 +224,9 @@ fromPtr#      = undefined
 
 #endif __HASTE__
 
+
+-------------------------------------------------------------------------------------
+
 -- |
 -- Class of JavaScript types.
 --
@@ -247,6 +250,9 @@ class JsVal a where
     -- > "undefined", "boolean", "number", "string", "object", "function"
     -- 
     typeOf :: JsVal a => a -> JsString
+
+
+-------------------------------------------------------------------------------------
 
 foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
 
@@ -699,7 +705,7 @@ slice :: JsArray -> Int -> Int -> IO JsArray
 slice x a b = (toObject x %.. "slice") a b
 
 --
--- $stringToArray
+-- $StringToArray
 --
 -- The following law holds for all strings @s@ and @t@
 --
@@ -884,19 +890,22 @@ newtype JsFunction = JsFunction { getJsFunction :: Any# }
 -- > f.length
 --
 arity :: JsFunction -> Int
-arity x = unsafePerformIO $ (toObject x %% "length")
+arity x = toObject x !%% "length"
 
-foreign import ccall "aPrimCall0" call#       :: Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall1" call1#      :: Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall2" call2#      :: Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimBind0" bind#       :: Any# -> Any# -> Any#
-foreign import ccall "aPrimBind1" bind1#      :: Any# -> Any# -> Any# -> Any#
+foreign import ccall "aPrimCall0"     call#   :: Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall1"     call1#  :: Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall2"     call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
+                                              
+foreign import ccall "aPrimBind0"     bind#   :: Any# -> Any# -> Any#
+foreign import ccall "aPrimBind1"     bind1#  :: Any# -> Any# -> Any# -> Any#
+
 foreign import ccall "aPrimLiftPure0" liftp#  :: Any# -> Any#
 foreign import ccall "aPrimLiftPure1" liftp1# :: Any# -> Any#
 foreign import ccall "aPrimLiftPure2" liftp2# :: Any# -> Any#
-foreign import ccall "aPrimLift0" lift#       :: Any# -> Any#
-foreign import ccall "aPrimLift1" lift1#      :: Any# -> Any#
-foreign import ccall "aPrimLift2" lift2#      :: Any# -> Any#
+
+foreign import ccall "aPrimLift0"     lift#   :: Any# -> Any#
+foreign import ccall "aPrimLift1"     lift1#  :: Any# -> Any#
+foreign import ccall "aPrimLift2"     lift2#  :: Any# -> Any#
 
 -- |
 -- Apply the given function, or equivalently
