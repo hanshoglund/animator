@@ -892,6 +892,8 @@ newtype JsFunction = JsFunction { getJsFunction :: Any# }
 arity :: JsFunction -> Int
 arity x = toObject x !%% "length"
 
+-------------------------------------------------------------------------------------
+
 foreign import ccall "aPrimCall0"     call#   :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1"     call1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall2"     call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
@@ -928,9 +930,18 @@ call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
 --
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
 
-call  f = callWith  f null
-call1 f = callWith1 f null
-call2 f = callWith2 f null
+call  = flip callWith  $ null
+call1 = flip callWith1 $ null
+call2 = flip callWith2 $ null
+
+-- |
+-- Partially apply the given function, or equivalently
+--
+-- > f.bind(null, a)
+--
+bind :: JsVal a => JsFunction -> a -> JsFunction
+bind = flip bindWith1 $ null
+
 
 -- |
 -- Apply the given function with the given @this@ value, or equivalently
@@ -954,35 +965,28 @@ callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
 callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
 
 callWith f t = do
-    r <- call# (getJsFunction f) (p t)
+    r <- call# (h f) (p t)
     return $ q r
     where
+        h = getJsFunction
         p = toAny#
         q = fromAny#
 
 callWith1 f t a = do
-    r <- call1# (getJsFunction f) (p t) (p a)
+    r <- call1# (h f) (p t) (p a)
     return $ q r
     where
+        h = getJsFunction
         p = toAny#
         q = fromAny#
 
 callWith2 f t a b = do
-    r <- call2# (getJsFunction f) (p t) (p a) (p b)
+    r <- call2# (h f) (p t) (p a) (p b)
     return $ q r
-    where
+    where         
+        h = getJsFunction
         p = toAny#
         q = fromAny#
-
-
-
--- |
--- Partially apply the given function, or equivalently
---
--- > f.bind(null, a)
---
-bind :: JsVal a => JsFunction -> a -> JsFunction
-bind  f = bindWith1 f null
 
 -- |
 -- Partially apply the given function with the given @this@ value, or equivalently
@@ -1005,6 +1009,97 @@ bindWith f t = JsFunction $ bind# (getJsFunction f) (p t)
 bindWith1 f t a = JsFunction $ bind1# (getJsFunction f) (p t) (p a)
     where
         p = toAny#
+
+--
+-- $lifting
+--
+-- The following law hold for all functions:
+--
+-- > lift . call  = liftM id
+-- > pure . apply = id
+--
+
+-- |
+-- Lift the given Haskell function to JavaScript.
+--
+liftp :: JsVal a => a -> JsFunction
+liftp1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
+liftp2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
+
+lift :: JsVal a => IO a -> JsFunction
+lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
+lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
+
+
+liftp  = JsFunction . liftp#  . unsafeCoerce . toPtr#
+liftp1 = JsFunction . liftp1# . unsafeCoerce . toPtr#
+liftp2 = JsFunction . liftp2# . unsafeCoerce . toPtr#
+lift   = JsFunction . lift#   . unsafeCoerce . toPtr#
+lift1  = JsFunction . lift1#  . unsafeCoerce . toPtr#
+lift2  = JsFunction . lift2#  . unsafeCoerce . toPtr#  
+
+
+-------------------------------------------------------------------------------------
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n()
+--
+invoke :: JsVal a => JsObject -> JsName -> IO a
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a)
+--
+invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a, b)
+--
+invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
+
+invoke o n = do
+    f <- get o n
+    callWith f o
+
+invoke1 o n a = do
+    f <- get o n
+    callWith1 f o a
+
+invoke2 o n a b = do
+    f <- get o n
+    callWith2 f o a b
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n()
+--
+invokep :: JsVal a => JsObject -> JsName -> a
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a)
+--
+invokep1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> b
+
+-- |
+-- Invoke the method of the given name on the given object, or equivalently
+--
+-- > o.n(a, b)
+--
+invokep2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> c
+
+invokep  o n     = unsafePerformIO $ invoke  o n
+invokep1 o n a   = unsafePerformIO $ invoke1 o n a
+invokep2 o n a b = unsafePerformIO $ invoke2 o n a b
+
+-------------------------------------------------------------------------------------
 
 
 infixl 9 !%
@@ -1077,95 +1172,6 @@ infixl 9 ?%
 -- Reverse infix version of 'hasProperty'.
 --
 (?%) = flip hasProperty
-
-
-
-
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n()
---
-invoke :: JsVal a => JsObject -> JsName -> IO a
-
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n(a)
---
-invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
-
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n(a, b)
---
-invoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> IO c
-
-invoke o n = do
-    f <- get o n
-    callWith f o
-
-invoke1 o n a = do
-    f <- get o n
-    callWith1 f o a
-
-invoke2 o n a b = do
-    f <- get o n
-    callWith2 f o a b
-
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n()
---
-invokep :: JsVal a => JsObject -> JsName -> a
-
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n(a)
---
-invokep1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> b
-
--- |
--- Invoke the method of the given name on the given object, or equivalently
---
--- > o.n(a, b)
---
-invokep2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> c
-
-invokep  o n     = unsafePerformIO $ invoke  o n
-invokep1 o n a   = unsafePerformIO $ invoke1 o n a
-invokep2 o n a b = unsafePerformIO $ invoke2 o n a b
-
---
--- $lifting
---
--- The following law hold for all functions:
---
--- > lift . call  = liftM id
--- > pure . apply = id
---
-
--- |
--- Lift the given Haskell function to JavaScript.
---
-liftp :: JsVal a => a -> JsFunction
-liftp1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
-liftp2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
-
-lift :: JsVal a => IO a -> JsFunction
-lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
-lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
-
-
-liftp  = JsFunction . liftp#  . unsafeCoerce . toPtr#
-liftp1 = JsFunction . liftp1# . unsafeCoerce . toPtr#
-liftp2 = JsFunction . liftp2# . unsafeCoerce . toPtr#
-lift      = JsFunction . lift#  . unsafeCoerce . toPtr#
-lift1     = JsFunction . lift1# . unsafeCoerce . toPtr#
-lift2     = JsFunction . lift2# . unsafeCoerce . toPtr#
 
 
 -------------------------------------------------------------------------------------
