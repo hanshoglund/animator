@@ -48,6 +48,7 @@ module Animator.Internal.Prim (
         -- *** Properties
         JsName,
         get,
+        getp,
         set,
         update,
         delete,
@@ -55,10 +56,12 @@ module Animator.Internal.Prim (
         hasOwnProperty,
         propertyIsEnumerable,
         lookup,
-        (%%),
         (%?),
         (?%),
+        (%%),
         (%%%),
+        (!%%),
+        (%%!),
 
         -- *** Conversion
         toString,
@@ -97,6 +100,7 @@ module Animator.Internal.Prim (
 
         -- *** Creation and access
         fromCharCode,
+        stringLength,
         charAt,
         charCodeAt,
 
@@ -140,6 +144,9 @@ module Animator.Internal.Prim (
         invoke,
         invoke1,
         invoke2,
+        invokep,
+        invokep1,
+        invokep2,
 
         -- *** With explicit 'this' argument
         bindWith,
@@ -148,6 +155,9 @@ module Animator.Internal.Prim (
         (%),
         (%.),
         (%..),
+        (!%),
+        (!%.),
+        (!%..),
         -- apply,
         -- new,
 
@@ -395,6 +405,13 @@ type JsName = JsString
 -- > o.n
 get :: JsVal a => JsObject -> JsName -> IO a
 get = get#
+
+-- | 
+-- Fetch the value of the immutable property @n@ in object @o@, or equivalently
+--
+-- > o.n
+getp :: JsVal a => JsObject -> JsName -> a
+getp o = unsafePerformIO . get o
 
 -- | 
 -- Assign the property @n@ to @x@ in object @o@, or equivalently
@@ -764,7 +781,15 @@ fromJsString = fromJsString# . getJsString
 -- > String.fromCharCode(a)
 --
 fromCharCode :: Int -> JsString
-fromCharCode = unsafeLookup ["String"] &. "fromCharCode"
+fromCharCode = unsafeLookup ["String"] !%. "fromCharCode"
+
+-- |
+-- Returns the length of the given array, or equivalently
+--
+-- > x.length
+--
+stringLength :: JsString -> Int
+stringLength x = toObject x !%% "length"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -772,7 +797,7 @@ fromCharCode = unsafeLookup ["String"] &. "fromCharCode"
 -- > x.charAt(a)
 --
 charAt :: JsString -> Int -> JsString
-charAt x = toObject x &. "charAt"
+charAt x = toObject x !%. "charAt"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -780,7 +805,7 @@ charAt x = toObject x &. "charAt"
 -- > x.charCodeAt(a)
 --
 charCodeAt :: JsString -> Int -> Int
-charCodeAt x = toObject x &. "charCodeAt"
+charCodeAt x = toObject x !%. "charCodeAt"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -788,7 +813,7 @@ charCodeAt x = toObject x &. "charCodeAt"
 -- > String.prototype.indexOf.call(s, c)
 --
 indexOf :: JsString -> JsString -> Int
-indexOf x = toObject x &. "indexOf"
+indexOf x = toObject x !%. "indexOf"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -796,7 +821,7 @@ indexOf x = toObject x &. "indexOf"
 -- > String.prototype.lastIndexOf.call(s, c)
 --
 lastIndexOf :: JsString -> JsString -> Int
-lastIndexOf x = toObject x &. "lastIndexOf"
+lastIndexOf x = toObject x !%. "lastIndexOf"
 
 -- match
 -- replace
@@ -810,7 +835,7 @@ lastIndexOf x = toObject x &. "lastIndexOf"
 split :: JsString -> JsString -> JsArray
 split = flip split'
     where
-        split' x = toObject x &. "split"
+        split' x = toObject x !%. "split"
 
 -- |
 -- Returns
@@ -818,7 +843,7 @@ split = flip split'
 -- > x.slice(a, b)
 --
 sliceString :: JsString -> Int -> Int -> JsString
-sliceString x a b = (toObject x &.. "slice") a b
+sliceString x a b = (toObject x !%.. "slice") a b
 
 -- |
 -- Returns
@@ -826,7 +851,7 @@ sliceString x a b = (toObject x &.. "slice") a b
 -- > x.toLower()
 --
 toLower :: JsString -> JsString
-toLower x = toObject x & "toLower"
+toLower x = toObject x !% "toLower"
 
 -- |
 -- Returns
@@ -834,7 +859,7 @@ toLower x = toObject x & "toLower"
 -- > x.toUpper()
 --
 toUpper :: JsString -> JsString
-toUpper x = toObject x & "toUpper"
+toUpper x = toObject x !% "toUpper"
 
 
 -------------------------------------------------------------------------------------
@@ -965,9 +990,9 @@ bindWith1 f t a = JsFunction $ bind1# (getJsFunction f) (p t) (p a)
         p = toAny#
 
 
-infixl 9 &
-infixl 9 &.
-infixl 9 &..
+infixl 9 !%
+infixl 9 !%.
+infixl 9 !%..
 infixl 9 %
 infixl 9 %.
 infixl 9 %..
@@ -994,17 +1019,17 @@ infixl 9 ?%
 -- |
 -- Infix version of 'invokep'.
 --
-(&)   = invokep
+(!%)   = invokep
 
 -- |
 -- Infix version of 'invokep1'.
 --
-(&.)  = invokep1
+(!%.)  = invokep1
 
 -- |
 -- Infix version of 'invokep2'.
 --
-(&..) = invokep2
+(!%..) = invokep2
 
 -- |
 -- Infix version of 'get'.
@@ -1012,14 +1037,24 @@ infixl 9 ?%
 (%%) = get
 
 -- |
--- Infix version of 'hasProperty'.
---
-(%?) = hasProperty
-
--- |
 -- Reverse infix version of 'get'.
 --
 (%%%) = flip get
+
+-- |
+-- Infix version of 'getp'.
+--
+(!%%) = getp
+
+-- |
+-- Reverse infix version of 'getp'.
+--
+(%%!) = flip getp
+
+-- |
+-- Infix version of 'hasProperty'.
+--
+(%?) = hasProperty
 
 -- |
 -- Reverse infix version of 'hasProperty'.
