@@ -60,7 +60,6 @@ function printError(error) {
         console.log();
         JSLINT.errors.map(function(error) {
             if (error) {
-                // console.log(Object.keys(error));
                 console.log(String() + style.file(path) + ' ' + error.line + ':' + error.character);
                 console.log('  ' + style.error(error.reason));
                 if (error.evidence) {
