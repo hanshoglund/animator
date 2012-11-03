@@ -26,7 +26,7 @@ function printUsage() {
 }
 
 function printError(error) {
-    console.log(style.error('Error: ') + 'Could not open file: ' + error);
+    console.log(style.error('Error: ') + error);
 }
 
 (function () {
@@ -46,7 +46,7 @@ function printError(error) {
     try {
         source = fs.readFileSync(path, 'utf8');        
     } catch (error) {
-        printError(path);
+        printError('Could not open file: ' + path);
         process.exit(1);
     }
 
