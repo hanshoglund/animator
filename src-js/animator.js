@@ -203,54 +203,60 @@ function aPrimBind1(f, t, a, _) {
     ];
 }
 
-var aPrimApp  = A;
-var aPrimEval = E;
-
 function aPrimLift0(f, _) {
+    var a = A;
+    var e = E;
     return [1, _,
         function () {
-            var r = aPrimApp(f, [_]);
-            return aPrimEval(r[2])[1];
+            var r = a(f, [_]);
+            return e(r[2])[1];
         }
     ];
 }
 function aPrimLift1(f, _) {
+    var a = A;
+    var e = E;
     return [1, _,
         function (a) {
-            var r = aPrimApp(f, [[1,a], _]);
-            return aPrimEval(r[2])[1];
+            var r = a(f, [[1,a], _]);
+            return e(r[2])[1];
         }
     ];
 }
 function aPrimLift2(f, _) {
+    var a = A;
+    var e = E;
     return [1, _,
         function (a, b) {
-            var r = aPrimApp(f, [[1,a], [1,b], _]);
-            return aPrimEval(r[2])[1];
+            var r = a(f, [[1,a], [1,b], _]);
+            return e(r[2])[1];
         }
     ];
 }
 
 function aPrimLiftPure0(f, _) {
+    var a = A;
     return [1, _,
         function () {
-            var r = aPrimApp(f, [_]);
+            var r = a(f, [_]);
             return r[1];
         }
     ];
 }
 function aPrimLiftPure1(f, _) {
+    var a = A;
     return [1, _,
         function (a) {
-            var r = aPrimApp(f, [[1,a], _]);
+            var r = a(f, [[1,a], _]);
             return r[1];
         }
     ];
 }
 function aPrimLiftPure2(f, _) {
+    var a = A;
     return [1, _,
         function (a, b) {
-            var r = aPrimApp(f, [[1,a], [1,b], _]);
+            var r = a(f, [[1,a], [1,b], _]);
             return r[1];
         }
     ];
