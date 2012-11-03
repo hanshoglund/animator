@@ -1,18 +1,21 @@
 
+/*jslint 
+    evil: true, debug: true, browser: true, vars: true, nomen: true */
+/*globals 
+    A, E */
+
 /*
     Namespace issues
+
         The Haste compiler relies heavily on the global scope ...
             - All RTS functions are global
             - All generated functions (_N) are global
             - Primitive functions must be global
  */
 
-/*jslint 
-    evil: true, debug: true, browser: true, vars: true, nomen: true */
-/*globals 
-    A, E */
-
-// Throw an error if @value@ is not of type @type@.
+/** 
+    Throw an error if `value` is not of type `type`.
+ */
 var aPrimTypeCheck = (function () {
 
     // Keep in sync with prim module
