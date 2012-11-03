@@ -1,53 +1,42 @@
 
-# PRE_COMPILER = uhc
-# COMPILER = uhc \
-# 	-tjs -O,2 --import-path src --import-path uhcjs
+JSPP 		= cpp -P -CC
+JSLINT		= build/jslint.sh
+JSC			= hastec \
+				-O2 \
+				--debug \
+				--out=main.js \
+				--with-js=src-js/animator.jspp,lib/processing/processing.js,lib/jquery/jquery.js
+CLOSURE		= googleclosure
+BROWSER  	= Google Chrome
 
-PRE_COMPILER = hastec \
-	--libinstall
-COMPILER = hastec \
-	-O2 \
-	--debug \
-	--out=main.js \
-	--with-js=src-js/animator.js,lib/processing/processing.js,lib/jquery/jquery.js
+FLAGS  	    = -DENABLE_TYPE_CHECKS=1
+MAIN	 	= main
 
-BROWSER  = Google Chrome
-MAIN	 = main
+PAPERJS_URL		= http://paperjs.org/downloads/paperjs-nightly.zip
+PROCESSING_URL	= http://cloud.github.com/downloads/processing-js/processing-js/processing-1.4.1-api.min.js
+DOMREADY_URL	= http://domready.googlecode.com/files/domready.js
+JQUERY_URL		= http://code.jquery.com/jquery-1.8.2.min.js
+JSLINT_URL		= https://raw.github.com/douglascrockford/JSLint/master/jslint.js
 
-all: debug
+all: 		debug
+debug:  	post reload
+release: 	post optimize reload
 
-debug:   post reload
-release: post optimize reload
+jspp:
+	$(JSPP) $(FLAGS) src-js/animator.js src-js/animator.jspp;
 
-# pre:
-# 	$(PRE_COMPILER) \
-# 		src/Data/List/NonEmpty.hs   \
-# 		src/Data/Semigroup.hs       \
-# 		src/Data/Void.hs            \
-# 		src/Data/MemoTrie.hs        \
-# 		src/Data/AdditiveGroup.hs   \
-# 		src/Data/AffineSpace.hs     \
-# 		src/Data/Basis.hs           \
-# 		src/Data/Cross.hs           \
-# 		src/Data/Derivative.hs      \
-# 		src/Data/LinearMap.hs       \
-# 		src/Data/Maclaurin.hs       \
-# 		src/Data/NumInstances.hs    \
-# 		src/Data/VectorSpace.hs     ;
+lint: 		jspp
+	$(JSLINT) src-js/animator.jspp;
 
-lint:
-	build/jslint.sh src-js/animator.js;
-
-.PHONY: build
-build: lint
-	$(COMPILER) \
+build: 		lint
+	$(JSC) \
 		src/Animator/Animation.hs 		 \
 		src/Animator/Prelude.hs 		 \
 		src/Animator/Internal/Prim.hs 	 \
 		$(MAIN).hs 						 && \
     perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
-post: build
+post: 		build
 	rm -f `find . -d -name "*.core*"`
 	rm -f `find . -d -name "*.hi*"`
 	rm -f `find . -d -name "*.mjs*"`
@@ -55,18 +44,16 @@ post: build
 	rm -f `find . -d -name "*.jsmod*"`
 	rm -f `find . -d -name "*.o*"`
 	rm -rf Animator
-	rm -rf Numeric
-	rm -rf Data
 
 FILE=$(MAIN).js
 optimize:
-	googleclosure \
+	$(CLOSURE) \
 		--language_in ECMASCRIPT5 \
 		--compilation_level SIMPLE_OPTIMIZATIONS \
-		--js 			 $(FILE) \
-		--js_output_file $(FILE)_opt; \
-		rm $(FILE); \
-		mv $(FILE)_opt $(FILE);
+		--js 			 $(MAIN).js \
+		--js_output_file $(MAIN).jsopt; \
+		rm $(MAIN).js; \
+		mv $(MAIN).jsopt $(MAIN).js;
 
 reload:
 	sh build/reload.sh $(BROWSER)
@@ -76,11 +63,6 @@ clean:
 
 haddock:
 	cabal haddock --hyperlink-source
-	# haddock \
-		# --html \
-		# --title="Animator: Purely functional animation for the Web" \
-		# src
-		# -o dist/doc `find src -name \*.hs`
 
 server-start:
 	(python -m SimpleHTTPServer 5566 &) > /dev/null 2>&1
@@ -88,9 +70,8 @@ server-start:
 server-stop:
 	killall python
 
-update-lib: update-paperjs update-processing update-domready update-jquery update-jslint
+update-lib: 	update-paperjs update-processing update-domready update-jquery update-jslint
 
-PAPERJS_URL=http://paperjs.org/downloads/paperjs-nightly.zip
 update-paperjs:
 	rm -rf lib/paperjs; \
 	mkdir -p lib/paperjs; \
@@ -102,7 +83,6 @@ update-paperjs:
 	rm -f paperjs.zip; \
 	cd ..;
 
-PROCESSING_URL=http://cloud.github.com/downloads/processing-js/processing-js/processing-1.4.1-api.min.js
 update-processing:
 	rm -rf lib/processing; \
 	mkdir -p lib/processing; \
@@ -110,7 +90,6 @@ update-processing:
 	curl $(PROCESSING_URL) > processing.js; \
 	cd ..;
 
-DOMREADY_URL=http://domready.googlecode.com/files/domready.js
 update-domready:
 	rm -rf lib/domready; \
 	mkdir -p lib/domready; \
@@ -118,7 +97,6 @@ update-domready:
 	curl $(DOMREADY_URL) > domready.js; \
 	cd ..;
 
-JQUERY_URL=http://code.jquery.com/jquery-1.8.2.min.js
 update-jquery:
 	rm -rf lib/jquery; \
 	mkdir -p lib/jquery; \
@@ -126,7 +104,6 @@ update-jquery:
 	curl $(JQUERY_URL) > jquery.js; \
 	cd ..;
 
-JSLINT_URL=https://raw.github.com/douglascrockford/JSLint/master/jslint.js
 update-jslint:
 	rm -rf lib/jslint; \
 	mkdir -p lib/jslint; \
@@ -134,3 +111,5 @@ update-jslint:
 	curl $(JSLINT_URL) > jslint.js; \
 	cd ..;
 
+
+.PHONY: 	build
