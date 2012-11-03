@@ -34,10 +34,10 @@ lint: 		jspp
 
 build: 		lint
 	$(JSC) \
-		src/Animator/Animation.hs 	 \
-		src/Animator/Prelude.hs 	 \
-		src/Animator/Internal/Prim.hs 	 \
-		$(MAIN).hs 						 && \
+		src/Animator/Animation.hs \
+		src/Animator/Prelude.hs \
+		src/Animator/Internal/Prim.hs \
+		$(MAIN).hs && \
 	perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
 post:		build
