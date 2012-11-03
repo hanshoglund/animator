@@ -1,6 +1,7 @@
 
 JSPP 		= cpp -P -CC
 JSLINT		= build/jslint.sh
+JSMIN		= jsmin
 JSINSTALL	= haste-inst --disable-library-profiling install
 JSC		= hastec \
 			-O2 \
@@ -25,7 +26,7 @@ JSLINT_URL	= https://raw.github.com/douglascrockford/JSLint/master/jslint.js
 
 all: 		debug
 debug:  	post reload
-release: 	post optimize reload
+release: 	post minify reload
 
 install-deps:
 	$(JSINSTALL) containers semigroups vector-space
@@ -59,9 +60,15 @@ optimize:
 		--language_in ECMASCRIPT5 \
 		--compilation_level SIMPLE_OPTIMIZATIONS \
 		--js 			 $(MAIN).js \
-		--js_output_file $(MAIN).jsopt; \
-		rm $(MAIN).js; \
-		mv $(MAIN).jsopt $(MAIN).js;
+		--js_output_file $(MAIN).jsopt && \
+	rm $(MAIN).js && \
+	mv $(MAIN).jsopt $(MAIN).js;
+
+minify:
+	$(JSMIN) <$(MAIN).js >$(MAIN).jsmin && \
+	rm $(MAIN).js && \
+	mv $(MAIN).jsmin $(MAIN).js;
+
 
 reload:
 	sh build/reload.sh $(BROWSER)
