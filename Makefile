@@ -69,7 +69,7 @@ reload:
 	sh build/reload.sh $(BROWSER)
 
 clean:
-	rm -f `find . -d -name "*.js*"`
+	rm main.js
 
 haddock:        
 	cabal haddock --hyperlink-source
