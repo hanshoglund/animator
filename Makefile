@@ -6,6 +6,10 @@ JSC		= hastec \
 			--debug \
 			--out=main.js \
 			--with-js=src-js/animator.jspp,lib/processing/processing.js,lib/jquery/jquery.js
+JSC_RELEASE    	= hastec \
+			-O2 \
+			--out=main.js \
+			--with-js=src-js/animator.jspp,lib/processing/processing.js,lib/jquery/jquery.js
 CLOSURE		= googleclosure
 BROWSER  	= Google Chrome
 
@@ -30,13 +34,13 @@ lint: 		jspp
 
 build: 		lint
 	$(JSC) \
-		src/Animator/Animation.hs 		 \
-		src/Animator/Prelude.hs 		 \
+		src/Animator/Animation.hs 	 \
+		src/Animator/Prelude.hs 	 \
 		src/Animator/Internal/Prim.hs 	 \
 		$(MAIN).hs 						 && \
 	perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
-post: 		build
+post:		build
 	rm -f `find . -d -name "*.core*"`
 	rm -f `find . -d -name "*.hi*"`
 	rm -f `find . -d -name "*.mjs*"`
@@ -45,7 +49,6 @@ post: 		build
 	rm -f `find . -d -name "*.o*"`
 	rm -rf Animator
 
-FILE=$(MAIN).js
 optimize:
 	$(CLOSURE) \
 		--language_in ECMASCRIPT5 \
