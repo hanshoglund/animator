@@ -35,6 +35,7 @@ release: post optimize reload
 # 		src/Data/NumInstances.hs    \
 # 		src/Data/VectorSpace.hs     ;
 
+.PHONY: build
 build:
 	$(COMPILER) \
 		src/Animator/Animation.hs 		 \
