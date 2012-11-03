@@ -48,13 +48,13 @@ Polymorhism requirements:
 -}
 
 main = do
-    testFib
-    testJQuery
     testPrim
-    testLift  
-    testLookup
-    testBool
-    testString
+    -- testFib
+    -- testJQuery
+    -- testLift  
+    -- testLookup
+    -- testBool
+    -- testString
 
 testFib = do
     printRepr $! fib 10

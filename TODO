@@ -1,11 +1,17 @@
 
-- Lift property related stuff + invoke from JsObject to (JsRef a) => a ?
 
 - What about read/show?
+
+- What about undefined?
+
+- Null is not an object!
 
 - Split Prim module
     - How?
 
-- Make wrapper ImmutableArray type (also with phantom types?)
 
-- Null is not an object!
+
+
+- Lift property related stuff + invoke from JsObject to (JsRef a) => a ?
+
+- Make wrapper ImmutableArray type (also with phantom types?)
