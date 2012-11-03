@@ -2,6 +2,7 @@
 /*jslint
     node: true, 
     evil: true, 
+    sloppy: true,
     stupid: true, 
     vars: true
 */
@@ -31,7 +32,6 @@ function printError(error) {
 
 (function () {
     var options = {
-        sloppy  : true,
         white   : true
     };
     var path = process.argv[2];

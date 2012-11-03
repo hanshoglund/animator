@@ -1,9 +1,10 @@
 
 /*jslint 
     browser: true, 
+    sloppy: true,
+    vars: true, 
     debug: true, 
     evil: true, 
-    vars: true, 
     nomen: true */
 /*globals 
     A, E */
