@@ -65,7 +65,7 @@ optimize:
 		mv $(FILE)_opt $(FILE);
 
 reload:
-	sh reload.sh $(BROWSER)
+	sh build/reload.sh $(BROWSER)
 
 clean:
 	rm -f `find . -d -name "*.js*"`
