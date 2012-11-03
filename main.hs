@@ -48,13 +48,20 @@ Polymorhism requirements:
 -}
 
 main = do
-    testPrim
+    testUndefined
+    -- testPrim
     -- testFib
     -- testJQuery
     -- testLift  
     -- testLookup
     -- testBool
     -- testString
+
+testUndefined = do
+    x <- object    
+    -- set x "foo" (123::Int)
+    u <- x %% "foo" :: IO Int
+    printRepr $! u
 
 testFib = do
     printRepr $! fib 10

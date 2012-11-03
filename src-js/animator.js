@@ -7,6 +7,7 @@
             - Primitive functions must be global
  */
 
+// Throw an error if @value@ is not of type @type@.
 function aPrimTypeCheck(type, value, error) {
 
     // Keep in sync with prim module
@@ -17,25 +18,61 @@ function aPrimTypeCheck(type, value, error) {
     var functionType  = 4;
     var undefinedType = 5;
     
+    var typeOfValue = typeof value;
+
+    var getName = (function() {
+        switch(type) {
+            case booleanType:   return "boolean";
+            case numberType:    return "number";
+            case stringType:    return "string";
+            case objectType:    return "object";
+            case functionType:  return "function";
+            case undefinedType: return "undefined";
+            default: 
+                throw "Animator: Missing case";
+        }
+    });
+    
+    var getMessage = (function() {
+        var base     = error || "Animator: Type error: ";
+        var expected = getName();
+        var actual   = typeOfValue;
+        return "" + base + "Expected '" + expected + "' not '" + actual + "'";
+    });
+    
     switch (type) {
         case booleanType:
-            if (typeof type !== "boolean") throw error;
+            if (typeOfValue !== "boolean") 
+                throw getMessage();
             break;
+
         case numberType:
-            if (typeof value !== "number") throw error;
+            if (typeOfValue !== "number") 
+                throw getMessage();
             break;
+
         case stringType:
-            if (typeof value !== "string") throw error;
+            if (typeOfValue !== "string") 
+                throw getMessage();
             break;
+
         case objectType:
-            if (typeof type !== "object") throw error;
+            if (typeOfValue !== "object") 
+                throw getMessage();
             break;
+
         case functionType:
-            if (typeof type !== "function") throw error;
+            if (typeOfValue !== "function") 
+                throw getMessage();
             break;
+
         case undefinedType:
-            if (typeof type !== "undefined") throw error;
+            if (typeOfValue !== "undefined") 
+                throw getMessage();
             break;
+        default: 
+            throw "Animator: Missing case";
+
     }
 }
 
@@ -86,19 +123,19 @@ function aPrimDebug(s, _) {
 
 
 function aPrimGet(type, obj, name, _) {
-    // aPrimTypeCheck(type, obj[name], "Animator: Type error");
+    aPrimTypeCheck(type, obj[name]);
     return [1, _,
         obj[name]
     ];
 }
 function aPrimHas(type, obj, name, _) {
-    // aPrimTypeCheck(type, obj[name], "Animator: Type error");
+    aPrimTypeCheck(type, obj[name]);
     return [1, _,
         (obj[name] !== undefined)
     ];
 }
 function aPrimSet(type, obj, name, value, _) {
-    // aPrimTypeCheck(type, value, "Animator: Type error");
+    aPrimTypeCheck(type, value);
     obj[name] = value;
     return [1, _];
 }
