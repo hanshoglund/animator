@@ -7,8 +7,12 @@
             - Primitive functions must be global
  */
 
+/*globals
+    'A', 'E'
+*/
+
 // Throw an error if @value@ is not of type @type@.
-function aPrimTypeCheck(type, value, error) {
+var aPrimTypeCheck = (function () {
 
     // Keep in sync with prim module
     var booleanType   = 0;
@@ -17,64 +21,71 @@ function aPrimTypeCheck(type, value, error) {
     var objectType    = 3;
     var functionType  = 4;
     var undefinedType = 5;
-    
-    var typeOfValue = typeof value;
 
-    var getName = (function() {
-        switch(type) {
+    return function (type, value, error) {
+        var typeOfValue = typeof value;
+
+        var getName = function () {
+            switch(type) {
             case booleanType:   return "boolean";
             case numberType:    return "number";
             case stringType:    return "string";
             case objectType:    return "object";
             case functionType:  return "function";
             case undefinedType: return "undefined";
-            default: 
+            default:
                 throw "Animator: Missing case";
-        }
-    });
-    
-    var getMessage = (function() {
-        var base     = error || "Animator: Type error: ";
-        var expected = getName();
-        var actual   = typeOfValue;
-        return "" + base + "Expected '" + expected + "' not '" + actual + "'";
-    });
-    
-    switch (type) {
+            }
+        };
+
+        var getMessage = function() {
+            var base     = error || "Animator: Type error: ";
+            var expected = getName();
+            var actual   = typeOfValue;
+            return String() + base + "Expected '" + expected + "' not '" + actual + "'";
+        };
+
+        switch (type) {
         case booleanType:
-            if (typeOfValue !== "boolean") 
-                throw getMessage();
+            if (typeOfValue !== "boolean") {
+                throw getMessage();                
+            }
             break;
 
         case numberType:
-            if (typeOfValue !== "number") 
+            if (typeOfValue !== "number") {                
                 throw getMessage();
+            }
             break;
 
         case stringType:
-            if (typeOfValue !== "string") 
+            if (typeOfValue !== "string") {
                 throw getMessage();
+            }
             break;
 
         case objectType:
-            if (typeOfValue !== "object") 
+            if (typeOfValue !== "object") {
                 throw getMessage();
+            }
             break;
 
         case functionType:
-            if (typeOfValue !== "function") 
+            if (typeOfValue !== "function") {
                 throw getMessage();
+            }
             break;
 
         case undefinedType:
-            if (typeOfValue !== "undefined") 
-                throw getMessage();
+            if (typeOfValue !== "undefined") {
+                throw getMessage();                
+            }
             break;
-        default: 
+        default:
             throw "Animator: Missing case";
-
-    }
-}
+        }
+    };
+}());
 
 function aPrimObj(_) {
     return [1, _,
@@ -99,17 +110,17 @@ function aPrimGlobal(_) {
 function aPrimAdd(a, b, _) {
     return [1, _,
         (a + b)
-    ]
+    ];
 }
 function aPrimTypeOf(a, _) {
     return [1, _,
         (typeof a)
-    ]
+    ];
 }
 function aPrimInstanceOf(a, b, _) {
     return [1, _,
         (a instanceof b)
-    ]
+    ];
 }
 function aPrimEval(s, _) {
     return [1, _,
@@ -174,28 +185,30 @@ function aPrimBind1(f, t, a, _) {
     ];
 }
 
+var aPrimApp  = A;
+var aPrimEval = E;
 
 function aPrimLift0(f, _) {
     return [1, _,
         function () {
-            var r = A(f, [_]);
-            return E(r[2])[1];
+            var r = aPrimApp(f, [_]);
+            return aPrimEval(r[2])[1];
         }
     ];
 }
 function aPrimLift1(f, _) {
     return [1, _,
         function (a) {
-            var r = A(f, [[1,a], _]);
-            return E(r[2])[1];
+            var r = aPrimApp(f, [[1,a], _]);
+            return aPrimEval(r[2])[1];
         }
     ];
 }
 function aPrimLift2(f, _) {
     return [1, _,
         function (a, b) {
-            var r = A(f, [[1,a], [1,b], _]);
-            return E(r[2])[1];
+            var r = aPrimApp(f, [[1,a], [1,b], _]);
+            return aPrimEval(r[2])[1];
         }
     ];
 }
@@ -203,7 +216,7 @@ function aPrimLift2(f, _) {
 function aPrimLiftPure0(f, _) {
     return [1, _,
         function () {
-            var r = A(f, [_]);
+            var r = aPrimApp(f, [_]);
             return r[1];
         }
     ];
@@ -211,7 +224,7 @@ function aPrimLiftPure0(f, _) {
 function aPrimLiftPure1(f, _) {
     return [1, _,
         function (a) {
-            var r = A(f, [[1,a], _]);
+            var r = aPrimApp(f, [[1,a], _]);
             return r[1];
         }
     ];
@@ -219,7 +232,7 @@ function aPrimLiftPure1(f, _) {
 function aPrimLiftPure2(f, _) {
     return [1, _,
         function (a, b) {
-            var r = A(f, [[1,a], [1,b], _]);
+            var r = aPrimApp(f, [[1,a], [1,b], _]);
             return r[1];
         }
     ];
