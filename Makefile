@@ -1,6 +1,7 @@
 
 JSPP 		= cpp -P -CC
 JSLINT		= build/jslint.sh
+JSINSTALL	= haste-inst --disable-library-profiling install
 JSC		= hastec \
 			-O2 \
 			--debug \
@@ -26,13 +27,16 @@ all: 		debug
 debug:  	post reload
 release: 	post optimize reload
 
+install-deps:
+	$(JSINSTALL) containers semigroups vector-space
+
 jspp:
 	$(JSPP) $(FLAGS) src-js/animator.js src-js/animator.jspp;
 
-lint: 		jspp
+jslint: 	jspp
 	$(JSLINT) src-js/animator.jspp;
 
-build: 		lint
+build: 		jslint
 	$(JSC) \
 		src/Animator/Animation.hs \
 		src/Animator/Prelude.hs \

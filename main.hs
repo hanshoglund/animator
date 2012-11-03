@@ -9,10 +9,13 @@ import Animator.Prelude
 import Animator.Internal.Prim
 import Foreign.Ptr
 import Haste.Prim(toPtr, fromPtr)
-import GHC.Prim
 import Data.Foldable 
 import Prelude hiding (null)
-import qualified Data.Aeson
+
+import qualified Haste.JSON
+import qualified Haste.Ajax
+import qualified Haste.DOM
+
 
 {-
 
@@ -48,14 +51,18 @@ Polymorhism requirements:
 -}
 
 main = do
-    testUndefined
-    -- testPrim
+    testReadShow
+    -- testUndefined
+    testPrim
     -- testFib
     -- testJQuery
     -- testLift  
     -- testLookup
     -- testBool
     -- testString
+
+testReadShow = do
+    printLog $ toJsString $ show (11232.12328::Double)
 
 testUndefined = do
     x <- object    
