@@ -1,5 +1,7 @@
 dist
 lib
 main.js
+*.jspp
+*.jsopt
 .DS_Store
 TEST
