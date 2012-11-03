@@ -9,7 +9,7 @@ COMPILER = hastec \
 	-O2 \
 	--debug \
 	--out=main.js \
-	--with-js=animator.js,lib/processing/processing.js,lib/jquery/jquery.js
+	--with-js=src-js/animator.js,lib/processing/processing.js,lib/jquery/jquery.js
 
 BROWSER  = Google Chrome
 MAIN	 = main
