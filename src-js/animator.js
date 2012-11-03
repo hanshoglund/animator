@@ -13,7 +13,9 @@
             - Primitive functions must be global
  */
 
+
 #ifdef ENABLE_TYPE_CHECKS
+
 /** 
     Throw an error if `value` is not of type `type`.
  */
@@ -90,8 +92,13 @@ var aPrimTypeCheck = (function () {
             throw "Animator: Missing case";
         }
     };
-}());
-#endif
+}()); 
+
+#else // ENABLE_TYPE_CHECKS
+
+function aPrimTypeCheck() {}
+
+#endif // ENABLE_TYPE_CHECKS
 
 function aPrimObj(_) {
     return [1, _,
@@ -140,25 +147,19 @@ function aPrimDebug(s, _) {
 
 
 function aPrimGet(type, obj, name, _) {
-#ifdef ENABLE_TYPE_CHECKS
     aPrimTypeCheck(type, obj[name]);
-#endif
     return [1, _,
         obj[name]
     ];
 }
 function aPrimHas(type, obj, name, _) {
-#ifdef ENABLE_TYPE_CHECKS
     aPrimTypeCheck(type, obj[name]);
-#endif
     return [1, _,
         (obj[name] !== undefined)
     ];
 }
 function aPrimSet(type, obj, name, value, _) {
-#ifdef ENABLE_TYPE_CHECKS
     aPrimTypeCheck(type, obj[name]);
-#endif
     obj[name] = value;
     return [1, _];
 }

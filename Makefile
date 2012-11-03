@@ -9,7 +9,7 @@ JSC			= hastec \
 CLOSURE		= googleclosure
 BROWSER  	= Google Chrome
 
-FLAGS  	    = -DENABLE_TYPE_CHECKS=1
+# FLAGS  	    = -DENABLE_TYPE_CHECKS=1
 MAIN	 	= main
 
 PAPERJS_URL		= http://paperjs.org/downloads/paperjs-nightly.zip
