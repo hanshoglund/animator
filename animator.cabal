@@ -7,7 +7,7 @@ author: Hans Hoglund
 synopsis: Interactive 2-D animation for the Web
 
 library                    
-  build-depends: base, vector-space, containers, ghc-prim, haste-compiler
+  build-depends: base, containers, semigroups, vector-space, ghc-prim, haste-compiler
   hs-source-dirs: src
   exposed-modules:
     Animator.Animation
