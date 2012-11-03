@@ -15,6 +15,8 @@ import Prelude hiding (null)
 import qualified Haste.JSON
 import qualified Haste.Ajax
 import qualified Haste.DOM
+import Haste.Readable
+import Haste.Showable
 
 
 {-
@@ -51,18 +53,19 @@ Polymorhism requirements:
 -}
 
 main = do
-    testReadShow
+    -- testReadShow
     -- testUndefined
-    testPrim
+    -- testPrim
     -- testFib
     -- testJQuery
-    -- testLift  
+    testLift  
     -- testLookup
     -- testBool
     -- testString
 
 testReadShow = do
-    printLog $ toJsString $ show (11232.12328::Double)
+    printLog $ toJsString $ show_ (11232.12328::Double)
+    printLog $ toJsString $ show  (11232.12328::Double)
 
 testUndefined = do
     x <- object    
@@ -71,7 +74,7 @@ testUndefined = do
     printRepr $! u
 
 testFib = do
-    printRepr $! fib 10
+    printRepr $! fib 30
     where
         fib !0 = 0
         fib !1 = 1
@@ -107,22 +110,21 @@ setTimeout t x = withGlobal $
 testLift = do
     g <- global
 
-    as <- eval "([1,2,3])" :: IO JsObject
+    as <- eval "([1,2,3])" :: IO JsArray
     let f = liftp1 ((+ 10) ::Int -> Int)
-    bs <- as %. "map" $ f :: IO JsArray
+    bs <- toObject as %. "map" $ f :: IO JsArray
     printRepr as
     printRepr bs
-
-    cs <- eval "([5,5,6])" :: IO JsObject
+    
+    cs <- eval "([5,5,6])" :: IO JsArray
     let add = liftp2 ((+) :: Int -> Int -> Int) 
-    ds <- (cs %.. "reduce") add (0::Int) :: IO JsArray
-    printRepr cs
-    printRepr ds
+    ds <- (toObject cs %.. "reduce") add (0::Int) :: IO JsArray
+    printRepr $! cs
+    printRepr $! ds
     
     setTimeout 1000 $ printLog "Hello to Andersson!"
     setTimeout 2000 $ printLog "Hello to Pettersson!"
     setTimeout 3000 $ printLog "Hello to Lundström!"
-
 
 testPrim = do    
     printRepr $ (False::Bool)
