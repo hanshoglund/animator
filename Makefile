@@ -1,22 +1,22 @@
 
 JSPP 		= cpp -P -CC
 JSLINT		= build/jslint.sh
-JSC			= hastec \
-				-O2 \
-				--debug \
-				--out=main.js \
-				--with-js=src-js/animator.jspp,lib/processing/processing.js,lib/jquery/jquery.js
+JSC		= hastec \
+			-O2 \
+			--debug \
+			--out=main.js \
+			--with-js=src-js/animator.jspp,lib/processing/processing.js,lib/jquery/jquery.js
 CLOSURE		= googleclosure
 BROWSER  	= Google Chrome
 
-# FLAGS  	    = -DENABLE_TYPE_CHECKS=1
+FLAGS  	    	= -DENABLE_TYPE_CHECKS=1
 MAIN	 	= main
 
-PAPERJS_URL		= http://paperjs.org/downloads/paperjs-nightly.zip
+PAPERJS_URL	= http://paperjs.org/downloads/paperjs-nightly.zip
 PROCESSING_URL	= http://cloud.github.com/downloads/processing-js/processing-js/processing-1.4.1-api.min.js
 DOMREADY_URL	= http://domready.googlecode.com/files/domready.js
-JQUERY_URL		= http://code.jquery.com/jquery-1.8.2.min.js
-JSLINT_URL		= https://raw.github.com/douglascrockford/JSLint/master/jslint.js
+JQUERY_URL	= http://code.jquery.com/jquery-1.8.2.min.js
+JSLINT_URL	= https://raw.github.com/douglascrockford/JSLint/master/jslint.js
 
 all: 		debug
 debug:  	post reload
@@ -34,7 +34,7 @@ build: 		lint
 		src/Animator/Prelude.hs 		 \
 		src/Animator/Internal/Prim.hs 	 \
 		$(MAIN).hs 						 && \
-    perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
+	perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
 post: 		build
 	rm -f `find . -d -name "*.core*"`
