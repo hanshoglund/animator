@@ -13,7 +13,7 @@ COMPILER = hastec \
 
 BROWSER  = Google Chrome
 MAIN	 = main
- 
+
 all: debug
 
 debug:   post reload
@@ -57,9 +57,9 @@ post: build
 	rm -rf Animator
 	rm -rf Numeric
 	rm -rf Data
- 
+
 FILE=$(MAIN).js
-optimize:              
+optimize:
 	googleclosure \
 		--language_in ECMASCRIPT5 \
 		--compilation_level SIMPLE_OPTIMIZATIONS \
@@ -74,7 +74,7 @@ reload:
 clean:
 	rm main.js
 
-haddock:        
+haddock:
 	cabal haddock --hyperlink-source
 	# haddock \
 		# --html \
@@ -88,7 +88,7 @@ server-start:
 server-stop:
 	killall python
 
-update-lib: update-paperjs update-processing update-closure-library update-domready update-jquery
+update-lib: update-paperjs update-processing update-domready update-jquery update-jslint
 
 PAPERJS_URL=http://paperjs.org/downloads/paperjs-nightly.zip
 update-paperjs:
@@ -108,18 +108,6 @@ update-processing:
 	mkdir -p lib/processing; \
 	cd lib/processing; \
 	curl $(PROCESSING_URL) > processing.js; \
-	cd ..;
-
-CLOSURE_LIBRARY_URL=http://closure-library.googlecode.com/files/closure-library-20120710-r2029.zip
-update-closure-library:
-	rm -rf lib/closure-library; \
-	mkdir -p lib/closure-library; \
-	cd lib; \
-	curl $(CLOSURE_LIBRARY_URL) > closure-library.zip; \
-	cd closure-library; \
-	unzip ../closure-library.zip; \
-	cd ..; \
-	rm -f closure-library.zip; \
 	cd ..;
 
 DOMREADY_URL=http://domready.googlecode.com/files/domready.js
