@@ -35,33 +35,47 @@ module Animator.Internal.Prim (
 
         -- *** Creation and access
         object,
-        create,
         global,
-        null,
+        create,
+        -- null,
 
         -- *** Prototype hierarchy
         -- $prototypeHierarchy
-        isInstanceOf,
-        isPrototypeOf,
+        prototype,
         constructor,
+        isPrototypeOf,
+        isInstanceOf,
 
         -- *** Properties
         JsName,
-        get,
         getp,
+        get,
         set,
-        update,
         delete,
+        update,
+        lookup,
+        
         hasProperty,
         hasOwnProperty,
+        -- defineProperty,
+        -- defineProperties,
+        -- getOwnPropertyDescriptor,
+        -- getOwnPropertyNames,
         propertyIsEnumerable,
-        lookup,
+        -- seal,
+        -- freeze,
+        -- preventExtentions,
+        -- isSealed,
+        -- isFrozen,
+        -- isExtensible,
+
+        -- *** Infix versions
         (%?),
         (?%),
         (%%),
-        (%%%),
+        -- (%%%),
         (!%%),
-        (%%!),
+        -- (%%!),
 
         -- *** Conversion
         toString,
@@ -71,6 +85,7 @@ module Animator.Internal.Prim (
         -- ------------------------------------------------------------
         -- ** Arrays
         JsArray,
+        -- isArray,
 
         -- *** Creation and access
         array,
@@ -87,6 +102,14 @@ module Animator.Internal.Prim (
         take,
         drop,
         slice,
+        -- splice,
+        -- concat,
+
+        -- *** Functional interface
+        -- forEach,
+        -- map,
+        -- filter,
+        -- reduceRight,
         
         -- *** Array to string
         -- $StringToArray
@@ -124,13 +147,16 @@ module Animator.Internal.Prim (
         -- ** Functions
         JsFunction,
         arity,
+        -- prototype,
+
+        -- *** Calling JavaScript functions
         call,
         call1,
         call2,
+        callp,
+        callp1,
+        callp2,
         
-        -- *** Partial application
-        bind,
-
         -- *** Lifting Haskell functions
         -- $lifting
         lift,
@@ -148,7 +174,9 @@ module Animator.Internal.Prim (
         invokep1,
         invokep2,
 
-        -- *** With explicit 'this' argument
+        -- *** Partial application
+        bind,
+        -- **** With explicit 'this' argument
         bindWith,
 
         -- *** Infix versions
@@ -249,7 +277,7 @@ class JsVal a where
     --
     -- > "undefined", "boolean", "number", "string", "object", "function"
     -- 
-    typeOf :: JsVal a => a -> JsString
+    typeOf :: a -> JsString
 
 
 -------------------------------------------------------------------------------------
@@ -452,8 +480,6 @@ hasProperty :: JsObject -> JsName -> IO Bool
 hasProperty x n = has# 0 (getJsObject x) (getJsString n)
 
 -- | 
--- Recursively traverse an object hierarchy using 'get'.
---   
 -- @lookup o [a1,a2, ... an]@ is equivalent to
 --
 -- > o.a1.a2. ... an
@@ -524,13 +550,20 @@ create = unsafeLookup ["Object"] %. "create"
 --
 
 -- |
--- Return true if object @x@ is an instance created by @y@, or equivalently
+-- Returns the prototype of object @x@, or equivalently
 --
--- > x instanceof y
+-- > Object.getPrototypeOf(x)
 --
-isInstanceOf :: JsObject -> JsObject -> Bool
-x `isInstanceOf` y = p x `instanceOf#` p y 
-    where p = getJsObject
+prototype :: JsObject -> JsObject
+prototype = unsafeLookup ["Object"] !%. "getPrototytpeOf"
+
+-- |
+-- Returns the constructor of object @x@, or equivalently
+--
+-- > x.constructor
+--
+constructor :: JsObject -> JsFunction
+constructor x = unsafePerformIO (x %% "constructor")
 
 -- |
 -- Return true if object @x@ is the prototype of object @y@, or equivalently
@@ -539,14 +572,18 @@ x `isInstanceOf` y = p x `instanceOf#` p y
 -- 
 isPrototypeOf :: JsObject -> JsObject -> Bool
 x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
-    
+
 -- |
--- Returns the constructor of object @x@, or equivalently
+-- Return true if object @x@ is an instance created by @y@, or equivalently
 --
--- > x.constructor
+-- > x instanceof y
 --
-constructor :: JsObject -> JsFunction
-constructor x = unsafePerformIO (x %% "constructor")
+isInstanceOf :: JsObject -> JsFunction -> Bool
+x `isInstanceOf` y = p x `instanceOf#` q y 
+    where 
+        p = getJsObject
+        q = getJsFunction
+
 
 -------------------------------------------------------------------------------------
 
@@ -915,20 +952,15 @@ foreign import ccall "aPrimLift2"     lift2#  :: Any# -> Any#
 -- > f()
 --
 call :: JsVal a => JsFunction -> IO a
-
--- |
--- Apply the given function, or equivalently
---
--- > f(a)
---
 call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
-
--- |
--- Apply the given function, or equivalently
---
--- > f(a, b)
---
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
+callp :: JsVal a => JsFunction -> a
+callp1 :: (JsVal a, JsVal b) => JsFunction -> a -> b
+callp2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> c
+
+callp f = unsafePerformIO $ call f
+callp1 f a = unsafePerformIO $ call1 f a
+callp2 f a b = unsafePerformIO $ call2 f a b
 
 call  = flip callWith  $ null
 call1 = flip callWith1 $ null
@@ -949,19 +981,7 @@ bind = flip bindWith1 $ null
 -- > f.call(thisArg)
 --
 callWith :: JsVal a => JsFunction -> JsObject -> IO a
-
--- |
--- Apply the given function with the given @this@ value, or equivalently
---
--- > f.call(thisArg, a)
---
 callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
-
--- |
--- Apply the given function with the given @this@ value, or equivalently
---
--- > f.call(thisArg, a, b)
---
 callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
 
 callWith f t = do

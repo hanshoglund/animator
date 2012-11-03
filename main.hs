@@ -106,7 +106,9 @@ testLift = do
     printRepr cs
     printRepr ds
     
-    setTimeout 1000 $ printLog "Hello to Jonas!"
+    setTimeout 1000 $ printLog "Hello to Andersson!"
+    setTimeout 2000 $ printLog "Hello to Pettersson!"
+    setTimeout 3000 $ printLog "Hello to Lundström!"
 
 
 testPrim = do    

@@ -19,25 +19,24 @@ all: debug
 debug:   post reload
 release: post optimize reload
 
-pre:
-	$(PRE_COMPILER) \
-		src/Data/List/NonEmpty.hs   \
-		src/Data/Semigroup.hs       \
-		src/Data/Void.hs            \
-		src/Data/MemoTrie.hs        \
-		src/Data/AdditiveGroup.hs   \
-		src/Data/AffineSpace.hs     \
-		src/Data/Basis.hs           \
-		src/Data/Cross.hs           \
-		src/Data/Derivative.hs      \
-		src/Data/LinearMap.hs       \
-		src/Data/Maclaurin.hs       \
-		src/Data/NumInstances.hs    \
-		src/Data/VectorSpace.hs     ;
+# pre:
+# 	$(PRE_COMPILER) \
+# 		src/Data/List/NonEmpty.hs   \
+# 		src/Data/Semigroup.hs       \
+# 		src/Data/Void.hs            \
+# 		src/Data/MemoTrie.hs        \
+# 		src/Data/AdditiveGroup.hs   \
+# 		src/Data/AffineSpace.hs     \
+# 		src/Data/Basis.hs           \
+# 		src/Data/Cross.hs           \
+# 		src/Data/Derivative.hs      \
+# 		src/Data/LinearMap.hs       \
+# 		src/Data/Maclaurin.hs       \
+# 		src/Data/NumInstances.hs    \
+# 		src/Data/VectorSpace.hs     ;
 
 build:
 	$(COMPILER) \
-		src/Numeric/Natural.hs			 \
 		src/Animator/Animation.hs 		 \
 		src/Animator/Prelude.hs 		 \
 		src/Animator/Internal/Prim.hs 	 \
