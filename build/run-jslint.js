@@ -1,6 +1,9 @@
 
 /*jslint
-    node: true, stupid: true
+    node: true, 
+    evil: true, 
+    stupid: true, 
+    vars: true
 */
 /*globals
     require, JSLINT
@@ -32,7 +35,6 @@ function printError(error) {
         white   : true
     };
     var path = process.argv[2];
-    var jsLintSource;
     var source = '';
     var result;
 

@@ -41,6 +41,7 @@ build: 		lint
 	perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
 post:		build
+	rm -f `find . -d -name "*.jspp"`
 	rm -f `find . -d -name "*.core*"`
 	rm -f `find . -d -name "*.hi*"`
 	rm -f `find . -d -name "*.mjs*"`
