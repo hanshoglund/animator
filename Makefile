@@ -35,8 +35,11 @@ release: post optimize reload
 # 		src/Data/NumInstances.hs    \
 # 		src/Data/VectorSpace.hs     ;
 
+lint:
+	build/jslint.sh src-js/animator.js;
+
 .PHONY: build
-build:
+build: lint
 	$(COMPILER) \
 		src/Animator/Animation.hs 		 \
 		src/Animator/Prelude.hs 		 \
@@ -134,3 +137,12 @@ update-jquery:
 	cd lib/jquery; \
 	curl $(JQUERY_URL) > jquery.js; \
 	cd ..;
+
+JSLINT_URL=https://raw.github.com/douglascrockford/JSLint/master/jslint.js
+update-jslint:
+	rm -rf lib/jslint; \
+	mkdir -p lib/jslint; \
+	cd lib/jslint; \
+	curl $(JSLINT_URL) > jslint.js; \
+	cd ..;
+

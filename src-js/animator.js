@@ -7,9 +7,10 @@
             - Primitive functions must be global
  */
 
-/*globals
-    'A', 'E'
-*/
+/*jslint 
+    evil: true, debug: true, browser: true, vars: true, nomen: true */
+/*globals 
+    A, E */
 
 // Throw an error if @value@ is not of type @type@.
 var aPrimTypeCheck = (function () {
