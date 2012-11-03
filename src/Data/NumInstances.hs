@@ -1,1 +1,0 @@
-/Users/hans/Downloads/NumInstances-1.0/src/Data/NumInstances.hs
