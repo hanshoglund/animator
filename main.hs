@@ -10,18 +10,19 @@ import Animator.Internal.Prim
 
 import Haste.Showable(show_)
 import Data.Foldable
+import Data.Word
 
 main = do
-    testUndefined
-    -- testFib
-    testReadShow
-    testBool
-    testString
-    testPrim
-    testJQuery
-    testLift
-    testLookup
-    testPropertyLookup
+    -- testUndefined
+    testFib
+    -- testReadShow
+    -- testBool
+    -- testString
+    -- testPrim
+    -- testJQuery
+    -- testLift
+    -- testLookup
+    -- testPropertyLookup
 
 {-# NOINLINE testUndefined #-}
 {-# NOINLINE testFib #-}
@@ -45,11 +46,19 @@ testUndefined = do
     printRepr $! u
 
 testFib = do
-    printRepr $! fib 30
-    where
-        fib !0 = 0
-        fib !1 = 1
-        fib !n = fib (n - 1) + fib (n - 2)
+    printRepr $! toJsString $! show (fib 1000 :: Integer)
+    where                    
+        fib :: Int -> Integer
+
+        fib n = go n (0,1)
+          where
+            go !n (!a, !b) | n==0      = a
+                           | otherwise = go (n-1) (b, a+b)
+        
+        -- fib n = fibs !! n    
+        -- fibs :: [Integer]
+        -- fibs = [0,1] ++ zipWith (+) fibs (tail fibs)
+        
 
 testString = do
     printRepr $! "hans" `charAt` 0

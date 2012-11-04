@@ -152,30 +152,35 @@ module Animator.Internal.Prim (
         -- $functionLaws
         JsFunction,
         arity,
-        -- prototype,
 
-
-        -- *** Haskell calling JavaScript
+        -- *** Safe
+        -- **** Haskell calling JavaScript
         call,
         call1,
         call2,
 
-        -- *** JavaScript calling Haskell 
+        -- **** JavaScript calling Haskell 
         lift,
         lift1,
         lift2,
 
-        -- *** Method invocation
+        -- **** Method invocation
         invoke,
         invoke1,
         invoke2,
 
+        -- *** Unsafe
+        -- **** Haskell calling JavaScript
         unsafeCall,
         unsafeCall1,
         unsafeCall2,
+
+        -- **** JavaScript calling Haskell 
         unsafeLift,
         unsafeLift1,
         unsafeLift2,
+
+        -- **** Method invocation
         unsafeInvoke,
         unsafeInvoke1,
         unsafeInvoke2,
@@ -241,6 +246,12 @@ import Foreign.Ptr(Ptr)
 type Any#     = H.JSAny              -- Opaque reference
 type String#  = H.JSString
 type JSON#    = HJ.JSON
+
+toJsString#   :: String -> String#
+fromJsString# :: String# -> String
+toPtr#   :: a -> Ptr a
+fromPtr# :: Ptr a -> a
+
 toJsString#   = H.toJSStr
 fromJsString# = H.fromJSStr
 toPtr#        = H.toPtr
@@ -251,6 +262,12 @@ fromPtr#      = H.fromPtr
 type Any#     = Ptr Int
 type String#  = Int
 type JSON#    = Int
+
+toJsString#   :: String -> String#
+fromJsString# :: String# -> String
+toPtr#   :: a -> Ptr a
+fromPtr# :: Ptr a -> a
+
 toJsString#   = undefined
 fromJsString# = undefined
 toPtr#        = undefined
@@ -912,9 +929,9 @@ foreign import ccall "aPrimCall2"     call2#  :: Any# -> Any# -> Any# -> Any# ->
 foreign import ccall "aPrimBind0"     bind#   :: Any# -> Any# -> Any#
 foreign import ccall "aPrimBind1"     bind1#  :: Any# -> Any# -> Any# -> Any#
 
-foreign import ccall "aPrimLiftPure0" unsafeLift#  :: Any# -> Any#
-foreign import ccall "aPrimLiftPure1" unsafeLift1# :: Any# -> Any#
-foreign import ccall "aPrimLiftPure2" unsafeLift2# :: Any# -> Any#
+foreign import ccall "aPrimLiftPure0" liftPure#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" liftPure1# :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" liftPure2# :: Any# -> Any#
 
 foreign import ccall "aPrimLift0"     lift#   :: Any# -> Any#
 foreign import ccall "aPrimLift1"     lift1#  :: Any# -> Any#
@@ -966,9 +983,12 @@ bindWith :: JsFunction -> JsObject -> JsFunction
 bindWith1 :: JsVal a => JsFunction -> JsObject -> a -> JsFunction
 
 
-lift   = JsFunction . lift#   . unsafeCoerce . toPtr#
-lift1  = JsFunction . lift1#  . unsafeCoerce . toPtr#
-lift2  = JsFunction . lift2#  . unsafeCoerce . toPtr#
+lift        = JsFunction . lift#      . toAny# . toPtr#
+lift1       = JsFunction . lift1#     . toAny# . toPtr#
+lift2       = JsFunction . lift2#     . toAny# . toPtr#
+unsafeLift  = JsFunction . liftPure#  . toAny# . toPtr#
+unsafeLift1 = JsFunction . liftPure1# . toAny# . toPtr#
+unsafeLift2 = JsFunction . liftPure2# . toAny# . toPtr#
 
 callWith f t = do
     r <- call# (h f) (p t)
@@ -1060,9 +1080,6 @@ unsafeInvoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> 
 unsafeCall f          = unsafePerformIO $ call f
 unsafeCall1 f a       = unsafePerformIO $ call1 f a
 unsafeCall2 f a b     = unsafePerformIO $ call2 f a b
-unsafeLift            = JsFunction . unsafeLift#  . unsafeCoerce . toPtr#
-unsafeLift1           = JsFunction . unsafeLift1# . unsafeCoerce . toPtr#
-unsafeLift2           = JsFunction . unsafeLift2# . unsafeCoerce . toPtr#
 unsafeInvoke  o n     = unsafePerformIO $ invoke  o n
 unsafeInvoke1 o n a   = unsafePerformIO $ invoke1 o n a
 unsafeInvoke2 o n a b = unsafePerformIO $ invoke2 o n a b
@@ -1191,7 +1208,7 @@ foreign import ccall "aPrimDebug" debug#     :: IO ()
 --
 --
 printRepr :: a -> IO ()
-printRepr = printRepr# . unsafeCoerce . toPtr#
+printRepr = printRepr# . toAny# . toPtr#
 {-# NOINLINE printRepr #-}
 
 -- |
