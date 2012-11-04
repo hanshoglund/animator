@@ -153,7 +153,7 @@ testCall = do
 
 
 
-newtype Query = Query JsObject
+data Query
 instance JsVal Query where
 instance JsRef Query where
 instance JsCall Query where
