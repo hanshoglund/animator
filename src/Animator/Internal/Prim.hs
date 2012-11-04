@@ -317,12 +317,13 @@ undefinedType# = 5
 -- The result of the void operator, the debugger statement and functions without return
 -- values is @undefined@, which should be IO () in Haskell.
 
--- | Represented by @undefined@.
+-- | Represented by @null@.
 instance JsVal () where
-    typeOf ()   = "undefined"
+    typeOf ()   = "object"
+    fromAny# _  = ()
+    -- toAny should map to pointer to null
     get# _ _    = return ()
     set# _ _ () = return ()
-    -- TODO what happens if undefined is passed or returned?
 
 -- | Represented by @boolean@ values.
 instance JsVal Bool where

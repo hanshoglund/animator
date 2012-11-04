@@ -5,63 +5,40 @@
 
 module Main where
 
-import Animator.Prelude
-import Animator.Internal.Prim
-import Foreign.Ptr
-import Haste.Prim(toPtr, fromPtr)
-import Data.Foldable 
 import Prelude hiding (null)
+import Data.Foldable 
+import Foreign.Ptr
 
-import qualified Haste.JSON
-import qualified Haste.Ajax
-import qualified Haste.DOM
-import Haste.Readable
-import Haste.Showable
-
-
-{-
-
-FFI quirks:
-    All imported js functions take and return extra parameter:
-        f(..., _) {
-            return [1,_, ...]
-        }
-    FFI functions unwrap one level of pointers (this include JsString and Int).
-    This does not apply to callbacks!
-
-Representation:
-
-    Haskell value               JS value
-    -----                       ------
-    False :: Bool               false
-    123 :: Int                  [1,123]
-    "foo" :: JsString           [1,"foo"]
-
-    eval "function(){...}"      [1,function(){...}]
-    eval "{...}"                [1,{...}]
-
-    \x->x+x :: Int->Int         function
-    (10,20)::(Int,Int)          [1,[1,10],[1,20]]
+import Haste.Prim(toPtr, fromPtr)
+import Haste.Showable(show_)
+-- import Animator.Prelude
+import Animator.Internal.Prim
 
 
-Polymorhism requirements:
-    Assignment and referencing
-        x.n = v
-        x.n
-    Calls
-        f(x,y,z)
--}
 
+    
 main = do
-    -- testReadShow
-    -- testUndefined
-    -- testPrim
+    testUndefined
     -- testFib
-    -- testJQuery
-    testLift  
-    -- testLookup
+    -- testReadShow
     -- testBool
     -- testString
+    -- testPrim
+    -- testJQuery
+    -- testLift  
+    -- testLookup
+    -- testPropertyLookup
+    
+{-# NOINLINE testUndefined #-}
+{-# NOINLINE testFib #-}
+{-# NOINLINE testReadShow #-}
+{-# NOINLINE testBool #-}
+{-# NOINLINE testString #-}
+{-# NOINLINE testPrim #-}
+{-# NOINLINE testJQuery #-}
+{-# NOINLINE testLift #-}
+{-# NOINLINE testLookup #-}
+
 
 testReadShow = do
     printLog $ toJsString $ show_ (11232.12328::Double)
@@ -89,16 +66,38 @@ testString = do
 testBool = do
     x <- object
     y <- create x
-    let !r = isPrototypeOf x y
-    let !u = isPrototypeOf y x
-    printRepr $ (r, u)
+    printRepr $! (x `isPrototypeOf` y)
+    printRepr $! (y `isPrototypeOf` x)
 
 testLookup = do
-    x <- object
+    x <- object              
+    
+    a <- x `hasProperty` "foo"
+    printRepr $! a
+    
     set x "foo" (1::Int)
+
+    b <- x `hasProperty` "foo"
+    printRepr $! b
+
+    r <- get x "foo" :: IO Int
+    printRepr $! r
+
+    delete x "foo"
+    c <- x `hasProperty` "foo"
+    printRepr $! c
+
+testPropertyLookup = do
+    x <- object              
     y <- create x
-    printLog . toJsString . show $ (x `isPrototypeOf` y)
-    printLog . toJsString . show $ (y `isPrototypeOf` x)
+
+    set x "foo" (1::Int)
+    
+    a <- y `hasProperty` "foo"
+    printRepr $! a
+    b <- y `hasOwnProperty` "foo"
+    printRepr $! b
+
 
 withGlobal :: (JsObject -> IO a) -> IO a
 withGlobal f = global >>= f

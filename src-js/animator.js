@@ -1,107 +1,104 @@
 
-/*jslint 
-    browser: true, 
+/*jslint
+    browser: true,
     sloppy: true,
-    vars: true, 
-    debug: true, 
-    evil: true, 
+    vars: true,
+    debug: true,
+    evil: true,
     nomen: true */
-/*globals 
+/*globals
     A, E */
 
-/*
-    Namespace issues
-
-        The Haste compiler relies heavily on the global scope ...
-            - All RTS functions are global
-            - All generated functions (_N) are global
-            - Primitive functions must be global
- */
+// Keep in sync with prim module
+var aPrimTypes = {
+    b : 0,
+    n : 1,
+    s : 2,
+    o : 3,
+    f : 4,
+    u : 5
+};
 
 
 #ifdef ENABLE_TYPE_CHECKS
 
-/** 
-    Throw an error if `value` is not of type `type`.
+/**
+    Throw an error if `value` is not of type `type`. Returns `value` otherwise.
  */
-var aPrimTypeCheck = (function () {
+var aPrimTypeCheck = function (type, value, error) {
+    var typeOfValue = typeof value;
 
-    // Keep in sync with prim module
-    var booleanType   = 0;
-    var numberType    = 1;
-    var stringType    = 2;
-    var objectType    = 3;
-    var functionType  = 4;
-    var undefinedType = 5;
-
-    return function (type, value, error) {
-        var typeOfValue = typeof value;
-
-        var getName = function () {
-            switch(type) {
-            case booleanType:   return "boolean";
-            case numberType:    return "number";
-            case stringType:    return "string";
-            case objectType:    return "object";
-            case functionType:  return "function";
-            case undefinedType: return "undefined";
-            default:
-                throw "Animator: Missing case";
-            }
-        };
-
-        var getMessage = function() {
-            var base     = error || "Animator: Type error: ";
-            var expected = getName();
-            var actual   = typeOfValue;
-            return String() + base + "Expected '" + expected + "' not '" + actual + "'";
-        };
-
-        switch (type) {
-        case booleanType:
-            if (typeOfValue !== "boolean") {
-                throw getMessage();                
-            }
-            break;
-
-        case numberType:
-            if (typeOfValue !== "number") {                
-                throw getMessage();
-            }
-            break;
-
-        case stringType:
-            if (typeOfValue !== "string") {
-                throw getMessage();
-            }
-            break;
-
-        case objectType:
-            if (typeOfValue !== "object") {
-                throw getMessage();
-            }
-            break;
-
-        case functionType:
-            if (typeOfValue !== "function") {
-                throw getMessage();
-            }
-            break;
-
-        case undefinedType:
-            if (typeOfValue !== "undefined") {
-                throw getMessage();                
-            }
-            break;
+    var getName = function () {
+        switch(type) {
+        case aPrimTypes.b:
+            return "boolean";
+        case aPrimTypes.n:
+            return "number";
+        case aPrimTypes.s:
+            return "string";
+        case aPrimTypes.o:
+            return "object";
+        case aPrimTypes.f:
+            return "function";
+        case aPrimTypes.u:
+            return "undefined";
         default:
             throw "Animator: Missing case";
         }
     };
-}()); 
+
+    var getMessage = function() {
+        var base     = error || "Animator: Type error: ";
+        var expected = getName();
+        var actual   = typeOfValue;
+        return String() + base + "Expected '" + expected + "' not '" + actual + "'";
+    };
+
+    switch (type) {
+    case aPrimTypes.b:
+        if (typeOfValue !== "boolean") {
+            throw getMessage();
+        }
+        break;
+
+    case aPrimTypes.n:
+        if (typeOfValue !== "number") {
+            throw getMessage();
+        }
+        break;
+
+    case aPrimTypes.s:
+        if (typeOfValue !== "string") {
+            throw getMessage();
+        }
+        break;
+
+    case aPrimTypes.o:
+        if (typeOfValue !== "object") {
+            throw getMessage();
+        }
+        break;
+
+    case aPrimTypes.f:
+        if (typeOfValue !== "function") {
+            throw getMessage();
+        }
+        break;
+
+    case aPrimTypes.u:
+        if (typeOfValue !== "undefined") {
+            throw getMessage();
+        }
+        break;
+    default:
+        throw "Animator: Missing case";
+    }
+    return value;
+};
 
 #else // ENABLE_TYPE_CHECKS
 
-function aPrimTypeCheck() {}
+function aPrimTypeCheck(type, value, error) {}
 
 #endif // ENABLE_TYPE_CHECKS
 
@@ -151,16 +148,16 @@ function aPrimDebug(s, _) {
 }
 
 
-function aPrimGet(type, obj, name, _) {
-    aPrimTypeCheck(type, obj[name]);
-    return [1, _,
-        obj[name]
-    ];
-}
 function aPrimHas(type, obj, name, _) {
     aPrimTypeCheck(type, obj[name]);
     return [1, _,
         (obj[name] !== undefined)
+    ];
+}
+function aPrimGet(type, obj, name, _) {
+    aPrimTypeCheck(type, obj[name]);
+    return [1, _,
+        obj[name]
     ];
 }
 function aPrimSet(type, obj, name, value, _) {
@@ -174,18 +171,24 @@ function aPrimDelete(type, obj, name, _) {
 }
 
 function aPrimCall0(f, t, _) {
+    // aPrimTypeCheck(t,aPrimTypes.o);
     return [1, _,
         // f()
         f.call(t)
     ];
 }
 function aPrimCall1(f, t, a, _) {
+    // aPrimTypeCheck(t,aPrimTypes.o);
+    // aPrimTypeCheck(a,?);
     return [1, _,
         // f(a)
         f.call(t, a)
     ];
 }
 function aPrimCall2(f, t, a, b, _) {
+    // aPrimTypeCheck(t,aPrimTypes.o);
+    // aPrimTypeCheck(a,?);
+    // aPrimTypeCheck(b,?);
     return [1, _,
         // f(a, y)
         f.call(t, a, b)
@@ -261,7 +264,6 @@ function aPrimLiftPure2(f, _) {
         }
     ];
 }
-
 
 function aPrimLog(text, _) {
     window.console.log(typeof text);

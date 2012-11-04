@@ -2,6 +2,9 @@
 JSPP 		= cpp -P -CC
 JSLINT		= build/jslint.sh
 JSMIN		= jsmin
+JSOPT		= googleclosure \
+			--language_in       ECMASCRIPT5 \
+			--compilation_level SIMPLE_OPTIMIZATIONS
 JSINSTALL	= haste-inst --disable-library-profiling install
 JSC		= hastec \
 			-O2 \
@@ -15,7 +18,7 @@ JSC_RELEASE    	= hastec \
 CLOSURE		= googleclosure
 BROWSER  	= Google Chrome
 
-FLAGS  	    	= -DENABLE_TYPE_CHECKS=1
+# FLAGS  	    	= -DENABLE_TYPE_CHECKS=1
 MAIN	 	= main
 
 PAPERJS_URL	= http://paperjs.org/downloads/paperjs-nightly.zip
@@ -38,11 +41,7 @@ jslint: 	jspp
 	$(JSLINT) src-js/animator.jspp;
 
 build: 		jslint
-	$(JSC) \
-		src/Animator/Animation.hs \
-		src/Animator/Prelude.hs \
-		src/Animator/Internal/Prim.hs \
-		$(MAIN).hs && \
+	$(JSC) `find src -d -name "*.hs"` $(MAIN).hs && \
 	perl -pi -e 's/window.onload = (function.*);/jQuery(document).ready($$1);/g' main.js;
 
 post:		build
@@ -56,11 +55,7 @@ post:		build
 	rm -rf Animator
 
 optimize:
-	$(CLOSURE) \
-		--language_in ECMASCRIPT5 \
-		--compilation_level SIMPLE_OPTIMIZATIONS \
-		--js 			 $(MAIN).js \
-		--js_output_file $(MAIN).jsopt && \
+	$(JSOPT) <$(MAIN).js >$(MAIN).jsopt && \
 	rm $(MAIN).js && \
 	mv $(MAIN).jsopt $(MAIN).js;
 

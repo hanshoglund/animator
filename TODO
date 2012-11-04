@@ -1,17 +1,23 @@
 
 
-- What about read/show?
+- What about read/show/read_/show_?
 
-- What about undefined?
+- What about undefined?                                           
+    - JS to HS
+        - It would be elegant to have JS undefined map to HS undefined
+        - The dynamic type checks can catch this, but we do not always want that
+        - For return values, we could always use an extra primitive, i.e.
+            function(x) { x===undefined ? T(die.bind(null,"undefined")) : null }
 
-- Null is not an object!
+- Haskell () represents a "safe" JsVal instance:
+    - Setting and sending it as an argument maps to setting to null
+    - Getting and receiving it always return (), even if JS actually returned something else
+        - This solves the problem of getting () where JS might want to say null, i.e. in 
+          functions without return statements.
 
 - Split Prim module
-    - How?
 
-
-
-
-- Lift property related stuff + invoke from JsObject to (JsRef a) => a ?
-
-- Make wrapper ImmutableArray type (also with phantom types?)
+- Js-aware collection types:
+    Data.TypedArray
+    Data.TypedArray.Mutable
+    Data.TypedArray.Immutable
