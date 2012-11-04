@@ -616,6 +616,9 @@ object = object# >>= (return . JsObject)
 global :: IO JsObject
 global = global# >>= (return . JsObject)
 
+-- withGlobal :: (JsObject -> IO a) -> IO a
+-- withGlobal f = global >>= f
+
 
 -- |
 -- Create a new JavaScript object using the given object as prototype, or equivalently

@@ -103,18 +103,14 @@ testPropertyLookup = do
     printRepr $! b
 
 
-withGlobal :: (JsObject -> IO a) -> IO a
-withGlobal f = global >>= f
-
 setTimeout :: Int -> IO () -> IO ()
-setTimeout t x = withGlobal $
-    \g -> (g %.. "setTimeout") (lift x) t
+setTimeout t x = (unsafeGlobalLookup ["window"] %.. "setTimeout") (lift x) t
 
 testLift = do
     g <- global
 
     as <- eval "([1,2,3])" :: IO JsArray
-    let f = unsafeLift1 ((+ 10) `fix1` int)
+    let f = unsafeLift1 $ (+ 10) `fix1` int
     bs <- toObject as %. "map" $ f :: IO JsArray
     printRepr as
     printRepr bs
@@ -140,7 +136,7 @@ testPrim = do
     jo <- eval "({foo:123,bar:function(x){return x}})" :: IO JsObject
     printRepr $ jo
 
-    let hf = (\x -> x + x `fix` int x)
+    let hf = \x -> x + x `with` int x
     printRepr $ hf
 
     let ho = (int 10, int 20)
@@ -158,7 +154,10 @@ testCall = do
 
 
 
-fix :: b -> a -> b
+with :: b -> a -> b
+with x _ = x
+
+fix :: a -> (a -> b) -> a
 fix x _ = x
 fix1 :: (a -> b) -> (a -> a) -> a -> b
 fix1 x _ = x
