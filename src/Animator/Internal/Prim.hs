@@ -6,12 +6,13 @@
 -------------------------------------------------------------------------------------
 
 -- |
--- The "Animator.Internal.Prim" modules provide a dynamic interface to the JavaScript host environment.
--- It provides access to JavaScript types including strings, arrays, objects and functions.
+-- This module modules provides a dynamic interface to JavaScript. It provides access to
+-- all native JavaScript types including strings, arrays, objects and functions which can
+-- be manipulated directly in Haskell. JavaScript bjects can be created and updated, 
+-- JavaScript functions can be called and so on.
 --
--- Objects can be inspected, created and updated at runtime. JavaScript functions can be called,
--- partially applied or passed to other JavaScript functions. Haskell functions can be converted
--- to JavaScript functions for use as callbacks in the host environment.
+-- This flexibility comes at the price of inheriting some of the safety problems of
+-- JavaScript, which are outlined below.
 --
 
 -------------------------------------------------------------------------------------
@@ -19,7 +20,16 @@
 module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
-        -- ** JavaScript type classes
+
+        -- *** Type safety
+        -- $typeSafety
+
+        -- *** Pure and impure functions
+        -- $purity
+        
+        -- ** JavaScript types
+        -- $jsTypeClasses
+        
         -- *** All types
         JsVal( typeOf ),
 
@@ -58,6 +68,7 @@ module Animator.Internal.Prim (
         -- **** Unsafe version
         unsafeGet,
         unsafeLookup,
+        unsafeGlobalLookup,
 
         -- **** Predicates
         hasProperty,
@@ -276,6 +287,27 @@ fromPtr#      = undefined
 #endif __HASTE__
 
 
+
+-- $typeSafety
+--
+-- This module tries to retain full type safety on the Haskell side. However, it is generally
+-- impossible to determine the type of a value retrived from JavaScript at runtime, that is
+-- when fetching the value of a property, or calling a JavaScript function.
+--
+
+-- $purity
+--
+-- As JavaScript is inherently stateful, most calls take place inside 'IO'.
+--
+-- However, there are some cases when it is safe to call into JavaScript using only pure
+-- functions. One of these is when handling objects known to be immutable (such as strings), or 
+-- properties known to be stable (such as the prototype chain). Others are when calling 
+-- functions known to be pure (such as 'slice').
+--
+-- This module provides a set of functions for pure calls for this purpose. By conventions such
+-- functions have the suffix /unsafe/.
+--
+
 -------------------------------------------------------------------------------------
 
 foreign import ccall "aPrimNull"   null#   :: Any#
@@ -297,6 +329,46 @@ stringType#    = 2
 objectType#    = 3
 functionType#  = 4
 undefinedType# = 5
+
+-- $jsTypeClasses
+--
+-- The class 'JsVal' and its subclasses 'JsRef', 'JsSeq' and 'JsCall' are used to represent
+-- JavaScript values. Instances of these classes are isomorphic to some set of JavaScript
+-- values and can be freely passed between the languages.
+--
+-- Instances for all JavaScript primitive types, objects arrays and functions are provided.
+-- There is no way to make arbitrary Haskell types instances of 'JsVal'. It is however possible 
+-- to pass an arbitrary Haskell value to JavaScript by wrapping it in a pointer. Such types 
+-- have an arbitrary runtime representation and should be treated as opaque by JavaScript code.
+--
+-- Conversely, Haskell can receive and manipulate JavaScript values in a type-safe way by
+-- by using opaque types. A type is considered opaque if either,
+--
+--     - It has no constructors, or
+--
+--     - It is an instance of 'JsVal', or
+--
+--     - It is a @newtype@ wrapper of an opaque type
+--
+-- Opaque types can be declared instances of 'JsVal' and its subclasses without providing an
+-- implementation. This idiom is useful for wrapping JavaScript libraries. For example a basic
+-- wrapper of the JQuery library looks like this:
+--
+-- > data Query
+-- > instance JsVal Query
+-- > instance JsRef Query
+-- > instance JsCall Query
+-- > 
+-- > query :: JsString -> IO Query
+-- > query = call1 $ unsafeGlobalLookup ["jQuery"]
+-- > 
+-- > fadeIn :: Query -> IO ()
+-- > fadeIn x = toObject x %% "fadeIn"
+-- > 
+-- > fadeOut :: Query -> IO ()
+-- > fadeOut x = toObject x %% "fadeOut"
+--
+--
 
 -- |
 -- Class of JavaScript types.
@@ -405,7 +477,7 @@ class JsRef a => JsCall a where
     -- | Cast a callable object descended from @Function.prototype@.
     toFunction :: a -> JsFunction
     toFunction = unsafeCoerce
-instance JsSeq JsFunction where
+instance JsCall JsFunction where
 
 
 -------------------------------------------------------------------------------------
@@ -430,46 +502,49 @@ newtype JsObject = JsObject { getJsObject :: Any# }
 type JsName = JsString
 
 -- |
--- Fetch the value of property @n@ in object @o@, or equivalently
+-- Return the value of property @n@ in object @x@, or equivalently
 --
--- > o.n
+-- > x.n
 get :: JsVal a => JsObject -> JsName -> IO a
 get = get#
 
 -- |
--- Assign the property @n@ to @x@ in object @o@, or equivalently
+-- Assign the property @n@ to @a@ in object @x@, or equivalently
 --
--- > o.n = x
+-- > x.n = a
+--
 set :: JsVal a => JsObject -> JsName -> a -> IO ()
 set = set#
 
 -- |
--- Updates the value named @n@ in object @o@ by applying the function f, or equivalently
+-- Updates the value named @n@ in object @x@ by applying @f@, or equivalently
 --
 -- > x.n = f(x.n)
 update :: (JsVal a, JsVal b) => JsObject -> JsName -> (a -> b) -> IO ()
 update n o f = get n o >>= set n o . f
 
 -- |
--- Deletes the property @n@ form object @o@, or equivalently
+-- Deletes the property @n@ form object @x@, or equivalently
 --
--- > delete o.n
+-- > delete x.n
 --
 delete :: JsObject -> JsName -> IO ()
 delete x n = delete# 0 (getJsObject x) (getJsString n) >> return ()
 
 -- |
--- Returns
+-- Returns true if property @n@ is defined in object @x@
 --
--- > "n" in o
+-- > x[n] !== undefined
 --
 hasProperty :: JsObject -> JsName -> IO Bool
 hasProperty x n = has# 0 (getJsObject x) (getJsString n)
 
 -- |
--- @lookup o [a1,a2, ... an]@ is equivalent to
+-- Recursively lookup a value in an object structure.
 --
--- > o.a1.a2. ... an
+-- @lookup x [n1,n2, ... nj]@ is equivalent to
+--
+-- > o.n1.n2. ... nj
 lookup :: JsVal a => JsObject -> [JsName] -> IO a
 lookup o [] = error "lookup: Empty list"
 lookup o (x:xs) = do
@@ -483,20 +558,41 @@ lookup' o (x:xs) = do
     get o' x
 
 -- |
--- Fetch the value of the immutable property @n@ in object @o@, or equivalently
+-- Fetch the value of the property @n@ in object @x@, or equivalently
 --
 -- > o.n
+--
+-- This unsafe function assumes that the given property exits and refers to a stable value.
+-- 
 unsafeGet :: JsVal a => JsObject -> JsName -> a
 unsafeGet o = unsafePerformIO . get o
 
 -- |
+-- Recursively lookup a value in an object structure.
+--
 -- @unsafeLookup o [a1,a2, ... an]@ is equivalent to
 --
 -- > o.a1.a2. ... an
-unsafeLookup :: JsVal c => [JsName] -> c
-unsafeLookup = unsafePerformIO . lookup g
+--
+-- This unsafe function assumes that the given property exits and refers to a stable value.
+--
+unsafeLookup :: JsVal c => JsObject -> [JsName] -> c
+unsafeLookup o = unsafePerformIO . lookup o
+
+-- |
+-- Recursively lookup a global value. This function is useful for calling static
+-- functions such as @Object.create@.
+--
+-- > create :: JsObject -> IO JsObject
+-- > create = unsafeGlobalLookup ["Object"] %. "create"
+--
+-- This unsafe function assumes that the given property exits and refers to a stable value.
+--
+unsafeGlobalLookup :: JsVal c => [JsName] -> c
+unsafeGlobalLookup = unsafeLookup g
     where
         g = unsafePerformIO $ global
+
 
 -------------------------------------------------------------------------------------
 
@@ -528,16 +624,14 @@ global = global# >>= (return . JsObject)
 --
 --
 create :: JsObject -> IO JsObject
-create = unsafeLookup ["Object"] %. "create"
+create = unsafeGlobalLookup ["Object"] %. "create"
 
 -------------------------------------------------------------------------------------
 --
 -- $prototypeHierarchy
 --
 -- These functions allow introspection of the prototype hierarchy. They are pure as the prototype
--- chain is immutable as far as the standard is concerned. Some implementations (notably Firefox
--- and Chrome) expose the prototype as a mutable property, but this is almost certainly a
--- misfeature.
+-- chain is immutable, at least as far as the standard is concerned.
 --
 
 -- |
@@ -546,7 +640,7 @@ create = unsafeLookup ["Object"] %. "create"
 -- > Object.getPrototypeOf(x)
 --
 prototype :: JsObject -> JsObject
-prototype = unsafeLookup ["Object"] !%. "getPrototytpeOf"
+prototype = unsafeGlobalLookup ["Object"] !%. "getPrototytpeOf"
 
 -- |
 -- Returns the constructor of object @x@, or equivalently
@@ -773,9 +867,10 @@ foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 -- |
 -- A JavaScript string.
 --
--- Informally, a sequence of Unicode characters. Allthough this type is normally used for text, it
--- can be used to store any unsigned 16-bit value using 'charAt' and 'fromCharCode'. Operations on
--- 'JsString' are much more efficient than the equivalent 'String' operations.
+-- Informally, a sequence of Unicode characters. Allthough this type is normally used for text,
+-- it can be used to store any unsigned 16-bit value using 'charAt' and 'fromCharCode'. Functions
+-- operating on 'JsString' are generally orders of magniture faster than their 'String'
+-- equivalents. However 'JsString' is strict.
 --
 -- There is no 'Char' type in JavaScript, so functions dealing with single characters return
 -- singleton strings.
@@ -817,7 +912,7 @@ fromJsString = fromJsString# . getJsString
 -- > String.fromCharCode(a)
 --
 fromCharCode :: Int -> JsString
-fromCharCode = unsafeLookup ["String"] !%. "fromCharCode"
+fromCharCode = unsafeGlobalLookup ["String"] !%. "fromCharCode"
 
 -- |
 -- Returns the length of the given array, or equivalently

@@ -19,7 +19,7 @@ main = do
     -- testBool
     -- testString
     -- testPrim
-    -- testJQuery
+    testJQuery
     -- testLift
     -- testLookup
     -- testPropertyLookup
@@ -159,12 +159,12 @@ testCall = do
 
 
 data Query
-instance JsVal Query where
-instance JsRef Query where
-instance JsCall Query where
+instance JsVal Query
+instance JsRef Query
+instance JsCall Query
 
 query :: JsString -> IO Query
-query = call1 $ unsafeLookup ["jQuery"]
+query = call1 $ unsafeGlobalLookup ["jQuery"]
 
 fadeIn :: Query -> IO ()
 fadeIn x = toObject x %% "fadeIn"
