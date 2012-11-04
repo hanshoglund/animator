@@ -18,14 +18,14 @@ import Animator.Internal.Prim
 main = do
     testUndefined
     -- testFib
-    -- testReadShow
-    -- testBool
-    -- testString
-    -- testPrim
+    testReadShow
+    testBool
+    testString
+    testPrim
     testJQuery
-    -- testLift
-    -- testLookup
-    -- testPropertyLookup
+    testLift
+    testLookup
+    testPropertyLookup
 
 {-# NOINLINE testUndefined #-}
 {-# NOINLINE testFib #-}

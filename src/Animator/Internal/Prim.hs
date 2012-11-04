@@ -173,13 +173,13 @@ module Animator.Internal.Prim (
         liftp1,
         liftp2,
 
-        -- *** Method invocation
+        -- *** Method invokeocation
         invoke,
         invoke1,
         invoke2,
-        invokep,
-        invokep1,
-        invokep2,
+        unsafeInvoke,
+        unsafeInvoke1,
+        unsafeInvoke2,
 
         -- *** Partial application
         bind,
@@ -271,12 +271,15 @@ class JsVal a where
 
     fromAny# :: Any# -> a
     fromAny# = unsafeCoerce
+    
+    typeId# :: a -> Int
+    typeId# _ = objectType#
 
     get# :: JsObject -> JsName -> IO a
-    get# = mkGet# (getAny# objectType#) unsafeCoerce
+    get# w = mkGet# (getAny# $ typeId# w) unsafeCoerce $ w
 
     set# :: JsObject -> JsName -> a -> IO ()
-    set# = mkSet# (setAny# objectType#) unsafeCoerce
+    set# w = mkSet# (setAny# $ typeId# w) unsafeCoerce $ w
 
     -- |
     -- Returns a string describing a type of the given value, or equivalently
@@ -339,58 +342,49 @@ instance JsVal () where
 -- | Represented by @boolean@ values.
 instance JsVal Bool where
     typeOf _    = "boolean"
-    get#        = mkGet# (getBool# booleanType#) id
-    set#        = mkSet# (setBool# booleanType#) id
+    typeId# _   = booleanType#
     toAny#      = unsafeCoerce . toPtr#
     fromAny#    = unsafeCoerce . fromPtr#
 
 -- | Represented by @number@ values.
 instance JsVal Int where
     typeOf _    = "number"
-    get#        = mkGet# (getInt# numberType#) id
-    set#        = mkSet# (setInt# numberType#) id
+    typeId# _   = numberType#
 
 -- | Represented by @number@ values.
 instance JsVal Word where
     typeOf _    = "number"
-    get#        = mkGet# (getWord# numberType#) id
-    set#        = mkSet# (setWord# numberType#) id
+    typeId# _   = numberType#
 
 -- | Represented by @number@ values.
 instance JsVal Double where
     typeOf _    = "number"
-    get#        = mkGet# (getDouble# numberType#) id
-    set#        = mkSet# (setDouble# numberType#) id
+    typeId# _   = numberType#
 
 -- | Represented by @string@ values.
 instance JsVal JsString where
     typeOf _    = "string"
-    get#        = mkGet# (getString# stringType#) JsString
-    set#        = mkSet# (setString# stringType#) getJsString
+    typeId# _   = stringType#
 
 -- | Represented by @object@ values whose prototype chain include @Object.prototype@.
 instance JsVal JsObject where
     typeOf      = JsString . typeOf# . getJsObject
-    get#        = mkGet# (getAny# objectType#) JsObject
-    set#        = mkSet# (setAny# objectType#) getJsObject
+    typeId# _   = objectType#
 
 -- | Represented by @number@ values whose prototype chain include @Array.prototype@.
 instance JsVal JsArray where
     typeOf _    = "object"
-    get#        = mkGet# (getAny# objectType#) JsArray
-    set#        = mkSet# (setAny# objectType#) getJsArray
+    typeId# _   = objectType#
 
 -- | Represented by @function@ values whose prototype chain include @Function.prototype@.
 instance JsVal JsFunction where
     typeOf _    = "function"
-    get#        = mkGet# (getAny# functionType#) JsFunction
-    set#        = mkSet# (setAny# functionType#) getJsFunction
+    typeId# _   = functionType#
 
--- | Represented by some opaque structure.
+-- | Represention is opaque.
 instance JsVal (Ptr a) where
     typeOf _    = "object"
-    get#        = mkGet# (getAny# objectType#) unsafeCoerce -- TODO problem?
-    set#        = mkSet# (setAny# objectType#) unsafeCoerce
+    typeId# _   = objectType#
 
 -- |
 -- Class of JavaScript reference types.
@@ -401,13 +395,9 @@ class JsVal a => JsRef a where
     toObject = unsafeCoerce
 
 instance JsRef JsObject where
-    toObject = id
 instance JsRef JsArray where
-    toObject = JsObject . getJsArray
 instance JsRef JsFunction where
-    toObject = JsObject . getJsFunction
 instance JsRef JsString where
-    toObject = JsObject . unsafeCoerce . getJsString
 
 -- |
 -- Class of JavaScript sequence types.
@@ -417,7 +407,6 @@ class JsRef a => JsSeq a where
     toArray :: a -> JsArray
     toArray = unsafeCoerce
 instance JsSeq JsArray where
-    toArray = id
 
 -- |
 -- Class of JavaScript callable types.
@@ -426,6 +415,7 @@ class JsRef a => JsCall a where
     -- | Cast a callable object descended from @Function.prototype@.
     toFunction :: a -> JsFunction
     toFunction = unsafeCoerce
+instance JsSeq JsFunction where
 
 
 -------------------------------------------------------------------------------------
@@ -1082,21 +1072,21 @@ lift2  = JsFunction . lift2#  . unsafeCoerce . toPtr#
 -------------------------------------------------------------------------------------
 
 -- |
--- Invoke the method of the given name on the given object, or equivalently
+-- Invokeoke the method of the given name on the given object, or equivalently
 --
 -- > o.n()
 --
 invoke :: JsVal a => JsObject -> JsName -> IO a
 
 -- |
--- Invoke the method of the given name on the given object, or equivalently
+-- Invokeoke the method of the given name on the given object, or equivalently
 --
 -- > o.n(a)
 --
 invoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> IO b
 
 -- |
--- Invoke the method of the given name on the given object, or equivalently
+-- Invokeoke the method of the given name on the given object, or equivalently
 --
 -- > o.n(a, b)
 --
@@ -1115,29 +1105,29 @@ invoke2 o n a b = do
     callWith2 f o a b
 
 -- |
--- Invoke the method of the given name on the given object, or equivalently
+-- Invokeoke the method of the given name on the given object, or equivalently
 --
 -- > o.n()
 --
-invokep :: JsVal a => JsObject -> JsName -> a
+unsafeInvoke :: JsVal a => JsObject -> JsName -> a
 
 -- |
--- Invoke the method of the given name on the given object, or equivalently
+-- Invokeoke the method of the given name on the given object, or equivalently
 --
 -- > o.n(a)
 --
-invokep1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> b
+unsafeInvoke1 :: (JsVal a, JsVal b) => JsObject -> JsName -> a -> b
 
 -- |
--- Invoke the method of the given name on the given object, or equivalently
+-- Invokeoke the method of the given name on the given object, or equivalently
 --
 -- > o.n(a, b)
 --
-invokep2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> c
+unsafeInvoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> c
 
-invokep  o n     = unsafePerformIO $ invoke  o n
-invokep1 o n a   = unsafePerformIO $ invoke1 o n a
-invokep2 o n a b = unsafePerformIO $ invoke2 o n a b
+unsafeInvoke  o n     = unsafePerformIO $ invoke  o n
+unsafeInvoke1 o n a   = unsafePerformIO $ invoke1 o n a
+unsafeInvoke2 o n a b = unsafePerformIO $ invoke2 o n a b
 
 -------------------------------------------------------------------------------------
 
@@ -1169,19 +1159,19 @@ infixl 9 ?%
 (%..) = invoke2
 
 -- |
--- Infix version of 'invokep'.
+-- Infix version of 'unsafeInvoke'.
 --
-(!%)   = invokep
+(!%)   = unsafeInvoke
 
 -- |
--- Infix version of 'invokep1'.
+-- Infix version of 'unsafeInvoke1'.
 --
-(!%.)  = invokep1
+(!%.)  = unsafeInvoke1
 
 -- |
--- Infix version of 'invokep2'.
+-- Infix version of 'unsafeInvoke2'.
 --
-(!%..) = invokep2
+(!%..) = unsafeInvoke2
 
 -- |
 -- Infix version of 'get'.
