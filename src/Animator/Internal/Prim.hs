@@ -155,12 +155,12 @@ module Animator.Internal.Prim (
         -- prototype,
 
 
-        -- *** Calling JavaScript functions
+        -- *** Haskell calling JavaScript
         call,
         call1,
         call2,
 
-        -- *** Lifting Haskell functions
+        -- *** JavaScript calling Haskell 
         lift,
         lift1,
         lift2,
@@ -269,6 +269,7 @@ foreign import ccall "aPrimDelete" delete#      :: Int -> Any# -> String# -> IO 
 foreign import ccall "aPrimGet"    getAny#      :: Int -> Any# -> String# -> IO Any#
 foreign import ccall "aPrimSet"    setAny#      :: Int -> Any# -> String# -> Any#    -> IO ()
 
+-- TODO simplify?
 mkGet# i c x n   = i (getJsObject x) (getJsString n)  >>= (return . c)
 mkSet# o c x n v = o (getJsObject x) (getJsString n) (c v)
 
@@ -294,10 +295,10 @@ class JsVal a where
     typeId# _ = objectType#
 
     get# :: JsObject -> JsName -> IO a
-    get# w = mkGet# (getAny# $ typeId# w) unsafeCoerce $ w
+    get# w = mkGet# (getAny# $ typeId# w) fromAny# $ w
 
     set# :: JsObject -> JsName -> a -> IO ()
-    set# w = mkSet# (setAny# $ typeId# w) unsafeCoerce $ w
+    set# w = mkSet# (setAny# $ typeId# w) toAny# $ w
 
     -- |
     -- Returns a string describing a type of the given value, or equivalently
@@ -309,61 +310,52 @@ class JsVal a where
     -- > "undefined", "boolean", "number", "string", "object", "function"
     --
     typeOf :: a -> JsString
-    typeOf = JsString . typeOf# . unsafeCoerce
+    typeOf = JsString . typeOf# . toAny#
 
 -- | Represented by @null@.
 instance JsVal () where
-    typeOf ()   = "object"
+    typeId# _   = objectType#
     fromAny# _  = ()
     toAny# _    = null#
     get# _ _    = return ()
-    set# _ _ () = return ()
+    set#        = mkSet# (setAny# $ typeId# ()) (const null#)
 
 -- | Represented by @boolean@ values.
 instance JsVal Bool where
-    typeOf _    = "boolean"
     typeId# _   = booleanType#
     toAny#      = unsafeCoerce . toPtr#
     fromAny#    = unsafeCoerce . fromPtr#
 
 -- | Represented by @number@ values.
 instance JsVal Int where
-    typeOf _    = "number"
     typeId# _   = numberType#
 
 -- | Represented by @number@ values.
 instance JsVal Word where
-    typeOf _    = "number"
     typeId# _   = numberType#
 
 -- | Represented by @number@ values.
 instance JsVal Double where
-    typeOf _    = "number"
     typeId# _   = numberType#
 
 -- | Represented by @string@ values.
 instance JsVal JsString where
-    typeOf _    = "string"
     typeId# _   = stringType#
 
 -- | Represented by @object@ values whose prototype chain include @Object.prototype@.
 instance JsVal JsObject where
-    typeOf      = JsString . typeOf# . getJsObject
     typeId# _   = objectType#
 
 -- | Represented by @number@ values whose prototype chain include @Array.prototype@.
 instance JsVal JsArray where
-    typeOf _    = "object"
     typeId# _   = objectType#
 
 -- | Represented by @function@ values whose prototype chain include @Function.prototype@.
 instance JsVal JsFunction where
-    typeOf _    = "function"
     typeId# _   = functionType#
 
 -- | Represention is opaque.
 instance JsVal (Ptr a) where
-    typeOf _    = "object"
     typeId# _   = objectType#
 
 -- |
@@ -545,7 +537,7 @@ prototype = unsafeLookup ["Object"] !%. "getPrototytpeOf"
 -- > x.constructor
 --
 constructor :: JsObject -> JsFunction
-constructor x = unsafePerformIO (x % "constructor")
+constructor x = x !% "constructor"
 
 -- |
 -- Return true if object @x@ is the prototype of object @y@, or equivalently
@@ -553,7 +545,7 @@ constructor x = unsafePerformIO (x % "constructor")
 -- > x.isPrototypeOf(y)
 --
 isPrototypeOf :: JsObject -> JsObject -> Bool
-x `isPrototypeOf` y = unsafePerformIO (x %. "isPrototypeOf" $ y)
+x `isPrototypeOf` y = x !%. "isPrototypeOf" $ y
 
 -- |
 -- Return true if object @x@ is an instance created by @y@, or equivalently
