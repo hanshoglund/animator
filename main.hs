@@ -1,6 +1,7 @@
 
 {-# LANGUAGE
     OverloadedStrings, NoMonomorphismRestriction, BangPatterns,
+    MultiParamTypeClasses, FlexibleInstances,
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving #-}
 
 module Main where
@@ -78,7 +79,7 @@ testLookup = do
     a <- x `hasProperty` "foo"
     printRepr $! a
 
-    set x "foo" (1::Int)
+    set x "foo" (int 1)
 
     b <- x `hasProperty` "foo"
     printRepr $! b
@@ -94,7 +95,7 @@ testPropertyLookup = do
     x <- object
     y <- create x
 
-    set x "foo" (1::Int)
+    set x "foo" (int 1)
 
     a <- y `hasProperty` "foo"
     printRepr $! a
@@ -113,14 +114,14 @@ testLift = do
     g <- global
 
     as <- eval "([1,2,3])" :: IO JsArray
-    let f = unsafeLift1 ((+ 10) ::Int -> Int)
+    let f = unsafeLift1 ((+ 10) `fix1` int)
     bs <- toObject as %. "map" $ f :: IO JsArray
     printRepr as
     printRepr bs
 
     cs <- eval "([5,5,6])" :: IO JsArray
-    let add = unsafeLift2 ((+) :: Int -> Int -> Int)
-    ds <- (toObject cs %.. "reduce") add (0::Int) :: IO JsArray
+    let add = unsafeLift2 ((+) `fix1` int)
+    ds <- (toObject cs %.. "reduce") add (int 0) :: IO JsArray
     printRepr $! cs
     printRepr $! ds
 
@@ -129,9 +130,9 @@ testLift = do
     setTimeout 3000 $ printLog "Hello to Lundström!"
 
 testPrim = do
-    printRepr $ (False::Bool)
-    printRepr $ (123::Int)
-    printRepr $ ("foo"::JsString)
+    printRepr $ False
+    printRepr $ int 123
+    printRepr $ str "foo"
 
     jf <- eval "(function(x){return x+x;})" :: IO JsFunction
     printRepr $ jf
@@ -139,10 +140,10 @@ testPrim = do
     jo <- eval "({foo:123,bar:function(x){return x}})" :: IO JsObject
     printRepr $ jo
 
-    let hf = ((\x -> x + x) :: Int -> Int)
+    let hf = (\x -> x + x `fix` int x)
     printRepr $ hf
 
-    let ho = (10::Int,20::Int)
+    let ho = (int 10, int 20)
     printRepr $ ho
 
 testCall = do
@@ -154,6 +155,18 @@ testCall = do
     res <- call1 foo (o::JsObject)
     printRepr $ (res::JsObject)
 
+
+
+
+fix :: b -> a -> b
+fix x _ = x
+fix1 :: (a -> b) -> (a -> a) -> a -> b
+fix1 x _ = x
+
+int :: Int -> Int
+int = id
+str :: JsString -> JsString
+str = id
 
 
 
@@ -173,7 +186,7 @@ fadeOut :: Query -> IO ()
 fadeOut x = toObject x %% "fadeOut"
 
 fadeInSlow :: Query -> IO ()
-fadeInSlow x = toObject x %. "fadeIn" $ ("slow"::JsString)
+fadeInSlow x = toObject x %. "fadeIn" $ str "slow"
 
 fadeInDuring :: Double -> Query -> IO ()
 fadeInDuring n x = toObject x %. "fadeIn" $ n
