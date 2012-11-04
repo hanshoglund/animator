@@ -21,12 +21,6 @@ module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
 
-        -- *** Type safety
-        -- $typeSafety
-
-        -- *** Pure and impure functions
-        -- $purity
-        
         -- ** JavaScript types
         -- $jsTypeClasses
         
@@ -332,26 +326,21 @@ undefinedType# = 5
 
 -- $jsTypeClasses
 --
--- The class 'JsVal' and its subclasses 'JsRef', 'JsSeq' and 'JsCall' are used to represent
--- JavaScript values. Instances of these classes are isomorphic to some set of JavaScript
--- values and can be freely passed between the languages.
+-- The class 'JsVal' and its subclasses represents types that have a predictable JavaScript
+-- representation. The values of these types be passed passed freely between the languages.
 --
--- Instances for all JavaScript primitive types, objects arrays and functions are provided.
--- There is no way to make arbitrary Haskell types instances of 'JsVal'. It is however possible 
--- to pass an arbitrary Haskell value to JavaScript by wrapping it in a pointer. Such types 
--- have an arbitrary runtime representation and should be treated as opaque by JavaScript code.
+-- There is no way to make arbitrary Haskell types instances of 'JsVal', as some types have
+-- an unspecified representation that should not be relied upon outside Haskell code. 
+-- It is however possible  to pass an arbitrary Haskell value to JavaScript by wrapping 
+-- it in a pointer.
 --
--- Conversely, Haskell can receive and manipulate JavaScript values in a type-safe way by
--- by using opaque types. A type is considered opaque if either,
+-- Also, a type can be declared an instance of 'JsVal' and its subclasses if /either/
 --
---     - It has no constructors, or
+--     - It has no constructors, /or/
 --
---     - It is an instance of 'JsVal', or
+--     - It is a @newtype@ wrapper around a type that is an instance of 'JsVal'
 --
---     - It is a @newtype@ wrapper of an opaque type
---
--- Opaque types can be declared instances of 'JsVal' and its subclasses without providing an
--- implementation. This idiom is useful for wrapping JavaScript libraries. For example a basic
+-- This idiom is useful for wrapping JavaScript libraries. For example a basic
 -- wrapper of the JQuery library looks like this:
 --
 -- > data Query
@@ -367,6 +356,8 @@ undefinedType# = 5
 -- > 
 -- > fadeOut :: Query -> IO ()
 -- > fadeOut x = toObject x %% "fadeOut"
+--
+-- There is no need to provide an implementations of the methods in 'JsVal' or its subclasses.
 --
 --
 
@@ -487,10 +478,6 @@ instance JsCall JsFunction where
 -- |
 -- A JavaScript object.
 --
--- This type is disjoint from ordinary Haskell data types, which have a compiler-specific
--- internal representation. All JavaScript reference types can be converted to this type
--- using the 'JsRef' class.
---
 --  /ECMA-262 8.6, 15.2/
 --
 newtype JsObject = JsObject { getJsObject :: Any# }
@@ -532,9 +519,11 @@ delete :: JsObject -> JsName -> IO ()
 delete x n = delete# 0 (getJsObject x) (getJsString n) >> return ()
 
 -- |
--- Returns true if property @n@ is defined in object @x@
+-- Returns true if property @n@ is defined in object @x@.
+-- 
+-- The following law holds for all @x@ and @n@
 --
--- > x[n] !== undefined
+-- > x `hasProperty` n = fmap isDefined (x % n)
 --
 hasProperty :: JsObject -> JsName -> IO Bool
 hasProperty x n = has# 0 (getJsObject x) (getJsString n)
@@ -870,10 +859,10 @@ foreign import ccall "aPrimAdd" concatString# :: String# -> String# -> String#
 -- |
 -- A JavaScript string.
 --
--- Informally, a sequence of Unicode characters. Allthough this type is normally used for text,
--- it can be used to store any unsigned 16-bit value using 'charAt' and 'fromCharCode'. Functions
--- operating on 'JsString' are generally orders of magniture faster than their 'String'
--- equivalents. However 'JsString' is strict.
+-- A string is a sequence of Unicode characters. Allthough it is normally used for text, it can be used to
+-- store any unsigned 16-bit value using 'charAt' and 'fromCharCode'. Functions operating on 'JsString'
+-- are generally an order of magniture faster than their 'String' equivalents. However 'JsString' is
+-- strict and does not provide the full list interface.
 --
 -- There is no 'Char' type in JavaScript, so functions dealing with single characters return
 -- singleton strings.
@@ -1001,10 +990,10 @@ toUpper x = toObject x !%% "toUpper"
 -------------------------------------------------------------------------------------
 
 -- |
--- A JavaScript function, i.e. a callable object.
+-- A JavaScript function, .
 --
--- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
--- internal representation. To convert between the two, use 'call' and 'lift'.
+-- This type is disjoint from ordinary Haskell functions, which have a compiler-specific internal
+-- representation. To convert between the two, use 'call' and 'lift'.
 --
 -- /ECMA-262 9.11, 15.3/
 --
