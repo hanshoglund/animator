@@ -14,8 +14,6 @@ import Haste.Showable(show_)
 -- import Animator.Prelude
 import Animator.Internal.Prim
 
-
-
     
 main = do
     testUndefined
@@ -58,16 +56,16 @@ testFib = do
         fib !n = fib (n - 1) + fib (n - 2)
 
 testString = do
-    printRepr $! "hans" `charAt` 0
-    printRepr $! "hans" `charCodeAt` 0    
-    printRepr $! "hans" `lastIndexOf` "ans"
-    printRepr $! "hans" `lastIndexOf` "anx"
+    printRepr $! "hans" `charAt` 0
+    printRepr $! "hans" `charCodeAt` 0    
+    printRepr $! "hans" `lastIndexOf` "ans"
+    printRepr $! "hans" `lastIndexOf` "anx"
 
 testBool = do
     x <- object
     y <- create x
-    printRepr $! (x `isPrototypeOf` y)
-    printRepr $! (y `isPrototypeOf` x)
+    printRepr $! (x `isPrototypeOf` y)
+    printRepr $! (y `isPrototypeOf` x)
 
 testLookup = do
     x <- object              
