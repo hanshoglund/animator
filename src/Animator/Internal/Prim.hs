@@ -29,6 +29,9 @@ module Animator.Internal.Prim (
         -- *** Sequence types
         JsSeq(..),
 
+        -- *** Callable types
+        JsCall(..),
+
         -- ------------------------------------------------------------
         -- ** Objects
         JsObject,
@@ -48,20 +51,25 @@ module Animator.Internal.Prim (
 
         -- *** Properties
         JsName,
-        getp,
         get,
         set,
         delete,
         update,
         lookup,
+        -- **** Unsafe version
+        unsafeGet,
+        unsafeLookup,
 
+        -- **** Predicates
         hasProperty,
         hasOwnProperty,
+        propertyIsEnumerable,
+        -- getOwnPropertyNames,
+        -- getOwnPropertyDescriptor,
+
         -- defineProperty,
         -- defineProperties,
-        -- getOwnPropertyDescriptor,
-        -- getOwnPropertyNames,
-        propertyIsEnumerable,
+
         -- seal,
         -- freeze,
         -- preventExtentions,
@@ -71,7 +79,6 @@ module Animator.Internal.Prim (
 
         -- *** Infix versions
         (%?),
-        (?%),
         (%%),
         -- (%%%),
         (!%%),
@@ -266,7 +273,10 @@ class JsVal a where
     fromAny# = unsafeCoerce
 
     get# :: JsObject -> JsName -> IO a
+    get# = mkGet# (getAny# objectType#) unsafeCoerce
+
     set# :: JsObject -> JsName -> a -> IO ()
+    set# = mkSet# (setAny# objectType#) unsafeCoerce
 
     -- |
     -- Returns a string describing a type of the given value, or equivalently
@@ -278,6 +288,7 @@ class JsVal a where
     -- > "undefined", "boolean", "number", "string", "object", "function"
     --
     typeOf :: a -> JsString
+    typeOf = JsString . typeOf# . unsafeCoerce
 
 
 -------------------------------------------------------------------------------------
@@ -375,7 +386,7 @@ instance JsVal JsFunction where
     get#        = mkGet# (getAny# functionType#) JsFunction
     set#        = mkSet# (setAny# functionType#) getJsFunction
 
--- | Represented by @object@ values.
+-- | Represented by some opaque structure.
 instance JsVal (Ptr a) where
     typeOf _    = "object"
     get#        = mkGet# (getAny# objectType#) unsafeCoerce -- TODO problem?
@@ -387,6 +398,8 @@ instance JsVal (Ptr a) where
 class JsVal a => JsRef a where
     -- | Cast an object descended from @Object.prototype@.
     toObject :: a -> JsObject
+    toObject = unsafeCoerce
+
 instance JsRef JsObject where
     toObject = id
 instance JsRef JsArray where
@@ -402,8 +415,17 @@ instance JsRef JsString where
 class JsRef a => JsSeq a where
     -- | Cast an object descended from @Array.prototype@.
     toArray :: a -> JsArray
+    toArray = unsafeCoerce
 instance JsSeq JsArray where
     toArray = id
+
+-- |
+-- Class of JavaScript callable types.
+--
+class JsRef a => JsCall a where
+    -- | Cast a callable object descended from @Function.prototype@.
+    toFunction :: a -> JsFunction
+    toFunction = unsafeCoerce
 
 
 -------------------------------------------------------------------------------------
@@ -428,18 +450,11 @@ newtype JsObject = JsObject { getJsObject :: Any# }
 type JsName = JsString
 
 -- |
--- Fetch the value of property @n@ in object @o@, or equivalently
---
--- > o.n
-get :: JsVal a => JsObject -> JsName -> IO a
-get = get#
-
--- |
 -- Fetch the value of the immutable property @n@ in object @o@, or equivalently
 --
 -- > o.n
-getp :: JsVal a => JsObject -> JsName -> a
-getp o = unsafePerformIO . get o
+unsafeGet :: JsVal a => JsObject -> JsName -> a
+unsafeGet o = unsafePerformIO . get o
 
 -- |
 -- Assign the property @n@ to @x@ in object @o@, or equivalently
@@ -487,8 +502,21 @@ lookup' o (x:xs) = do
     o' <- lookup' o xs
     get o' x
 
-unsafeGlobal = unsafePerformIO $ global
-unsafeLookup = unsafePerformIO . lookup unsafeGlobal
+-- |
+-- Fetch the value of property @n@ in object @o@, or equivalently
+--
+-- > o.n
+get :: JsVal a => JsObject -> JsName -> IO a
+get = get#
+
+-- |
+-- @unsafeLookup o [a1,a2, ... an]@ is equivalent to
+--
+-- > o.a1.a2. ... an
+unsafeLookup :: JsVal c => [JsName] -> c
+unsafeLookup = unsafePerformIO . lookup g
+    where
+        g = unsafePerformIO $ global
 
 -------------------------------------------------------------------------------------
 
@@ -1166,14 +1194,14 @@ infixl 9 ?%
 (%%%) = flip get
 
 -- |
--- Infix version of 'getp'.
+-- Infix version of 'unsafeGet'.
 --
-(!%%) = getp
+(!%%) = unsafeGet
 
 -- |
--- Reverse infix version of 'getp'.
+-- Reverse infix version of 'unsafeGet'.
 --
-(%%!) = flip getp
+(%%!) = flip unsafeGet
 
 -- |
 -- Infix version of 'hasProperty'.

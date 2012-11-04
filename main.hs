@@ -1,12 +1,12 @@
 
-{-# LANGUAGE 
+{-# LANGUAGE
     OverloadedStrings, NoMonomorphismRestriction, BangPatterns,
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving #-}
 
 module Main where
 
 import Prelude hiding (null)
-import Data.Foldable 
+import Data.Foldable
 import Foreign.Ptr
 
 import Haste.Prim(toPtr, fromPtr)
@@ -14,7 +14,7 @@ import Haste.Showable(show_)
 -- import Animator.Prelude
 import Animator.Internal.Prim
 
-    
+
 main = do
     testUndefined
     -- testFib
@@ -22,11 +22,11 @@ main = do
     -- testBool
     -- testString
     -- testPrim
-    -- testJQuery
-    -- testLift  
+    testJQuery
+    -- testLift
     -- testLookup
     -- testPropertyLookup
-    
+
 {-# NOINLINE testUndefined #-}
 {-# NOINLINE testFib #-}
 {-# NOINLINE testReadShow #-}
@@ -43,7 +43,7 @@ testReadShow = do
     printLog $ toJsString $ show  (11232.12328::Double)
 
 testUndefined = do
-    x <- object    
+    x <- object
     -- set x "foo" (123::Int)
     u <- x %% "foo" :: IO Int
     printRepr $! u
@@ -57,7 +57,7 @@ testFib = do
 
 testString = do
     printRepr $! "hans" `charAt` 0
-    printRepr $! "hans" `charCodeAt` 0    
+    printRepr $! "hans" `charCodeAt` 0
     printRepr $! "hans" `lastIndexOf` "ans"
     printRepr $! "hans" `lastIndexOf` "anx"
 
@@ -68,11 +68,11 @@ testBool = do
     printRepr $! (y `isPrototypeOf` x)
 
 testLookup = do
-    x <- object              
-    
+    x <- object
+
     a <- x `hasProperty` "foo"
     printRepr $! a
-    
+
     set x "foo" (1::Int)
 
     b <- x `hasProperty` "foo"
@@ -86,11 +86,11 @@ testLookup = do
     printRepr $! c
 
 testPropertyLookup = do
-    x <- object              
+    x <- object
     y <- create x
 
     set x "foo" (1::Int)
-    
+
     a <- y `hasProperty` "foo"
     printRepr $! a
     b <- y `hasOwnProperty` "foo"
@@ -101,9 +101,9 @@ withGlobal :: (JsObject -> IO a) -> IO a
 withGlobal f = global >>= f
 
 setTimeout :: Int -> IO () -> IO ()
-setTimeout t x = withGlobal $ 
+setTimeout t x = withGlobal $
     \g -> (g %.. "setTimeout") (lift x) t
-    
+
 testLift = do
     g <- global
 
@@ -112,18 +112,18 @@ testLift = do
     bs <- toObject as %. "map" $ f :: IO JsArray
     printRepr as
     printRepr bs
-    
+
     cs <- eval "([5,5,6])" :: IO JsArray
-    let add = liftp2 ((+) :: Int -> Int -> Int) 
+    let add = liftp2 ((+) :: Int -> Int -> Int)
     ds <- (toObject cs %.. "reduce") add (0::Int) :: IO JsArray
     printRepr $! cs
     printRepr $! ds
-    
+
     setTimeout 1000 $ printLog "Hello to Andersson!"
     setTimeout 2000 $ printLog "Hello to Pettersson!"
     setTimeout 3000 $ printLog "Hello to Lundström!"
 
-testPrim = do    
+testPrim = do
     printRepr $ (False::Bool)
     printRepr $ (123::Int)
     printRepr $ ("foo"::JsString)
@@ -140,8 +140,8 @@ testPrim = do
     let ho = (10::Int,20::Int)
     printRepr $ ho
 
-testCall = do    
-    g <- global                     
+testCall = do
+    g <- global
     o <- eval "([1,2,3,4])"
     foo <- g %% "foo"
     console <- g %% "console" :: IO JsObject
@@ -151,20 +151,35 @@ testCall = do
 
 
 
+
+
+newtype Query = Query JsObject
+instance JsVal Query where
+instance JsRef Query where
+instance JsCall Query where
+
+query :: JsString -> IO Query
+query = call1 $ unsafeLookup ["jQuery"]
+
+fadeIn :: Query -> IO ()
+fadeIn x = toObject x % "fadeIn"
+
+fadeOut :: Query -> IO ()
+fadeOut x = toObject x % "fadeOut"
+
+fadeInSlow :: Query -> IO ()
+fadeInSlow x = toObject x %. "fadeIn" $ ("slow"::JsString)
+
+fadeInDuring :: Double -> Query -> IO ()
+fadeInDuring n x = toObject x %. "fadeIn" $ n
+
+
 testJQuery = do
-    g <- global
-    jq <- g %% "jQuery"
+    a <- query "#div1"
+    fadeIn a
+    fadeOut a
+    b <- query "#div2"
+    fadeInSlow b
+    c <- query "#div3"
+    fadeInDuring 2000 c
 
-    r1 <- call1 jq ("#div1"::JsString)
-    r1 % "fadeIn" :: IO ()
-
-    r2 <- call1 jq ("#div2"::JsString)
-    r2 %. "fadeIn" $ ("slow"::JsString) :: IO ()
-
-    r3 <- call1 jq ("#div3"::JsString)
-    r3 %. "fadeIn" $ (5000::Double) :: IO ()
-
-
-    -- object % "x" := 1
-    --        % "y" := 2
-    -- array [1,2,3] % "0" := 33
