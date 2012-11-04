@@ -262,6 +262,23 @@ fromPtr#      = undefined
 
 -------------------------------------------------------------------------------------
 
+foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
+foreign import ccall "aPrimHas"    has#         :: Int -> Any# -> String# -> IO Bool
+foreign import ccall "aPrimDelete" delete#      :: Int -> Any# -> String# -> IO Bool
+foreign import ccall "aPrimGet"    getAny#      :: Int -> Any# -> String# -> IO Any#
+foreign import ccall "aPrimSet"    setAny#      :: Int -> Any# -> String# -> Any#    -> IO ()
+
+mkGet# i c x n   = i (getJsObject x) (getJsString n)  >>= (return . c)
+mkSet# o c x n v = o (getJsObject x) (getJsString n) (c v)
+
+-- Keep in synch with aPrimTypeCheck
+booleanType#   = 0
+numberType#    = 1
+stringType#    = 2
+objectType#    = 3
+functionType#  = 4
+undefinedType# = 5
+
 -- |
 -- Class of JavaScript types.
 --
@@ -292,44 +309,6 @@ class JsVal a where
     --
     typeOf :: a -> JsString
     typeOf = JsString . typeOf# . unsafeCoerce
-
-
--------------------------------------------------------------------------------------
-
-foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
-
-foreign import ccall "aPrimHas"    has#         :: Int -> Any# -> String# -> IO Bool
-foreign import ccall "aPrimDelete" delete#      :: Int -> Any# -> String# -> IO Bool
-
-foreign import ccall "aPrimGet"    getBool#     :: Int -> Any# -> String# -> IO Bool
-foreign import ccall "aPrimGet"    getInt#      :: Int -> Any# -> String# -> IO Int
-foreign import ccall "aPrimGet"    getWord#     :: Int -> Any# -> String# -> IO Word
-foreign import ccall "aPrimGet"    getDouble#   :: Int -> Any# -> String# -> IO Double
-foreign import ccall "aPrimGet"    getString#   :: Int -> Any# -> String# -> IO String#
-foreign import ccall "aPrimGet"    getAny#      :: Int -> Any# -> String# -> IO Any#
-
-foreign import ccall "aPrimSet"    setBool#     :: Int -> Any# -> String# -> Bool    -> IO ()
-foreign import ccall "aPrimSet"    setInt#      :: Int -> Any# -> String# -> Int     -> IO ()
-foreign import ccall "aPrimSet"    setWord#     :: Int -> Any# -> String# -> Word    -> IO ()
-foreign import ccall "aPrimSet"    setDouble#   :: Int -> Any# -> String# -> Double  -> IO ()
-foreign import ccall "aPrimSet"    setString#   :: Int -> Any# -> String# -> String# -> IO ()
-foreign import ccall "aPrimSet"    setAny#      :: Int -> Any# -> String# -> Any#    -> IO ()
-
-mkGet# i c x n   = i (getJsObject x) (getJsString n)  >>= (return . c)
-mkSet# o c x n v = o (getJsObject x) (getJsString n) (c v)
-
--- Keep in synch with aPrimTypeCheck
-booleanType#   = 0
-numberType#    = 1
-stringType#    = 2
-objectType#    = 3
-functionType#  = 4
-undefinedType# = 5
-
--- In JavaScript @undefined@ is really (), not _|_
---
--- The result of the void operator, the debugger statement and functions without return
--- values is @undefined@, which should be IO () in Haskell.
 
 -- | Represented by @null@.
 instance JsVal () where
