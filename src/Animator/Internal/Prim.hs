@@ -216,7 +216,7 @@ module Animator.Internal.Prim (
         debug
   ) where
 
-import Prelude hiding (reverse, null, length, lookup, take, drop)
+import Prelude hiding (reverse, length, lookup, take, drop)
 
 import Data.Int
 import Data.Word
@@ -261,7 +261,9 @@ fromPtr#      = undefined
 
 -------------------------------------------------------------------------------------
 
+foreign import ccall "aPrimNull"   null#   :: Any#
 foreign import ccall "aPrimTypeOf" typeOf# :: Any# -> String#
+
 foreign import ccall "aPrimHas"    has#         :: Int -> Any# -> String# -> IO Bool
 foreign import ccall "aPrimDelete" delete#      :: Int -> Any# -> String# -> IO Bool
 foreign import ccall "aPrimGet"    getAny#      :: Int -> Any# -> String# -> IO Any#
@@ -313,7 +315,7 @@ class JsVal a where
 instance JsVal () where
     typeOf ()   = "object"
     fromAny# _  = ()
-    -- toAny should map to pointer to null
+    toAny# _    = null#
     get# _ _    = return ()
     set# _ _ () = return ()
 
@@ -372,6 +374,7 @@ class JsVal a => JsRef a where
     toObject :: a -> JsObject
     toObject = unsafeCoerce
 
+instance JsRef () where -- TODO wrong?
 instance JsRef JsObject where
 instance JsRef JsArray where
 instance JsRef JsFunction where
@@ -488,18 +491,9 @@ unsafeLookup = unsafePerformIO . lookup g
 
 -------------------------------------------------------------------------------------
 
-foreign import ccall "aPrimNull"       null#             :: Any#
 foreign import ccall "aPrimObj"        object#           :: IO Any#
 foreign import ccall "aPrimGlobal"     global#           :: IO Any#
 foreign import ccall "aPrimInstanceOf" instanceOf#       :: Any# -> Any# -> Bool
-
--- |
--- Return the JavaScript null object, or equivalently
---
--- > null
---
-null :: JsObject
-null = JsObject $ null#
 
 -- |
 -- Create a new JavaScript object, or equivalently
@@ -1015,11 +1009,11 @@ bindWith1 f t a = JsFunction $ bind1# (getJsFunction f) (p t) (p a)
     where
         p = toAny#
 
-call  = flip callWith  $ null
-call1 = flip callWith1 $ null
-call2 = flip callWith2 $ null
+call  = flip callWith  $ toObject ()
+call1 = flip callWith1 $ toObject ()
+call2 = flip callWith2 $ toObject ()
 
-bind  = flip bindWith1 $ null
+bind  = flip bindWith1 $ toObject ()
 
 
 
