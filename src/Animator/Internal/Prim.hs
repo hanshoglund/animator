@@ -79,10 +79,8 @@ module Animator.Internal.Prim (
 
         -- *** Infix versions
         (%?),
-        (%%),
-        -- (%%%),
-        (!%%),
-        -- (%%!),
+        (%),
+        (!%),
 
         -- *** Conversion
         toString,
@@ -152,31 +150,33 @@ module Animator.Internal.Prim (
 
         -- ------------------------------------------------------------
         -- ** Functions
+        -- $functionLaws
         JsFunction,
         arity,
         -- prototype,
+
 
         -- *** Calling JavaScript functions
         call,
         call1,
         call2,
-        callp,
-        callp1,
-        callp2,
 
         -- *** Lifting Haskell functions
-        -- $lifting
         lift,
         lift1,
         lift2,
-        liftp,
-        liftp1,
-        liftp2,
 
-        -- *** Method invokeocation
+        -- *** Method invocation
         invoke,
         invoke1,
         invoke2,
+
+        unsafeCall,
+        unsafeCall1,
+        unsafeCall2,
+        unsafeLift,
+        unsafeLift1,
+        unsafeLift2,
         unsafeInvoke,
         unsafeInvoke1,
         unsafeInvoke2,
@@ -187,10 +187,10 @@ module Animator.Internal.Prim (
         bindWith,
 
         -- *** Infix versions
-        (%),
+        (%%),
         (%.),
         (%..),
-        (!%),
+        (!%%),
         (!%.),
         (!%..),
         -- apply,
@@ -573,7 +573,7 @@ prototype = unsafeLookup ["Object"] !%. "getPrototytpeOf"
 -- > x.constructor
 --
 constructor :: JsObject -> JsFunction
-constructor x = unsafePerformIO (x %% "constructor")
+constructor x = unsafePerformIO (x % "constructor")
 
 -- |
 -- Return true if object @x@ is the prototype of object @y@, or equivalently
@@ -618,26 +618,26 @@ propertyIsEnumerable x n = (x %. "propertyIsEnumerable") n
 -- |
 -- Returns
 --
--- > x.toString(y)
+-- > x.toString()
 --
 toString :: JsObject -> IO JsString
-toString x = x % "toString"
+toString x = x %% "toString"
 
 -- |
 -- Returns
 --
--- > x.toLocaleString(y)
+-- > x.toLocaleString()
 --
 toLocaleString :: JsObject -> IO JsString
-toLocaleString x = x % "toLocaleString"
+toLocaleString x = x %% "toLocaleString"
 
 -- |
 -- Returns
 --
--- > x.valueOf(y)
+-- > x.valueOf()
 --
 valueOf :: JsVal a => JsObject -> IO a
-valueOf x = x % "valueOf"
+valueOf x = x %% "valueOf"
 
 
 -------------------------------------------------------------------------------------
@@ -667,7 +667,7 @@ array = array# >>= (return . JsArray)
 -- > x.length
 --
 length :: JsArray -> IO Int
-length x = toObject x %% "length"
+length x = toObject x % "length"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
@@ -683,7 +683,7 @@ push x = toObject x %. "push"
 -- > x.pop()
 --
 pop :: JsVal a => JsArray -> IO a
-pop x = toObject x % "pop"
+pop x = toObject x %% "pop"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
@@ -691,7 +691,7 @@ pop x = toObject x % "pop"
 -- > x.shift()
 --
 shift :: JsVal a => JsArray -> IO a
-shift x = toObject x % "shift"
+shift x = toObject x %% "shift"
 
 -- |
 -- Returns a string describing a type of the given object, or equivalently
@@ -707,7 +707,7 @@ unshift x = toObject x %. "unshift"
 -- > x.reverse()
 --
 reverse :: JsArray -> IO JsArray
-reverse x = toObject x % "reverse"
+reverse x = toObject x %% "reverse"
 
 -- |
 -- Returns
@@ -715,7 +715,7 @@ reverse x = toObject x % "reverse"
 -- > x.sort()
 --
 sort :: JsArray -> IO JsArray
-sort x = toObject x % "sort"
+sort x = toObject x %% "sort"
 
 -- splice
 
@@ -844,7 +844,7 @@ fromCharCode = unsafeLookup ["String"] !%. "fromCharCode"
 -- > x.length
 --
 stringLength :: JsString -> Int
-stringLength x = toObject x !%% "length"
+stringLength x = toObject x !% "length"
 
 -- |
 -- Returns the JavaScript global object, or equivalently
@@ -906,7 +906,7 @@ sliceString x a b = (toObject x !%.. "slice") a b
 -- > x.toLower()
 --
 toLower :: JsString -> JsString
-toLower x = toObject x !% "toLower"
+toLower x = toObject x !%% "toLower"
 
 -- |
 -- Returns
@@ -914,7 +914,7 @@ toLower x = toObject x !% "toLower"
 -- > x.toUpper()
 --
 toUpper :: JsString -> JsString
-toUpper x = toObject x !% "toUpper"
+toUpper x = toObject x !%% "toUpper"
 
 
 -------------------------------------------------------------------------------------
@@ -925,7 +925,7 @@ toUpper x = toObject x !% "toUpper"
 -- A JavaScript function, i.e. a callable object.
 --
 -- This type is disjoint from ordinary Haskell functions, which have a compiler-specific
--- internal representation. To convert between the two, use 'call', 'lift' or 'liftp'.
+-- internal representation. To convert between the two, use 'call' and 'lift'.
 --
 -- /ECMA-262 9.11, 15.3/
 --
@@ -937,7 +937,7 @@ newtype JsFunction = JsFunction { getJsFunction :: Any# }
 -- > f.length
 --
 arity :: JsFunction -> Int
-arity x = toObject x !%% "length"
+arity x = toObject x !% "length"
 
 -------------------------------------------------------------------------------------
 
@@ -948,9 +948,9 @@ foreign import ccall "aPrimCall2"     call2#  :: Any# -> Any# -> Any# -> Any# ->
 foreign import ccall "aPrimBind0"     bind#   :: Any# -> Any# -> Any#
 foreign import ccall "aPrimBind1"     bind1#  :: Any# -> Any# -> Any# -> Any#
 
-foreign import ccall "aPrimLiftPure0" liftp#  :: Any# -> Any#
-foreign import ccall "aPrimLiftPure1" liftp1# :: Any# -> Any#
-foreign import ccall "aPrimLiftPure2" liftp2# :: Any# -> Any#
+foreign import ccall "aPrimLiftPure0" unsafeLift#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" unsafeLift1# :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" unsafeLift2# :: Any# -> Any#
 
 foreign import ccall "aPrimLift0"     lift#   :: Any# -> Any#
 foreign import ccall "aPrimLift1"     lift1#  :: Any# -> Any#
@@ -964,13 +964,13 @@ foreign import ccall "aPrimLift2"     lift2#  :: Any# -> Any#
 call :: JsVal a => JsFunction -> IO a
 call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
-callp :: JsVal a => JsFunction -> a
-callp1 :: (JsVal a, JsVal b) => JsFunction -> a -> b
-callp2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> c
+unsafeCall :: JsVal a => JsFunction -> a
+unsafeCall1 :: (JsVal a, JsVal b) => JsFunction -> a -> b
+unsafeCall2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> c
 
-callp f = unsafePerformIO $ call f
-callp1 f a = unsafePerformIO $ call1 f a
-callp2 f a b = unsafePerformIO $ call2 f a b
+unsafeCall f = unsafePerformIO $ call f
+unsafeCall1 f a = unsafePerformIO $ call1 f a
+unsafeCall2 f a b = unsafePerformIO $ call2 f a b
 
 call  = flip callWith  $ null
 call1 = flip callWith1 $ null
@@ -1041,29 +1041,31 @@ bindWith1 f t a = JsFunction $ bind1# (getJsFunction f) (p t) (p a)
         p = toAny#
 
 --
--- $lifting
+-- $functionLaws
 --
 -- The following law hold for all functions:
 --
--- > lift . call  = liftM id
--- > pure . apply = id
+-- > lift . call  = id
+-- > call . lift  = id
+-- > unsafeLift . unsafeCall = id
+-- > unsafeCall . unsafeLift = id
 --
 
 -- |
 -- Lift the given Haskell function to JavaScript.
 --
-liftp :: JsVal a => a -> JsFunction
-liftp1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
-liftp2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
+unsafeLift :: JsVal a => a -> JsFunction
+unsafeLift1 :: (JsVal a, JsVal b) => (a -> b) -> JsFunction
+unsafeLift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> c) -> JsFunction
 
 lift :: JsVal a => IO a -> JsFunction
 lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
 lift2 :: (JsVal a, JsVal b, JsVal c) => (a -> b -> IO c) -> JsFunction
 
 
-liftp  = JsFunction . liftp#  . unsafeCoerce . toPtr#
-liftp1 = JsFunction . liftp1# . unsafeCoerce . toPtr#
-liftp2 = JsFunction . liftp2# . unsafeCoerce . toPtr#
+unsafeLift  = JsFunction . unsafeLift#  . unsafeCoerce . toPtr#
+unsafeLift1 = JsFunction . unsafeLift1# . unsafeCoerce . toPtr#
+unsafeLift2 = JsFunction . unsafeLift2# . unsafeCoerce . toPtr#
 lift   = JsFunction . lift#   . unsafeCoerce . toPtr#
 lift1  = JsFunction . lift1#  . unsafeCoerce . toPtr#
 lift2  = JsFunction . lift2#  . unsafeCoerce . toPtr#
@@ -1132,21 +1134,19 @@ unsafeInvoke2 o n a b = unsafePerformIO $ invoke2 o n a b
 -------------------------------------------------------------------------------------
 
 
-infixl 9 !%
+infixl 9 !%%
 infixl 9 !%.
 infixl 9 !%..
-infixl 9 %
+infixl 9 %%
 infixl 9 %.
 infixl 9 %..
-infixl 9 %%
-infixl 9 %%%
+infixl 9 %
 infixl 9 %?
-infixl 9 ?%
 
 -- |
 -- Infix version of 'invoke'.
 --
-(%)   = invoke
+(%%)   = invoke
 
 -- |
 -- Infix version of 'invoke1'.
@@ -1161,7 +1161,7 @@ infixl 9 ?%
 -- |
 -- Infix version of 'unsafeInvoke'.
 --
-(!%)   = unsafeInvoke
+(!%%)   = unsafeInvoke
 
 -- |
 -- Infix version of 'unsafeInvoke1'.
@@ -1176,32 +1176,17 @@ infixl 9 ?%
 -- |
 -- Infix version of 'get'.
 --
-(%%) = get
-
--- |
--- Reverse infix version of 'get'.
---
-(%%%) = flip get
+(%) = get
 
 -- |
 -- Infix version of 'unsafeGet'.
 --
-(!%%) = unsafeGet
-
--- |
--- Reverse infix version of 'unsafeGet'.
---
-(%%!) = flip unsafeGet
+(!%) = unsafeGet
 
 -- |
 -- Infix version of 'hasProperty'.
 --
 (%?) = hasProperty
-
--- |
--- Reverse infix version of 'hasProperty'.
---
-(?%) = flip hasProperty
 
 
 -------------------------------------------------------------------------------------

@@ -6,14 +6,10 @@
 module Main where
 
 import Prelude hiding (null)
-import Data.Foldable
-import Foreign.Ptr
-
-import Haste.Prim(toPtr, fromPtr)
-import Haste.Showable(show_)
--- import Animator.Prelude
 import Animator.Internal.Prim
 
+import Haste.Showable(show_)
+import Data.Foldable
 
 main = do
     testUndefined
@@ -45,7 +41,7 @@ testReadShow = do
 testUndefined = do
     x <- object
     -- set x "foo" (123::Int)
-    u <- x %% "foo" :: IO Int
+    u <- x % "foo" :: IO Int
     printRepr $! u
 
 testFib = do
@@ -108,13 +104,13 @@ testLift = do
     g <- global
 
     as <- eval "([1,2,3])" :: IO JsArray
-    let f = liftp1 ((+ 10) ::Int -> Int)
+    let f = unsafeLift1 ((+ 10) ::Int -> Int)
     bs <- toObject as %. "map" $ f :: IO JsArray
     printRepr as
     printRepr bs
 
     cs <- eval "([5,5,6])" :: IO JsArray
-    let add = liftp2 ((+) :: Int -> Int -> Int)
+    let add = unsafeLift2 ((+) :: Int -> Int -> Int)
     ds <- (toObject cs %.. "reduce") add (0::Int) :: IO JsArray
     printRepr $! cs
     printRepr $! ds
@@ -143,8 +139,8 @@ testPrim = do
 testCall = do
     g <- global
     o <- eval "([1,2,3,4])"
-    foo <- g %% "foo"
-    console <- g %% "console" :: IO JsObject
+    foo <- g % "foo"
+    console <- g % "console" :: IO JsObject
     printRepr $ foo
     res <- call1 foo (o::JsObject)
     printRepr $ (res::JsObject)
@@ -162,10 +158,10 @@ query :: JsString -> IO Query
 query = call1 $ unsafeLookup ["jQuery"]
 
 fadeIn :: Query -> IO ()
-fadeIn x = toObject x % "fadeIn"
+fadeIn x = toObject x %% "fadeIn"
 
 fadeOut :: Query -> IO ()
-fadeOut x = toObject x % "fadeOut"
+fadeOut x = toObject x %% "fadeOut"
 
 fadeInSlow :: Query -> IO ()
 fadeInSlow x = toObject x %. "fadeIn" $ ("slow"::JsString)
