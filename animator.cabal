@@ -10,13 +10,12 @@ library
   build-depends: base, containers, semigroups, vector-space
   hs-source-dirs: src
   exposed-modules:
-    -- Foreign.JavaScript
+    Foreign.JavaScript
     -- Foreign.JavaScript.Types
+    -- Foreign.JavaScript.Object
     -- Foreign.JavaScript.Function
     -- Foreign.JavaScript.String
-    -- Foreign.JavaScript.Object
     -- Foreign.JavaScript.Array
-    -- Foreign.JavaScript.Array.Typed
     -- Foreign.JavaScript.JSON
     -- Foreign.JavaScript.Utility
     -- 
@@ -32,7 +31,7 @@ library
     -- Web.Network.Storage
     -- Web.Network.File
     -- 
-    Animator.Prelude
-    Animator.Internal.Prim
-
+    -- Animator.Prelude
+  other-modules:
+    
 

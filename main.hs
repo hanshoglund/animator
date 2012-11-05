@@ -6,8 +6,7 @@
 
 module Main where
 
-import Prelude hiding (null)
-import Animator.Internal.Prim
+import Foreign.JavaScript
 
 import Haste.Showable(show_)
 import Data.Foldable

@@ -80,8 +80,6 @@ module Animator.Prelude (
         -- * Host language
   ) where
     
-import Animator.Internal.Prim
-
 import Data.Eq
 import Data.Ord
 import Data.Semigroup
@@ -98,6 +96,8 @@ import Data.Maybe
 import Data.Either
 import Data.Word
 import Data.String
+
+import Foreign.JavaScript
 
 -- type Rat = Rational Int
 

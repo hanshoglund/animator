@@ -3,6 +3,8 @@
 
 - What about read/show/read_/show_?
 
+- Move Foreign.JavaScript to separate package
+
 - What about undefined?                                           
     - JS to HS
         - It would be elegant to have JS undefined map to HS undefined
