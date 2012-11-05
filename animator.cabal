@@ -19,9 +19,9 @@ library
     -- Foreign.JavaScript.JSON
     -- Foreign.JavaScript.Utility
     -- 
-    -- Web.JQuery
+    Web.JQuery
     -- Web.YUI
-    -- Web.Graphics.Processing
+    Web.Graphics.Processing
     -- Web.Graphics.Canvas
     -- Web.Graphics.WebGL
     -- Web.Media.Audio

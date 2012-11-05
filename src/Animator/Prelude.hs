@@ -9,9 +9,9 @@
 --
 -- License     : BSD-style
 --
--- Maintainer  : hans@hanshoglunds.se
+-- Maintainer  : hans@hanshoglund.se
 -- Stability   : experimental
--- Portability : GHC
+-- Portability : Haste
 -- 
 -- This module is impicitly imported into every Animator program.           
 --

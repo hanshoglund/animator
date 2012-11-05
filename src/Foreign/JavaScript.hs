@@ -6,6 +6,15 @@
 -------------------------------------------------------------------------------------
 
 -- |
+-- Module      : Foreign.JavaScript
+-- Copyright   : (c) Hans Hoglund 2012
+--
+-- License     : BSD-style
+--
+-- Maintainer  : hans@hanshoglund.se
+-- Stability   : experimental
+-- Portability : Haste
+-- 
 -- This module modules provides a dynamic interface to JavaScript. It provides access to
 -- all native JavaScript types including strings, arrays, objects and functions which can
 -- be manipulated directly in Haskell. JavaScript bjects can be created and updated, 

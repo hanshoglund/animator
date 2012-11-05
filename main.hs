@@ -7,6 +7,7 @@
 module Main where
 
 import Foreign.JavaScript
+import Web.JQuery
 
 import Haste.Showable(show_)
 import Data.Foldable
@@ -152,6 +153,16 @@ testCall = do
 
 
 
+testJQuery = do
+    a <- query "#div1"
+    fadeIn a
+    fadeOut a
+    b <- query "#div2"
+    fadeInSlow b
+    c <- query "#div3"
+    fadeInDuring 2000 c
+
+
 
 with :: b -> a -> b
 with x _ = x
@@ -166,35 +177,4 @@ int = id
 str :: JsString -> JsString
 str = id
 
-
-
-
-data Query
-instance JsVal Query
-instance JsRef Query
-
-query :: JsString -> IO Query
-query = call1 $ unsafeGlobalLookup ["jQuery"]
-
-fadeIn :: Query -> IO ()
-fadeIn x = toObject x %% "fadeIn"
-
-fadeOut :: Query -> IO ()
-fadeOut x = toObject x %% "fadeOut"
-
-fadeInSlow :: Query -> IO ()
-fadeInSlow x = toObject x %. "fadeIn" $ str "slow"
-
-fadeInDuring :: Double -> Query -> IO ()
-fadeInDuring n x = toObject x %. "fadeIn" $ n
-
-
-testJQuery = do
-    a <- query "#div1"
-    fadeIn a
-    fadeOut a
-    b <- query "#div2"
-    fadeInSlow b
-    c <- query "#div3"
-    fadeInDuring 2000 c
 
