@@ -6,11 +6,32 @@ build-type: Simple
 author: Hans Hoglund
 synopsis: Interactive 2-D animation for the Web
 
-library                    
+library
   build-depends: base, containers, semigroups, vector-space
   hs-source-dirs: src
   exposed-modules:
-    Animator.Animation
+    -- Foreign.JavaScript
+    -- Foreign.JavaScript.Types
+    -- Foreign.JavaScript.Function
+    -- Foreign.JavaScript.String
+    -- Foreign.JavaScript.Object
+    -- Foreign.JavaScript.Array
+    -- Foreign.JavaScript.Array.Typed
+    -- Foreign.JavaScript.JSON
+    -- Foreign.JavaScript.Utility
+    -- 
+    -- Web.JQuery
+    -- Web.YUI
+    -- Web.Graphics.Processing
+    -- Web.Graphics.Canvas
+    -- Web.Graphics.WebGL
+    -- Web.Media.Audio
+    -- Web.Media.Video
+    -- Web.Control.Workers
+    -- Web.Network.Sockets
+    -- Web.Network.Storage
+    -- Web.Network.File
+    -- 
     Animator.Prelude
     Animator.Internal.Prim
 

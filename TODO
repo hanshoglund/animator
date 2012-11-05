@@ -1,4 +1,5 @@
 
+- Split Prim module
 
 - What about read/show/read_/show_?
 
@@ -8,14 +9,6 @@
         - The dynamic type checks can catch this, but we do not always want that
         - For return values, we could always use an extra primitive, i.e.
             function(x) { x===undefined ? T(die.bind(null,"undefined")) : null }
-
-- Haskell () represents a "safe" JsVal instance:
-    - Setting and sending it as an argument maps to setting to null
-    - Getting and receiving it always return (), even if JS actually returned something else
-        - This solves the problem of getting () where JS might want to say null, i.e. in 
-          functions without return statements.
-
-- Split Prim module
 
 - Js-aware collection types:
     Data.TypedArray

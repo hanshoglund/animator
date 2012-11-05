@@ -173,7 +173,6 @@ str = id
 data Query
 instance JsVal Query
 instance JsRef Query
-instance JsCall Query
 
 query :: JsString -> IO Query
 query = call1 $ unsafeGlobalLookup ["jQuery"]

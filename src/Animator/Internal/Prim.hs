@@ -359,6 +359,13 @@ undefinedType# = 5
 --
 -- There is no need to provide an implementations of the methods in 'JsVal' or its subclasses.
 --
+-- To simplify semantics, JavaScript's @undefined@ maps to Haskell's 'undefined', and is thus a member
+-- of any type. This means that reading an undefined property, calling a JavaScript method that returns
+-- @undefined@, or passing to few arguments when calling a Haskell callback from JavaScript results
+-- in a runtime error if the value is used (as do 'undefined' or 'error').
+--
+-- The only exception to this behaviour is the 'JsVal' instance for @()@, which always map to the unit
+-- value. This means that JavaScript functions returning @undefined@ can be imported as @IO ()@.
 --
 
 -- |
