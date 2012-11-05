@@ -53,6 +53,7 @@ post:		build
 	rm -f `find . -d -name "*.jsmod*"`
 	rm -f `find . -d -name "*.o*"`
 	rm -rf Animator
+	rm -rf Foreign
 
 optimize:
 	$(JSOPT) <$(MAIN).js >$(MAIN).jsopt && \
