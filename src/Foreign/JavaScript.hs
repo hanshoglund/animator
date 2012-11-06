@@ -311,6 +311,17 @@ fromPtr#      = undefined
 -- functions have the suffix /unsafe/.
 --
 
+-- $invokeApi
+-- 
+-- > ffi "A"           ==> unsafeLookupGlobal ["Object"]
+-- > ffi "global.a.b"  ==> unsafeLookupGlobal ["a.b"]
+-- > ffi "x.foo"       ==> x %   "foo"
+-- > ffi "x.foo()"     ==> x %%  "foo"
+-- > ffi "x.foo(a)"    ==> (x %.  "foo") a
+-- > ffi "x.foo(a,b)"  ==> (x %.. "foo") a b
+-- 
+
+
 -------------------------------------------------------------------------------------
 
 foreign import ccall "aPrimNull"   null#   :: Any#
