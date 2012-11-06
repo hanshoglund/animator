@@ -24,8 +24,29 @@
 
 -------------------------------------------------------------------------------------
 
-module Web.System.File -- (
--- )
+module Web.System.File (
+
+        -- ** Blobs
+        HasBlob(..),
+
+        Blob,
+        blobSize,
+        blobType,
+        sliceBlob,
+        close,
+        
+        -- ** Files
+        File,
+        name,
+        lastModified,
+        
+        -- ** File readers
+        FileReader,
+        UriScheme,
+        
+        -- ** Util
+        toNativeLineEndings
+)
 where   
     
 import Web.Data.Array
@@ -33,11 +54,20 @@ import Web.Data.Array
 import Prelude -- hiding (take, drop, filter, length)
 import Foreign.JavaScript -- hiding (take, drop, slice, length)
 
+class HasBlob a where
+    getBlob :: a -> Blob
+instance HasBlob File where
+    getBlob = undefined
+
 -- |
 -- Immutable binary data.
 data Blob
-sizeBlob :: Blob -> Size
-sizeBlob = undefined
+instance JsVal Blob
+instance JsRef Blob
+blobSize :: Blob -> Size
+blobSize = undefined
+blobType :: Blob -> JsString
+blobType = undefined
 sliceBlob :: Int -> Int -> Blob -> Blob
 sliceBlob = undefined
 close :: Blob -> IO ()
@@ -46,11 +76,17 @@ close = undefined
 -- |
 -- A file.
 data File
-
-
+instance JsVal File
+instance JsRef File
+name :: File -> JsString
+name = undefined
+lastModified :: File -> JsDate
+lastModified = undefined
 
 data FileReader
-type FileList = [File]
+instance JsVal FileReader
+instance JsRef FileReader
+
 data UriScheme
 
 toNativeLineEndings :: JsString -> JsString

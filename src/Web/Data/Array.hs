@@ -61,6 +61,8 @@ type Offset = Int
 type Size = Int
 
 data Buffer
+instance JsVal Buffer
+instance JsRef Buffer
 
 slice :: Offset -> Buffer -> IO Buffer
 slice = undefined
@@ -70,8 +72,8 @@ slice' = undefined
 
 
 class HasView a where
-    view :: Buffer -> Offset -> Size -> BufferView a
-    view = undefined
+    getView :: Buffer -> Offset -> Size -> BufferView a
+    getView = undefined
 instance HasView Int8
 instance HasView Int16
 instance HasView Int32
@@ -82,6 +84,8 @@ instance HasView Float
 instance HasView Double
 
 data BufferView a
+instance HasView a => JsVal (BufferView a)
+instance HasView a => JsRef (BufferView a)
 buffer     :: HasView a => BufferView a -> Buffer
 buffer = undefined
 byteOffset :: HasView a => BufferView a -> Offset
