@@ -95,17 +95,22 @@ length = undefined
 
 take :: Int -> Query -> Query
 take = undefined
+
 drop :: Int -> Query -> Query
 drop = undefined
+
 slice :: Int -> Int -> Query -> Query
 slice = undefined
 
 children :: JsString -> Query -> Query
 children = undefined
+
 closest :: JsString -> Query -> Query
 closest = undefined
+
 filter :: (Element -> Bool) -> Query -> Query
 filter = undefined
+
 -- contents :: Query -> [?]
 -- children :: Query -> [?]
 

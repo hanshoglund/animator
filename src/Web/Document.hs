@@ -6,7 +6,7 @@
 -------------------------------------------------------------------------------------
 
 -- |
--- Module      : Web.FooBar
+-- Module      : Web.Document
 -- Copyright   : (c) Hans Hoglund 2012
 --
 -- License     : BSD-style
@@ -15,12 +15,14 @@
 -- Stability   : experimental
 -- Portability : Haste
 --
--- Bindings for FooBar.
+-- Bindings for Document Object Model (DOM).
+--
+-- * <http://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407>
 --
 
 -------------------------------------------------------------------------------------
 
-module Web.FooBar -- (
+module Web.Document -- (
 -- )
 where
 

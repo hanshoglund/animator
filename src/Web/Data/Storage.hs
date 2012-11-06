@@ -6,7 +6,7 @@
 -------------------------------------------------------------------------------------
 
 -- |
--- Module      : Web.FooBar
+-- Module      : Web.Data.Storage
 -- Copyright   : (c) Hans Hoglund 2012
 --
 -- License     : BSD-style
@@ -15,12 +15,16 @@
 -- Stability   : experimental
 -- Portability : Haste
 --
--- Bindings for FooBar.
+-- Bindings for Web Storage.
+--
+-- * <http://caniuse.com/#search=storage>
+--
+-- * <http://www.w3.org/TR/webstorage>
 --
 
 -------------------------------------------------------------------------------------
 
-module Web.FooBar -- (
+module Web.Data.Storage -- (
 -- )
 where
 

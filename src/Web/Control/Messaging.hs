@@ -6,7 +6,7 @@
 -------------------------------------------------------------------------------------
 
 -- |
--- Module      : Web.FooBar
+-- Module      : Web.Control.Messaging
 -- Copyright   : (c) Hans Hoglund 2012
 --
 -- License     : BSD-style
@@ -15,12 +15,16 @@
 -- Stability   : experimental
 -- Portability : Haste
 --
--- Bindings for FooBar.
+-- Bindings for Web Messaging.
+--
+-- * <http://caniuse.com/#search=messaging>
+--
+-- * <http://www.whatwg.org/specs/web-apps/current-work/multipage/comms.html>
 --
 
 -------------------------------------------------------------------------------------
 
-module Web.FooBar -- (
+module Web.Control.Messaging -- (
 -- )
 where
 

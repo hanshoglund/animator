@@ -18,19 +18,27 @@ library
     -- Foreign.JavaScript.Array
     -- Foreign.JavaScript.JSON
     -- Foreign.JavaScript.Utility
-    -- 
+
     Web.JQuery
     -- Web.YUI
+    Web.Document
+
     Web.Graphics.Processing
+    -- Web.Graphics.Paper
     -- Web.Graphics.Canvas
     -- Web.Graphics.WebGL
     -- Web.Media.Audio
     -- Web.Media.Video
-    -- Web.Control.Workers
+
+    Web.Data.Array
+    Web.Data.Storage
+
+    Web.Control.Workers
+    Web.Control.Messaging
     -- Web.Network.Sockets
-    -- Web.Network.Storage
-    -- Web.Network.File
-    -- 
+
+
+
     -- Animator.Prelude
   other-modules:
     

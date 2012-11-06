@@ -6,7 +6,7 @@
 -------------------------------------------------------------------------------------
 
 -- |
--- Module      : Web.FooBar
+-- Module      : Web.Control.Workers
 -- Copyright   : (c) Hans Hoglund 2012
 --
 -- License     : BSD-style
@@ -15,12 +15,16 @@
 -- Stability   : experimental
 -- Portability : Haste
 --
--- Bindings for FooBar.
+-- Bindings for Web Workers.
+--
+-- * <http://caniuse.com/#search=workers>
+--
+-- * <http://www.whatwg.org/specs/web-workers/current-work>
 --
 
 -------------------------------------------------------------------------------------
 
-module Web.FooBar -- (
+module Web.Control.Workers -- (
 -- )
 where
 
