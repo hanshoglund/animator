@@ -457,8 +457,12 @@ instance JsVal JsString where
 instance JsVal JsObject where
     typeId# _   = objectType#
 
--- | Represented by @number@ values whose prototype chain include @Array.prototype@.
+-- | Represented by @object@ values whose prototype chain include @Array.prototype@.
 instance JsVal JsArray where
+    typeId# _   = objectType#
+
+-- | Represented by @object@ values whose prototype chain include @Date.prototype@.
+instance JsVal JsDate where
     typeId# _   = objectType#
 
 -- | Represented by @function@ values whose prototype chain include @Function.prototype@.
@@ -478,10 +482,11 @@ class JsVal a => JsRef a where
     toObject = unsafeCoerce
 
 instance JsRef () where -- TODO wrong?
+instance JsRef JsString where
 instance JsRef JsObject where
 instance JsRef JsArray where
+instance JsRef JsDate where
 instance JsRef JsFunction where
-instance JsRef JsString where
 
 -- |
 -- Class of JavaScript sequence types.
