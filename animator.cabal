@@ -32,10 +32,10 @@ library
 
     Web.Data.Array
     Web.Data.Storage
-
+    Web.System.File
     Web.Control.Workers
-    Web.Control.Messaging
-    -- Web.Network.Sockets
+    Web.Network.Messaging
+    Web.Network.Socket
 
 
 

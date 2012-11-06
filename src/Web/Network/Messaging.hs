@@ -24,7 +24,7 @@
 
 -------------------------------------------------------------------------------------
 
-module Web.Control.Messaging -- (
+module Web.Network.Messaging -- (
 -- )
 where
 

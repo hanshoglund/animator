@@ -28,22 +28,22 @@ module Web.Data.Array (
 
         -- ** Buffers
         Offset,
-        Length,
+        Size,
         Buffer,
         slice,
         slice',
 
         -- ** Views
         HasView(..),
-        Array,
+        BufferView,
         buffer,
         byteOffset,
-        byteLength,
+        byteSize,
         size,
         length,
         get,
         set,
-        subArray
+        subView
 )
 where
 
@@ -52,20 +52,25 @@ import Data.Int
 import Data.Word
 import Foreign.JavaScript hiding (set, get, take, drop, slice, length)
 
+-- |
+-- Offset into a buffer in bytes.
 type Offset = Int
-type Length = Int
+
+-- |
+-- Size of a buffer. Either refers to a raw size in bytes or an element count.
+type Size = Int
 
 data Buffer
 
 slice :: Offset -> Buffer -> IO Buffer
 slice = undefined
-slice' :: Offset -> Length -> Buffer -> IO Buffer
+slice' :: Offset -> Size -> Buffer -> IO Buffer
 slice' = undefined
 
 
 
 class HasView a where
-    view :: Buffer -> Offset -> Length -> Array a
+    view :: Buffer -> Offset -> Size -> BufferView a
     view = undefined
 instance HasView Int8
 instance HasView Int16
@@ -76,24 +81,24 @@ instance HasView Word32
 instance HasView Float
 instance HasView Double
 
-data Array a
-buffer     :: HasView a => Array a -> Buffer
+data BufferView a
+buffer     :: HasView a => BufferView a -> Buffer
 buffer = undefined
-byteOffset :: HasView a => Array a -> Offset
+byteOffset :: HasView a => BufferView a -> Offset
 byteOffset = undefined
-byteLength :: HasView a => Array a -> Length
-byteLength = undefined
-size       :: Array a -> Length
+byteSize :: HasView a => BufferView a -> Size
+byteSize = undefined
+size       :: BufferView a -> Size
 size = undefined
-length     :: Array a -> Length
+length     :: BufferView a -> Size
 length = undefined
 
-get :: Array a -> IO a
+get :: BufferView a -> IO a
 get = undefined
-set :: a -> Array a -> IO ()
+set :: a -> BufferView a -> IO ()
 set = undefined
 
-subArray :: Offset -> Length -> Array a -> Array a
-subArray = undefined
+subView :: Offset -> Size -> BufferView a -> BufferView a
+subView = undefined
 
 
