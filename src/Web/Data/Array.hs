@@ -3,6 +3,8 @@
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
     NoMonomorphismRestriction, EmptyDataDecls #-}
 
+{-# LANGUAGE FlexibleInstances #-}
+
 -------------------------------------------------------------------------------------
 
 -- |
@@ -26,50 +28,82 @@
 
 module Web.Data.Array (
 
-        -- ** Buffers
+        -- ** Size types
         Offset,
         Size,
+        Index,
+        Length,
+
+        -- ** Buffers
         Buffer,
         slice,
-        slice',
 
-        -- ** Views
+        -- ** Typed arrays/Views
         HasView(..),
+        Clamped(..),
         BufferView,
+
+        -- *** Properties
         buffer,
-        byteOffset,
-        byteSize,
+        offset,
         size,
         length,
+        
+        -- *** Single element read/write
         get,
         set,
-        subView
+
+        -- *** Contigous read/write
+        setRange,
+        getRange,
 )
 where
 
 import Prelude hiding (take, drop, filter, length)
 import Data.Int
 import Data.Word
+
 import Foreign.JavaScript hiding (set, get, take, drop, slice, length)
 
+import qualified Prelude as P
+import qualified Foreign.JavaScript as JS
+
+-------------------------------------------------------------------------------------
+-- Buffers
+-------------------------------------------------------------------------------------
+
 -- |
--- Offset into a buffer in bytes.
+-- Offset in bytes.
 type Offset = Int
 
 -- |
--- Size of a buffer. Either refers to a raw size in bytes or an element count.
+-- Raw size in bytes.
 type Size = Int
+
+-- |
+-- Index of element.
+type Index = Int
+
+-- |
+-- Number of elements.
+type Length = Int
 
 data Buffer
 instance JsVal Buffer
 instance JsRef Buffer
 
-slice :: Offset -> Buffer -> IO Buffer
+create :: Size -> IO Buffer
+create = undefined
+-- create s = unsafeLookupGlobal ["ArrayBuffer"] `new` [s]
+
+slice :: Offset -> Size -> Buffer -> IO Buffer
 slice = undefined
-slice' :: Offset -> Size -> Buffer -> IO Buffer
-slice' = undefined
 
 
+
+-------------------------------------------------------------------------------------
+-- Typed arrays/views
+-------------------------------------------------------------------------------------
 
 class HasView a where
     getView :: Buffer -> Offset -> Size -> BufferView a
@@ -83,26 +117,37 @@ instance HasView Word32
 instance HasView Float
 instance HasView Double
 
+newtype Clamped a = Clamped { getClamped :: a }
+instance HasView (Clamped Word8)
+
 data BufferView a
 instance HasView a => JsVal (BufferView a)
 instance HasView a => JsRef (BufferView a)
-buffer     :: HasView a => BufferView a -> Buffer
+
+buffer :: HasView a => BufferView a -> Buffer
 buffer = undefined
-byteOffset :: HasView a => BufferView a -> Offset
-byteOffset = undefined
-byteSize :: HasView a => BufferView a -> Size
-byteSize = undefined
-size       :: BufferView a -> Size
+
+offset :: HasView a => BufferView a -> Offset
+offset = undefined
+
+-- | Number of bytes
+size :: HasView a => BufferView a -> Size
 size = undefined
-length     :: BufferView a -> Size
-length = undefined
 
-get :: BufferView a -> IO a
-get = undefined
-set :: a -> BufferView a -> IO ()
-set = undefined
+-- | Number of elements
+length :: HasView a => BufferView a -> Size
+length x = toObject x !% "lenght"
 
-subView :: Offset -> Size -> BufferView a -> BufferView a
-subView = undefined
+get :: HasView a => BufferView a -> Index -> IO a
+get x j = undefined
+
+set :: a -> HasView a => BufferView a -> Index -> a -> IO ()
+set x j = undefined
+
+setRange :: a -> HasView a => BufferView a -> Index -> BufferView a -> IO ()
+setRange x j y = undefined
+
+getRange :: HasView a => Index -> Int -> BufferView a -> BufferView a
+getRange x i j = undefined
 
 
