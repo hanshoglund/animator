@@ -19,7 +19,7 @@ CLOSURE		= googleclosure
 BROWSER  	= Google Chrome
 
 # FLAGS  	    	= -DENABLE_TYPE_CHECKS=1
-MAIN	 	= main
+MAIN	 	= sketch
 
 PAPERJS_URL	= http://paperjs.org/downloads/paperjs-nightly.zip
 PROCESSING_URL	= http://cloud.github.com/downloads/processing-js/processing-js/processing-1.4.1-api.min.js

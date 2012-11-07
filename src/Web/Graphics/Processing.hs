@@ -36,6 +36,10 @@ instance JsVal Processing
 instance JsRef Processing
 
 
+println :: Processing -> JsString -> IO () 
+println p s = (toObject p %. "println") s
+
+
 
 
 size :: Processing -> Double -> Double -> IO ()
