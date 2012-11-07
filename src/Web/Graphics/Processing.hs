@@ -69,6 +69,8 @@ liftIO f = S (\_ -> f)
 
 
 
+
+
 data Processing
 instance JsVal Processing
 instance JsRef Processing
@@ -105,14 +107,54 @@ ellipse p x y w h = (toObject p %.... "ellipse") x y w h
 
 
 -- --------------------------------------------------------------------------------
--- Shapes
+-- Affine transformations
 -- --------------------------------------------------------------------------------
 
+translate :: Processing -> Double -> Double -> IO ()
+translate p x y = (toObject p %.. "translate") x y
+
+rotate :: Processing -> Double -> IO ()
+rotate p x = (toObject p %. "rotate") x
+
+scale :: Processing -> Double -> IO ()
+scale p x = (toObject p %. "scale") x
+
+-- reflect, shear, squeeze?
 
 
+-- --------------------------------------------------------------------------------
+-- Style and color
+-- --------------------------------------------------------------------------------
 
 size :: Processing -> Double -> Double -> IO ()
 size p x y = (toObject p %.. "size") x y
+
+data Color = Color Double Double Double Double
+red         = Color 1.00 0.00 0.00 1
+green       = Color 0.00 1.00 0.00 1
+blue        = Color 0.00 0.00 1.00 1
+black       = Color 0.00 0.00 0.00 1
+white       = Color 0.00 0.00 0.00 1
+transparent = Color 0.00 0.00 0.00 0
+
+alpha :: Double -> Color
+alpha x = Color 0 0 0 x
+
+withOpacity :: Color -> Double -> Color 
+withOpacity (Color r g b a) x = Color r g b x
+
+atop :: Color -> Color -> Color
+atop (Color r1 g1 b1 a1) (Color r2 g2 b2 a2) = Color rx gx bx ax
+    where 
+        ax = 1 - (1 - a1) * (1 - a2)
+        rx = r1 * a1 / ax + r2 * a2 * (1 - a1) / ax
+        gx = g1 * a1 / ax + g2 * a2 * (1 - a1) / ax
+        bx = b1 * a1 / ax + b2 * a2 * (1 - a1) / ax
+
+-- internal
+convertColor :: Color -> (Double, Double, Double, Double)
+convertColor (Color r g b a) = (r*256, g*256, b*256, a*256)
+
 
 background :: Processing -> Color -> IO ()
 background p c = (toObject p %.... "background") r g b a
@@ -121,6 +163,14 @@ background p c = (toObject p %.... "background") r g b a
 fill :: Processing -> Color -> IO ()
 fill p c = (toObject p %.... "fill") r g b a
     where (r,g,b,a) = convertColor c
+
+stroke :: Processing -> Color -> IO ()
+stroke p c = (toObject p %.... "stroke") r g b a
+    where (r,g,b,a) = convertColor c
+
+-- --------------------------------------------------------------------------------
+-- Events
+-- --------------------------------------------------------------------------------
 
 setMouseClicked :: Processing -> (Processing -> IO ()) -> IO ()
 setMouseClicked p f = set (toObject p) "mouseClicked" (lift $ f p)
@@ -131,9 +181,12 @@ setMouseMoved p f = set (toObject p) "mouseMoved" (lift $ f p)
 setDraw :: Processing -> (Processing -> IO ()) -> IO ()
 setDraw p f = set (toObject p) "draw" (lift $ f p)
 
+-- --------------------------------------------------------------------------------
+-- Misc
+-- --------------------------------------------------------------------------------
+
 println :: Processing -> JsString -> IO () 
 println p s = (toObject p %. "println") s
-
 
 runProcessing :: (Processing -> IO ()) -> JsString -> IO ()
 runProcessing f n = do
@@ -144,24 +197,13 @@ runProcessing f n = do
     where
         mkProcessing = new2 $ unsafeGlobalLookup ["Processing"]
 
+-- --------------------------------------------------------------------------------
+-- Math
+-- --------------------------------------------------------------------------------
+
+tau = pi * 2
 
 
 
 
 
-data Color = Color Double Double Double Double
-red   = Color 1 0 0 1
-green = Color 0 1 0 1
-blue  = Color 0 0 1 1
-
-convertColor :: Color -> (Double, Double, Double, Double)
-convertColor (Color r g b a) = (r*256, g*256, b*256, a*256)
-
--- convertColor :: AlphaColour Double -> (Double, Double, Double, Double)
--- convertColor c = (r,g,b,a)
---     where
---         rgb = toSRGB (c `over` black)
---         r   = channelRed rgb
---         g   = channelGreen rgb
---         b   = channelBlue rgb
---         a   = alphaChannel c
