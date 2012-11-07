@@ -54,6 +54,7 @@ post:		build
 	rm -f `find . -d -name "*.o*"`
 	rm -rf Animator
 	rm -rf Foreign
+	rm -rf Web
 
 optimize:
 	$(JSOPT) <$(MAIN).js >$(MAIN).jsopt && \
