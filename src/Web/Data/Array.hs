@@ -3,7 +3,7 @@
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
     NoMonomorphismRestriction, EmptyDataDecls #-}
 
-{-# LANGUAGE FlexibleInstances #-}
+-- {-# LANGUAGE FlexibleInstances #-}
 
 -------------------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ module Web.Data.Array (
 
         -- ** Typed arrays/Views
         HasView(..),
-        Clamped(..),
+        -- Clamped(..),
         BufferView,
 
         -- *** Properties
@@ -96,7 +96,7 @@ create :: Size -> IO Buffer
 create = undefined
 -- create s = unsafeLookupGlobal ["ArrayBuffer"] `new` [s]
 
-slice :: Offset -> Size -> Buffer -> IO Buffer
+slice :: Offset -> Offset -> Buffer -> IO Buffer
 slice = undefined
 
 
@@ -117,8 +117,8 @@ instance HasView Word32
 instance HasView Float
 instance HasView Double
 
-newtype Clamped a = Clamped { getClamped :: a }
-instance HasView (Clamped Word8)
+-- newtype Clamped a = Clamped { getClamped :: a }
+-- instance HasView (Clamped Word8)
 
 data BufferView a
 instance HasView a => JsVal (BufferView a)
