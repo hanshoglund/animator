@@ -44,3 +44,6 @@ instance JsRef Element
 
 getElementById :: Document -> JsString -> IO Element
 getElementById x = toObject x %. "getElementById"
+
+requestFullScreen :: Element -> IO ()
+requestFullScreen x = toObject x % "requestFullScreen"

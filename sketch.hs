@@ -14,7 +14,7 @@ main = do
     where
         handler p = do
             printRepr $! p
-            size p 400 400
+            size p 800 600
             background p red
 
             fill p blue
