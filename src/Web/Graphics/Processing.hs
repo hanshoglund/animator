@@ -55,25 +55,59 @@ liftIO f = S (\_ -> f)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 data Processing
 instance JsVal Processing
 instance JsRef Processing
 
 
--- runSignals :: (Signal a, Sink a) -> Processing -> IO ()
--- runSignals = undefined
+-- --------------------------------------------------------------------------------
+-- Shapes
+-- --------------------------------------------------------------------------------
+
+point :: Processing -> Double -> Double -> IO ()
+point p x y = (toObject p %.. "point") x y 
+
+line :: Processing -> Double -> Double -> Double -> Double -> IO ()
+line p x1 y1 x2 y2 = (toObject p %.... "line") x1 y1 x2 y2
+
+square :: Processing -> Double -> Double -> IO ()
+square p x y = (toObject p %.... "rect") x y (1::Double) (1::Double)
+
+circle :: Processing -> Double -> Double -> IO ()
+circle p x y = (toObject p %.... "ellipse") x y (1::Double) (1::Double)
+
+rect :: Processing -> Double -> Double -> Double -> Double -> IO ()
+rect p x y w h = (toObject p %.... "rect") x y w h
 
 ellipse :: Processing -> Double -> Double -> Double -> Double -> IO ()
 ellipse p x y w h = (toObject p %.... "ellipse") x y w h
 
-line2D :: Processing -> Double -> Double -> Double -> Double -> IO ()
-line2D p x1 y1 x2 y2 = (toObject p %.... "line") x1 y1 x2 y2
+-- arc
+-- quad
+-- triangle
+-- curve
+-- vertex
+-- 3D
 
-point2D :: Processing -> Double -> Double -> IO ()
-point2D p x y = (toObject p %.. "point") x y 
 
-rect :: Processing -> Double -> Double -> Double -> Double -> IO ()
-rect p x y w h = (toObject p %.... "rect") x y w h
+-- --------------------------------------------------------------------------------
+-- Shapes
+-- --------------------------------------------------------------------------------
+
 
 
 
