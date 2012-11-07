@@ -35,7 +35,7 @@ import Foreign.JavaScript hiding (join)
 
 -- TODO make variable
 kSize = 600
-kFrameRate = 18
+kFrameRate = 15
 
 newtype S a = S { getS :: Processing -> IO a }
 instance Functor S where
@@ -99,11 +99,23 @@ scaleL x (Anim d) = Anim $ liftA2 (\x d g -> scale g x >> d g) x d
 -- scaleXY :: S Double -> S Double -> Animation -> Animation
 -- scaleX :: S Double -> Animation -> Animation
 -- scaleY :: S Double -> Animation -> Animation
+
 -- mirrorX :: Animation -> Animation
 -- mirrorY :: Animation -> Animation
 
+fillA :: S Color -> Animation -> Animation
+fillA x (Animation ls) = Animation $ fmap (fillL x) ls
+
+fillL :: S Color -> Layer -> Layer
+fillL x (Still d) = fillL x (animL $ Still d)
+fillL x (Anim d) = Anim $ liftA2 (\x d g -> fill g x >> d g) x d
+
 -- fillA :: Color -> Animation -> Animation
 -- strokeA :: Color -> Animation -> Animation
+
+
+
+
 
 
 
@@ -323,6 +335,11 @@ withGraphics p x y f = do
     f g
     toObject g %% "endDraw" :: IO ()
     image p g
+
+runAnimation :: Animation -> JsString -> IO ()
+runAnimation anim canvas = runProcessing h canvas
+    where
+        h p = setDraw p (flip renderAnimation $ anim)
 
 runProcessing :: (Processing -> IO ()) -> JsString -> IO ()
 runProcessing f n = do

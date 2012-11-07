@@ -11,70 +11,16 @@ import Control.Applicative
 import Foreign.JavaScript
 import Web.Graphics.Processing
 
-main = do
-    runProcessing handler "main-canvas"
-    where                                  
-        -- foo g = do            
-        --      stroke g transparent
-        --      fill g $ blue `withOpacity` 0.2
-        --      scale g 0.9
-        --      rect g (-1/2) (-1/2) 1 1
-        -- 
-        -- 
-        --  bar g = do            
-        --      stroke g transparent
-        --      fill g $ red `withOpacity` 0.2                        
-        --      scale g 0.8
-        --      rect g (-1/2) (-1/2) 1 1
-        --  
-        --  baz g = do
-        --      stroke g transparent
-        --      fill g $ red `withOpacity` 0.2
-        --      translate g 0.2 (0.3)
-        --      scaleX g 0.3
-        --      scaleY g 0.1
-        --      circle g
-             
-        handler p = do          
-            let a = scaleA (fmap (/600) timeS) circleA
-            let b = scaleA (fmap ((/600) . fst) mouseS) circleA
+a = fillA (pure $ red `withOpacity` 0.2) 
+    . scaleA (fmap sin . fmap (*tau) . fmap (*13) 
+    . fmap (/600) $ timeS) 
+    $ circleA
+
+b = fillA (pure $ blue `withOpacity` 0.2) 
+    . scaleA (fmap ((/600) . fst) mouseS) 
+    $ circleA
+
+c = b <> a
 
 
-            setDraw p (flip renderAnimation $ a <> b)
-            return ()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-with :: b -> a -> b
-with x _ = x
-
-fix :: a -> (a -> b) -> a
-fix x _ = x
-fix1 :: (a -> b) -> (a -> a) -> a -> b
-fix1 x _ = x
-
-int :: Int -> Int
-int = id
-str :: JsString -> JsString
-str = id
-
-
+main = runAnimation c "main-canvas"
