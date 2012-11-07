@@ -170,25 +170,35 @@ function aPrimDelete(type, obj, name, _) {
     return [1, _];
 }
 
+function aPrimNew0(F, _) {
+    return [1, _,
+        new F()
+    ];
+}
+function aPrimNew1(F, a, _) {
+    return [1, _,
+        new F(a)
+    ];
+}
+function aPrimNew2(F, a, b, _) {
+    return [1, _,
+        new F(a, b)
+    ];
+}
+
 function aPrimCall0(f, t, _) {
-    // aPrimTypeCheck(t,aPrimTypes.o);
     return [1, _,
         // f()
         f.call(t)
     ];
 }
 function aPrimCall1(f, t, a, _) {
-    // aPrimTypeCheck(t,aPrimTypes.o);
-    // aPrimTypeCheck(a,?);
     return [1, _,
         // f(a)
         f.call(t, a)
     ];
 }
 function aPrimCall2(f, t, a, b, _) {
-    // aPrimTypeCheck(t,aPrimTypes.o);
-    // aPrimTypeCheck(a,?);
-    // aPrimTypeCheck(b,?);
     return [1, _,
         // f(a, y)
         f.call(t, a, b)
