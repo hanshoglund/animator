@@ -28,8 +28,6 @@ import Prelude hiding (lookup)
 import Data.Semigroup
 import Control.Applicative
 import Control.Monad (join, ap)
-import Data.Colour
-import Data.Colour.SRGB
 
 import Web.Document
 import Unsafe.Coerce
@@ -56,14 +54,55 @@ runS (S f) p = f p
 liftIO :: IO a -> S a
 liftIO f = S (\_ -> f)            
 
+
+
 mouseS :: S (Double, Double)
 mouseS = S mouse
 
 timeS :: S Double
 timeS = S frame
 
+newtype Animation = Animation { getAnimation :: [Layer] }
+data Layer 
+    = Still DrawInstr
+    | Anim  (S DrawInstr)
+anim :: Animation -> Animation
+anim = Animation . map animL . getAnimation
+animL :: Layer -> Layer
+animL (Still d) = Anim (pure d)
+
+instance Semigroup Animation where
+    (Animation a) <> (Animation b) = Animation (a <> b)
+instance Monoid Animation where
+    mempty  = Animation []
+    mappend = (<>)
 
 
+squareA :: Animation
+squareA = Animation [Still square]
+
+circleA :: Animation
+circleA = Animation [Still circle]
+
+-- translateA :: S Double -> S Double -> Animation -> Animation
+-- rotate :: S Double -> Animation -> Animation
+
+scaleA :: S Double -> Animation -> Animation
+scaleA x (Animation ls) = Animation $ fmap (scaleL x) ls
+
+scaleL :: S Double -> Layer -> Layer
+scaleL x (Still d) = scaleL x (animL $ Still d)
+scaleL x (Anim d) = Anim $ liftA2 (\x d g -> scale g x >> d g) x d
+
+
+-- scaleXY :: S Double -> S Double -> Animation -> Animation
+-- scaleX :: S Double -> Animation -> Animation
+-- scaleY :: S Double -> Animation -> Animation
+-- mirrorX :: Animation -> Animation
+-- mirrorY :: Animation -> Animation
+
+-- fillA :: Color -> Animation -> Animation
+-- strokeA :: Color -> Animation -> Animation
 
 
 
@@ -83,6 +122,8 @@ type DrawInstr = Graphics -> IO ()
 -- TODO also flip Y
 renderDrawInstr :: Double -> DrawInstr -> DrawInstr
 renderDrawInstr x draw g = do
+    stroke g transparent
+    fill g red
     translate g (x/2) (x/2)
     scale g x
     mirrorY g
@@ -91,19 +132,19 @@ renderDrawInstr x draw g = do
 -- Render at a point in time
 -- TODO optimize
 renderAnimation :: Processing -> Animation -> IO ()
-renderAnimation p ls = mapM (renderLayer p) ls >> return ()
+renderAnimation p (Animation ls) = do
+    background p white
+    size p kSize kSize
+    mapM (renderLayer p) ls
+    return ()
 
 renderLayer :: Processing -> Layer -> IO ()
 renderLayer p (Still d) = do
     withGraphics p kSize kSize $ renderDrawInstr kSize d
+
 renderLayer p (Anim ds) = do                              
     d <- runS ds p
     withGraphics p kSize kSize $ renderDrawInstr kSize d
-
-type Animation = [Layer]
-data Layer 
-    = Still DrawInstr
-    | Anim  (S DrawInstr)
 
 
 -- --------------------------------------------------------------------------------
@@ -201,7 +242,7 @@ red         = Color 1.00 0.00 0.00 1
 green       = Color 0.00 1.00 0.00 1
 blue        = Color 0.00 0.00 1.00 1
 black       = Color 0.00 0.00 0.00 1
-white       = Color 0.00 0.00 0.00 1
+white       = Color 1.00 1.00 1.00 1
 transparent = Color 0.00 0.00 0.00 0
 
 alpha :: Double -> Color

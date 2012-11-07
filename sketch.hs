@@ -6,37 +6,38 @@
 
 module Main where
 
+import Data.Semigroup
+import Control.Applicative
 import Foreign.JavaScript
 import Web.Graphics.Processing
 
 main = do
     runProcessing handler "main-canvas"
     where                                  
-        foo g = do            
-            stroke g transparent
-            fill g $ blue `withOpacity` 0.2
-            scale g 0.9
-            rect g (-1/2) (-1/2) 1 1
-
-
-        bar g = do            
-            stroke g transparent
-            fill g $ red `withOpacity` 0.2                        
-            scale g 0.8
-            rect g (-1/2) (-1/2) 1 1
-        
-        baz g = do
-            stroke g transparent
-            fill g $ red `withOpacity` 0.2
-            translate g 0.2 (0.3)
-            scaleX g 0.3
-            scaleY g 0.1
-            circle g
-            
-        handler p = do
-            size p 600 600 
-            let an = [Still foo, Still bar, Still baz]
-            renderAnimation p an
+        -- foo g = do            
+        --      stroke g transparent
+        --      fill g $ blue `withOpacity` 0.2
+        --      scale g 0.9
+        --      rect g (-1/2) (-1/2) 1 1
+        -- 
+        -- 
+        --  bar g = do            
+        --      stroke g transparent
+        --      fill g $ red `withOpacity` 0.2                        
+        --      scale g 0.8
+        --      rect g (-1/2) (-1/2) 1 1
+        --  
+        --  baz g = do
+        --      stroke g transparent
+        --      fill g $ red `withOpacity` 0.2
+        --      translate g 0.2 (0.3)
+        --      scaleX g 0.3
+        --      scaleY g 0.1
+        --      circle g
+             
+        handler p = do          
+            let a = scaleA (pure 0.5) circleA
+            setDraw p (flip renderAnimation $ a)
             return ()
 
 
