@@ -25,10 +25,33 @@ module Web.Graphics.Processing -- (
 where
 
 import Prelude hiding (lookup)
+import Control.Applicative
+import Control.Monad (join, ap)
 import Data.Colour
 import Data.Colour.SRGB
+
 import Web.Document
-import Foreign.JavaScript -- hiding (take, drop, slice, length)
+import Foreign.JavaScript hiding (join)
+
+
+newtype S a = S { getS :: Processing -> IO a }
+instance Functor S where
+    fmap f (S s) = S (fmap f . s)
+instance Applicative S where
+    pure  = return
+    (<*>) = ap
+instance Monad S where             
+    return      = S . const . return
+    s >>= f = join_ $ fmap f s
+        where
+            join_ :: S (S a) -> S a
+            join_ (S f) = S (\p -> fap p . getS =<< f p)
+            fap x f = f x
+
+liftIO :: IO a -> S a
+liftIO f = S (\_ -> f)            
+
+
 
 
 
@@ -37,11 +60,6 @@ import Foreign.JavaScript -- hiding (take, drop, slice, length)
 data Processing
 instance JsVal Processing
 instance JsRef Processing
-
-
-
-
-
 
 
 -- runSignals :: (Signal a, Sink a) -> Processing -> IO ()
@@ -72,14 +90,14 @@ fill :: Processing -> Color -> IO ()
 fill p c = (toObject p %.... "fill") r g b a
     where (r,g,b,a) = convertColor c
 
-setMouseClicked :: Processing -> IO () -> IO ()
-setMouseClicked p f = set (toObject p) "mouseClicked" (lift f)
+setMouseClicked :: Processing -> (Processing -> IO ()) -> IO ()
+setMouseClicked p f = set (toObject p) "mouseClicked" (lift $ f p)
 
-setMouseMoved :: Processing -> IO () -> IO ()
-setMouseMoved p f = set (toObject p) "mouseMoved" (lift f)
+setMouseMoved :: Processing -> (Processing -> IO ()) -> IO ()
+setMouseMoved p f = set (toObject p) "mouseMoved" (lift $ f p)
 
-setDraw :: Processing -> IO () -> IO ()
-setDraw p f = set (toObject p) "draw" (lift f)
+setDraw :: Processing -> (Processing -> IO ()) -> IO ()
+setDraw p f = set (toObject p) "draw" (lift $ f p)
 
 println :: Processing -> JsString -> IO () 
 println p s = (toObject p %. "println") s
