@@ -25,6 +25,7 @@ module Web.Graphics.Processing -- (
 where
 
 import Prelude hiding (lookup)
+import Data.Semigroup
 import Control.Applicative
 import Control.Monad (join, ap)
 import Data.Colour
@@ -51,7 +52,20 @@ liftIO :: IO a -> S a
 liftIO f = S (\_ -> f)            
 
 
+-- | Instructions to draw an image at size (1,1) with origin at (0,0)
+type DrawInstr = Graphics -> IO ()          
 
+-- TODO also flip Y
+renderDrawInstr :: Double -> DrawInstr -> DrawInstr
+renderDrawInstr x draw g = do
+    translate g (x/2) (x/2)
+    scale g x
+    mirrorY g
+    draw g
+
+data Animation =
+    Still     DrawInstr
+    Animation (S DrawInstr)
 
 
 
@@ -101,11 +115,11 @@ point p x y = (toObject p %.. "point") x y
 line :: HasGraphics a => a -> Double -> Double -> Double -> Double -> IO ()
 line p x1 y1 x2 y2 = (toObject p %.... "line") x1 y1 x2 y2
 
-square :: HasGraphics a => a -> Double -> Double -> IO ()
-square p x y = (toObject p %.... "rect") x y (1::Double) (1::Double)
+square :: HasGraphics a => a -> IO ()
+square p = rect p 0 0 1 1
 
-circle :: HasGraphics a => a -> Double -> Double -> IO ()
-circle p x y = (toObject p %.... "ellipse") x y (1::Double) (1::Double)
+circle :: HasGraphics a => a -> IO ()
+circle p = ellipse p 0 0 1 1
 
 rect :: HasGraphics a => a -> Double -> Double -> Double -> Double -> IO ()
 rect p x y w h = (toObject p %.... "rect") (x-w/2) (y-h/2) w h
@@ -134,6 +148,21 @@ rotate p x = (toObject p %. "rotate") x
 
 scale :: HasGraphics a => a -> Double -> IO ()
 scale p x = (toObject p %. "scale") x
+
+scaleXY :: HasGraphics a => a -> Double -> Double -> IO ()
+scaleXY p x y = (toObject p %.. "scale") x y
+
+scaleX :: HasGraphics a => a -> Double -> IO ()
+scaleX g x = scaleXY g x 1
+
+scaleY :: HasGraphics a => a -> Double -> IO ()
+scaleY g y = scaleXY g 1 y
+
+mirrorX :: HasGraphics a => a -> IO ()
+mirrorX g = scaleX g (-1)
+
+mirrorY :: HasGraphics a => a -> IO ()
+mirrorY g = scaleY g (-1)
 
 -- reflect, shear, squeeze?
 
