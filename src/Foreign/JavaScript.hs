@@ -177,6 +177,7 @@ module Foreign.JavaScript (
         call,
         call1,
         call2,
+        call3,
 
         -- **** JavaScript calling Haskell 
         lift,
@@ -188,6 +189,7 @@ module Foreign.JavaScript (
         new,
         new1,
         new2,
+        new3,
 
         -- **** Method invocation
         invoke,
@@ -455,6 +457,18 @@ instance JsVal Int where
 
 -- | Represented by @number@ values.
 instance JsVal Word where
+    typeId# _   = numberType#
+
+-- | Represented by @number@ values.
+instance JsVal Int32 where
+    typeId# _   = numberType#
+
+-- | Represented by @number@ values.
+instance JsVal Word32 where
+    typeId# _   = numberType#
+
+-- | Represented by @number@ values.
+instance JsVal Float where
     typeId# _   = numberType#
 
 -- | Represented by @number@ values.
@@ -1060,16 +1074,18 @@ arity x = toObject x !% "length"
 data JsArg = forall a . JsVal a => JsArg a
 
 new' :: JsVal a => JsFunction -> [JsArg] -> IO a
-new' f []                  = new f
-new' f [JsArg a]           = new1 f a
-new' f [JsArg a, JsArg b]  = new2 f a b
-new' f _                   = error "new': Too many arguments"
+new' f []                           = new f
+new' f [JsArg a]                    = new1 f a
+new' f [JsArg a, JsArg b]           = new2 f a b
+new' f [JsArg a, JsArg b, JsArg c]  = new3 f a b c
+new' f _                            = error "new': Too many arguments"
 
 call' :: JsVal a => JsFunction -> [JsArg] -> IO a
-call' f []                 = call f
-call' f [JsArg a]          = call1 f a
-call' f [JsArg a, JsArg b] = call2 f a b
-call' f _                  = error "call': Too many arguments"
+call' f []                          = call f
+call' f [JsArg a]                   = call1 f a
+call' f [JsArg a, JsArg b]          = call2 f a b
+call' f [JsArg a, JsArg b, JsArg c] = call3 f a b c
+call' f _                           = error "call': Too many arguments"
 
 
 -------------------------------------------------------------------------------------
@@ -1077,10 +1093,12 @@ call' f _                  = error "call': Too many arguments"
 foreign import ccall "aPrimCall0"     call#   :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1"     call1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall2"     call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall2"     call3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
 foreign import ccall "aPrimNew0"      new#    :: Any# -> IO Any#
 foreign import ccall "aPrimNew1"      new1#   :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimNew2"      new2#   :: Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimNew2"      new3#   :: Any# -> Any# -> Any# -> Any# -> IO Any#
 
 foreign import ccall "aPrimBind0"     bind#   :: Any# -> Any# -> Any#
 foreign import ccall "aPrimBind1"     bind1#  :: Any# -> Any# -> Any# -> Any#
@@ -1107,10 +1125,12 @@ foreign import ccall "aPrimLiftPure2" liftp2# :: Any# -> Any#
 call  :: JsVal a => JsFunction -> IO a
 call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
+call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> IO d
 
 new  :: JsVal a => JsFunction -> IO a
 new1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
 new2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
+new3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> IO d
 
 lift  :: JsVal a => IO a -> JsFunction
 lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
@@ -1145,18 +1165,21 @@ bindWith1 :: JsVal a => JsFunction -> JsObject -> a -> JsFunction
 call    = flip callWith  $ toObject ()
 call1   = flip callWith1 $ toObject ()
 call2   = flip callWith2 $ toObject ()
+call3   = flip callWith3 $ toObject ()
 bind    = flip bindWith1 $ toObject ()
 
-callWith  f t     = pure fromAny# <*> call# (getJsFunction f) (toAny# t)
-callWith1 f t a   = pure fromAny# <*> call1# (getJsFunction f) (toAny# t) (toAny# a)
-callWith2 f t a b = pure fromAny# <*> call2# (getJsFunction f) (toAny# t) (toAny# a) (toAny# b)
+callWith  f t       = pure fromAny# <*> call# (getJsFunction f) (toAny# t)
+callWith1 f t a     = pure fromAny# <*> call1# (getJsFunction f) (toAny# t) (toAny# a)
+callWith2 f t a b   = pure fromAny# <*> call2# (getJsFunction f) (toAny# t) (toAny# a) (toAny# b)
+callWith3 f t a b c = pure fromAny# <*> call3# (getJsFunction f) (toAny# t) (toAny# a) (toAny# b) (toAny# c)
 
-new  f            = pure fromAny# <*> new# (getJsFunction f)
-new1 f a          = pure fromAny# <*> new1# (getJsFunction f) (toAny# a)
-new2 f a b        = pure fromAny# <*> new2# (getJsFunction f) (toAny# a) (toAny# b)
+new  f              = pure fromAny# <*> new# (getJsFunction f)
+new1 f a            = pure fromAny# <*> new1# (getJsFunction f) (toAny# a)
+new2 f a b          = pure fromAny# <*> new2# (getJsFunction f) (toAny# a) (toAny# b)
+new3 f a b c        = pure fromAny# <*> new3# (getJsFunction f) (toAny# a) (toAny# b) (toAny# c)
 
-bindWith  f t     = fromAny# $ bind# (getJsFunction f) (toAny# t)
-bindWith1 f t a   = fromAny# $ bind1# (getJsFunction f) (toAny# t) (toAny# a)
+bindWith  f t       = fromAny# $ bind# (getJsFunction f) (toAny# t)
+bindWith1 f t a     = fromAny# $ bind1# (getJsFunction f) (toAny# t) (toAny# a)
 
 lift        = JsFunction . lift#   . toAny# . toPtr#
 lift1       = JsFunction . lift1#  . toAny# . toPtr#
