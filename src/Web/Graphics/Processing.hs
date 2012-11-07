@@ -35,6 +35,7 @@ import Foreign.JavaScript hiding (join)
 
 -- TODO make variable
 kSize = 600
+kFrameRate = 18
 
 newtype S a = S { getS :: Processing -> IO a }
 instance Functor S where
@@ -135,6 +136,7 @@ renderAnimation :: Processing -> Animation -> IO ()
 renderAnimation p (Animation ls) = do
     background p white
     size p kSize kSize
+    frameRate p kFrameRate
     mapM (renderLayer p) ls
     return ()
 
@@ -234,9 +236,6 @@ mirrorY g = scaleY g (-1)
 -- Style and color
 -- --------------------------------------------------------------------------------
 
-size :: Processing -> Double -> Double -> IO ()
-size p x y = (toObject p %.. "size") x y
-
 data Color = Color Double Double Double Double
 red         = Color 1.00 0.00 0.00 1
 green       = Color 0.00 1.00 0.00 1
@@ -307,6 +306,12 @@ setDraw p f = set (toObject p) "draw" (lift $ f p)
 -- --------------------------------------------------------------------------------
 -- Misc
 -- --------------------------------------------------------------------------------
+
+size :: Processing -> Double -> Double -> IO ()
+size p x y = (toObject p %.. "size") x y
+
+frameRate :: Processing -> Double -> IO ()
+frameRate p x = (toObject p %. "frameRate") x
 
 println :: Processing -> JsString -> IO () 
 println p s = (toObject p %. "println") s

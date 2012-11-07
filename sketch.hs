@@ -36,8 +36,11 @@ main = do
         --      circle g
              
         handler p = do          
-            let a = scaleA (pure 0.5) circleA
-            setDraw p (flip renderAnimation $ a)
+            let a = scaleA (fmap (/600) timeS) circleA
+            let b = scaleA (fmap ((/600) . fst) mouseS) circleA
+
+
+            setDraw p (flip renderAnimation $ a <> b)
             return ()
 
 
