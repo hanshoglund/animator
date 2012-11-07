@@ -26,7 +26,21 @@ module Web.Document -- (
 -- )
 where
 
-import Prelude -- hiding (take, drop, filter, length)
+import Prelude hiding (lookup)
 import Foreign.JavaScript -- hiding (take, drop, slice, length)
 
+data Document
+instance JsVal Document
+instance JsRef Document
 
+document :: IO Document
+document = do
+    g <- global
+    lookup g ["document"]
+
+data Element
+instance JsVal Element
+instance JsRef Element
+
+getElementById :: Document -> JsString -> IO Element
+getElementById x = toObject x %. "getElementById"

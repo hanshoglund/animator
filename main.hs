@@ -10,6 +10,7 @@ module Main where
 
 import Foreign.JavaScript
 import Web.JQuery
+import Web.Graphics.Processing
 import Web.Data.Array hiding (set, get)
 
 import Haste.Showable(show_)
@@ -28,8 +29,9 @@ main = do
     -- testLift
     -- testLookup
     -- testPropertyLookup
-    testArray 
-    testJQuery
+    -- testArray 
+    -- testJQuery
+    testProcessing
 
 {-# NOINLINE testUndefined #-}
 {-# NOINLINE testFib #-}
@@ -176,7 +178,6 @@ testArray = do
     printRepr $! a
     printRepr $! b
 
-
 testJQuery = do
     a <- query "#div1"
     fadeIn a
@@ -185,6 +186,22 @@ testJQuery = do
     fadeInSlow b
     c <- query "#div3"
     fadeInDuring 2000 c
+
+testProcessing = do
+    runProcessing handler "main-canvas"
+    where
+        handler p = do
+            printRepr $! p
+            (toObject p %. "println") (str "This is Processing!") :: IO ()
+            return ()
+
+
+
+
+
+
+
+
 
 
 
