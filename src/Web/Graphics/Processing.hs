@@ -35,6 +35,8 @@ import Web.Document
 import Unsafe.Coerce
 import Foreign.JavaScript hiding (join)
 
+-- TODO make variable
+kSize = 600
 
 newtype S a = S { getS :: Processing -> IO a }
 instance Functor S where
@@ -48,8 +50,31 @@ instance Monad S where
         where
             fap x f = f x
 
+runS :: S a -> Processing -> IO a
+runS (S f) p = f p
+
 liftIO :: IO a -> S a
 liftIO f = S (\_ -> f)            
+
+mouseS :: S (Double, Double)
+mouseS = S mouse
+
+timeS :: S Double
+timeS = S frame
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 -- | Instructions to draw an image at size (1,1) with origin at (0,0)
@@ -63,25 +88,22 @@ renderDrawInstr x draw g = do
     mirrorY g
     draw g
 
-data Animation =
-    Still     DrawInstr
-    Animation (S DrawInstr)
+-- Render at a point in time
+-- TODO optimize
+renderAnimation :: Processing -> Animation -> IO ()
+renderAnimation p ls = mapM (renderLayer p) ls >> return ()
 
+renderLayer :: Processing -> Layer -> IO ()
+renderLayer p (Still d) = do
+    withGraphics p kSize kSize $ renderDrawInstr kSize d
+renderLayer p (Anim ds) = do                              
+    d <- runS ds p
+    withGraphics p kSize kSize $ renderDrawInstr kSize d
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+type Animation = [Layer]
+data Layer 
+    = Still DrawInstr
+    | Anim  (S DrawInstr)
 
 
 -- --------------------------------------------------------------------------------
@@ -214,8 +236,23 @@ stroke p c = (toObject p %.... "stroke") r g b a
     where (r,g,b,a) = convertColor c
 
 -- --------------------------------------------------------------------------------
--- Events
+-- Events and input
 -- --------------------------------------------------------------------------------
+
+frame :: Processing -> IO Double
+frame p = toObject p % "frameCount"
+
+mouse :: Processing -> IO (Double, Double)
+mouse p = do
+    x <- mouseX p
+    y <- mouseY p
+    return (x,y)
+    
+mouseX :: Processing -> IO Double
+mouseX p = toObject p % "mouseX"
+
+mouseY :: Processing -> IO Double
+mouseY p = toObject p % "mouseY"
 
 setMouseClicked :: Processing -> (Processing -> IO ()) -> IO ()
 setMouseClicked p f = set (toObject p) "mouseClicked" (lift $ f p)

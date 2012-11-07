@@ -12,20 +12,20 @@ import Web.Graphics.Processing
 main = do
     runProcessing handler "main-canvas"
     where                                  
-        handler2 g = do            
+        foo g = do            
             stroke g transparent
             fill g $ blue `withOpacity` 0.2
             scale g 0.9
             rect g (-1/2) (-1/2) 1 1
 
 
-        handler2b g = do            
+        bar g = do            
             stroke g transparent
             fill g $ red `withOpacity` 0.2                        
             scale g 0.8
             rect g (-1/2) (-1/2) 1 1
         
-        handler3 g = do
+        baz g = do
             stroke g transparent
             fill g $ red `withOpacity` 0.2
             translate g 0.2 (0.3)
@@ -34,10 +34,9 @@ main = do
             circle g
             
         handler p = do
-            size p 600 600
-            withGraphics p 600 600 (renderDrawInstr 600 handler3)
-            withGraphics p 600 600 (renderDrawInstr 600 handler2)
-            withGraphics p 600 600 (renderDrawInstr 600 handler2b)
+            size p 600 600 
+            let an = [Still foo, Still bar, Still baz]
+            renderAnimation p an
             return ()
 
 
