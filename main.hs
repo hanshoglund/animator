@@ -10,13 +10,15 @@ module Main where
 
 import Foreign.JavaScript
 import Web.JQuery
+import Web.Data.Array hiding (set, get)
 
 import Haste.Showable(show_)
 import Data.Foldable
+import Data.Int
 import Data.Word
 
 main = do
-    testNew
+    -- testNew
     -- testUndefined
     -- testFib
     -- testReadShow
@@ -26,6 +28,7 @@ main = do
     -- testLift
     -- testLookup
     -- testPropertyLookup
+    testArray 
     testJQuery
 
 {-# NOINLINE testUndefined #-}
@@ -47,6 +50,7 @@ testNew = do
     printRepr $! date1
     printRepr $! date2
     where
+        mkDate :: [JsArg] -> IO JsDate
         mkDate = new' $ unsafeGlobalLookup ["Date"]
     
 testReadShow = do
@@ -164,6 +168,13 @@ testCall = do
     res <- call1 foo (o::JsObject)
     printRepr $ (res::JsObject)
 
+testArray = do
+    x <- newBuffer 16
+    let a = getView x 0 16 :: BufferView Int32
+    let b = getView x 0 16 :: BufferView Word32
+    set (toObject a) "1" ((-1)::Int32)
+    printRepr $! a
+    printRepr $! b
 
 
 testJQuery = do

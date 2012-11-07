@@ -29,19 +29,18 @@
 module Web.Data.Array (
 
         -- ** Size types
-        Offset,
         Size,
-        Index,
-        Length,
 
         -- ** Buffers
         Buffer,
+        newBuffer,
         slice,
 
         -- ** Typed arrays/Views
         HasView(..),
         -- Clamped(..),
         BufferView,
+        newBufferView,
 
         -- *** Properties
         buffer,
@@ -62,6 +61,7 @@ where
 import Prelude hiding (take, drop, filter, length)
 import Data.Int
 import Data.Word
+import System.IO.Unsafe
 
 import Foreign.JavaScript hiding (set, get, take, drop, slice, length)
 
@@ -72,33 +72,24 @@ import qualified Foreign.JavaScript as JS
 -- Buffers
 -------------------------------------------------------------------------------------
 
--- |
--- Offset in bytes.
-type Offset = Int
-
--- |
--- Raw size in bytes.
 type Size = Int
-
--- |
--- Index of element.
-type Index = Int
-
--- |
--- Number of elements.
-type Length = Int
 
 data Buffer
 instance JsVal Buffer
 instance JsRef Buffer
 
-create :: Size -> IO Buffer
-create = undefined
--- create s = unsafeLookupGlobal ["ArrayBuffer"] `new` [s]
+newBuffer :: Size -> IO Buffer
+newBuffer n = unsafeGlobalLookup ["ArrayBuffer"] `new1` n
 
-slice :: Offset -> Offset -> Buffer -> IO Buffer
-slice = undefined
+newBufferView :: HasView a => Size -> IO (BufferView a)
+newBufferView n = do
+    b <- newBuffer n
+    return $ getView b 0 n
 
+-- |
+-- Slice buffer bitwise.
+slice :: Buffer -> Size -> Size -> IO Buffer
+slice x a b = (toObject x %.. "slice") a b
 
 
 -------------------------------------------------------------------------------------
@@ -106,16 +97,24 @@ slice = undefined
 -------------------------------------------------------------------------------------
 
 class HasView a where
-    getView :: Buffer -> Offset -> Size -> BufferView a
-    getView = undefined
-instance HasView Int8
-instance HasView Int16
-instance HasView Int32
-instance HasView Word8
-instance HasView Word16
-instance HasView Word32
-instance HasView Float
-instance HasView Double
+    getView :: Buffer -> Size -> Size -> BufferView a
+
+instance HasView Int8 where
+    getView x a b = unsafePerformIO $ (unsafeGlobalLookup ["Int8Array"] `new3`) x a b
+instance HasView Int16 where
+    getView x a b = unsafePerformIO $ (unsafeGlobalLookup ["Int15Array"] `new3`) x a b
+instance HasView Int32 where
+    getView x a b = unsafePerformIO $ (unsafeGlobalLookup ["Int32Array"] `new3`) x a b
+instance HasView Word8 where
+    getView x a b = unsafePerformIO $ (unsafeGlobalLookup ["Uint8Array"] `new3`) x a b
+instance HasView Word16 where
+    getView x a b = unsafePerformIO $ (unsafeGlobalLookup ["Uint16Array"] `new3`) x a b
+instance HasView Word32 where
+    getView x a b = unsafePerformIO $ (unsafeGlobalLookup ["Uint32Array"] `new3`) x a b
+instance HasView Float where
+    getView x a b = unsafePerformIO $ (unsafeGlobalLookup ["Float32Array"] `new3`) x a b
+instance HasView Double where
+    getView x a b = unsafePerformIO $ (unsafeGlobalLookup ["Float64Array"] `new3`) x a b
 
 -- newtype Clamped a = Clamped { getClamped :: a }
 -- instance HasView (Clamped Word8)
@@ -125,29 +124,30 @@ instance HasView a => JsVal (BufferView a)
 instance HasView a => JsRef (BufferView a)
 
 buffer :: HasView a => BufferView a -> Buffer
-buffer = undefined
+buffer x = toObject x !% "buffer"
 
-offset :: HasView a => BufferView a -> Offset
-offset = undefined
+-- | Byte offset
+offset :: HasView a => BufferView a -> Size
+offset x = toObject x !% "byteOffset"
 
--- | Number of bytes
+-- | Byte length
 size :: HasView a => BufferView a -> Size
-size = undefined
+size x = toObject x !% "byteLength"
 
 -- | Number of elements
 length :: HasView a => BufferView a -> Size
 length x = toObject x !% "lenght"
 
-get :: HasView a => BufferView a -> Index -> IO a
-get x j = undefined
+get :: HasView a => BufferView a -> Size -> IO a
+get x j = error "Not implemented"
 
-set :: a -> HasView a => BufferView a -> Index -> a -> IO ()
-set x j = undefined
+set :: a -> HasView a => BufferView a -> Size -> a -> IO ()
+set x j = error "Not implemented"
 
-setRange :: a -> HasView a => BufferView a -> Index -> BufferView a -> IO ()
-setRange x j y = undefined
+setRange :: a -> HasView a => BufferView a -> Size -> BufferView a -> IO ()
+setRange x j y = error "Not implemented"
 
-getRange :: HasView a => Index -> Int -> BufferView a -> BufferView a
-getRange x i j = undefined
+getRange :: HasView a => Size -> Int -> BufferView a -> BufferView a
+getRange x i j = error "Not implemented"
 
 
