@@ -11,19 +11,24 @@ import Web.Graphics.Processing
 
 main = do
     runProcessing handler "main-canvas"
-    where
+    where                                  
+        handler2 g = do
+            stroke g transparent
+            translate g 300 300
+            fill g $ blue `withOpacity` 0.5
+            rect g 0 0 100 100
+        handler3 g = do
+            stroke g transparent
+            translate g 300 300
+            fill g $ red `withOpacity` 0.5
+            scale g 200
+            ellipse g 0 0 1 1
+            
         handler p = do
-            printRepr $! p
-            size p 800 600
-            background p red
-
-            fill p blue
-            ellipse p 100 0 200 200
-
-            fill p green
-            rect p 30 110 100 100
-
-            -- println p "This is Processing!"
+            size p 600 600
+            
+            withGraphics p 600 600 handler2
+            withGraphics p 600 600 handler3
             return ()
 
 

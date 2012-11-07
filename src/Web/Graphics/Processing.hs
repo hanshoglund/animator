@@ -31,6 +31,7 @@ import Data.Colour
 import Data.Colour.SRGB
 
 import Web.Document
+import Unsafe.Coerce
 import Foreign.JavaScript hiding (join)
 
 
@@ -69,33 +70,48 @@ liftIO f = S (\_ -> f)
 
 
 
+-- --------------------------------------------------------------------------------
+-- Processing
+-- --------------------------------------------------------------------------------
 
+class JsRef a => HasGraphics a where
+    toGraphics :: a -> Graphics
+    toGraphics = unsafeCoerce
+
+data Graphics
+instance JsVal Graphics
+instance JsRef Graphics
+instance HasGraphics Graphics
 
 data Processing
 instance JsVal Processing
 instance JsRef Processing
+instance HasGraphics Processing
 
+image :: Processing -> Graphics -> IO ()
+image p x = (toObject p %... "image") x (0::Double) (0::Double)
 
 -- --------------------------------------------------------------------------------
 -- Shapes
 -- --------------------------------------------------------------------------------
 
-point :: Processing -> Double -> Double -> IO ()
+point :: HasGraphics a => a -> Double -> Double -> IO ()
 point p x y = (toObject p %.. "point") x y 
 
-line :: Processing -> Double -> Double -> Double -> Double -> IO ()
+line :: HasGraphics a => a -> Double -> Double -> Double -> Double -> IO ()
 line p x1 y1 x2 y2 = (toObject p %.... "line") x1 y1 x2 y2
 
-square :: Processing -> Double -> Double -> IO ()
+square :: HasGraphics a => a -> Double -> Double -> IO ()
 square p x y = (toObject p %.... "rect") x y (1::Double) (1::Double)
 
-circle :: Processing -> Double -> Double -> IO ()
+circle :: HasGraphics a => a -> Double -> Double -> IO ()
 circle p x y = (toObject p %.... "ellipse") x y (1::Double) (1::Double)
 
-rect :: Processing -> Double -> Double -> Double -> Double -> IO ()
-rect p x y w h = (toObject p %.... "rect") x y w h
+rect :: HasGraphics a => a -> Double -> Double -> Double -> Double -> IO ()
+rect p x y w h = (toObject p %.... "rect") (x-w/2) (y-h/2) w h
+-- change to get origin in the middle!
 
-ellipse :: Processing -> Double -> Double -> Double -> Double -> IO ()
+ellipse :: HasGraphics a => a -> Double -> Double -> Double -> Double -> IO ()
 ellipse p x y w h = (toObject p %.... "ellipse") x y w h
 
 -- arc
@@ -110,13 +126,13 @@ ellipse p x y w h = (toObject p %.... "ellipse") x y w h
 -- Affine transformations
 -- --------------------------------------------------------------------------------
 
-translate :: Processing -> Double -> Double -> IO ()
+translate :: HasGraphics a => a -> Double -> Double -> IO ()
 translate p x y = (toObject p %.. "translate") x y
 
-rotate :: Processing -> Double -> IO ()
+rotate :: HasGraphics a => a -> Double -> IO ()
 rotate p x = (toObject p %. "rotate") x
 
-scale :: Processing -> Double -> IO ()
+scale :: HasGraphics a => a -> Double -> IO ()
 scale p x = (toObject p %. "scale") x
 
 -- reflect, shear, squeeze?
@@ -156,15 +172,15 @@ convertColor :: Color -> (Double, Double, Double, Double)
 convertColor (Color r g b a) = (r*256, g*256, b*256, a*256)
 
 
-background :: Processing -> Color -> IO ()
+background :: HasGraphics a => a -> Color -> IO ()
 background p c = (toObject p %.... "background") r g b a
     where (r,g,b,a) = convertColor c
 
-fill :: Processing -> Color -> IO ()
+fill :: HasGraphics a => a -> Color -> IO ()
 fill p c = (toObject p %.... "fill") r g b a
     where (r,g,b,a) = convertColor c
 
-stroke :: Processing -> Color -> IO ()
+stroke :: HasGraphics a => a -> Color -> IO ()
 stroke p c = (toObject p %.... "stroke") r g b a
     where (r,g,b,a) = convertColor c
 
@@ -187,6 +203,14 @@ setDraw p f = set (toObject p) "draw" (lift $ f p)
 
 println :: Processing -> JsString -> IO () 
 println p s = (toObject p %. "println") s
+
+withGraphics :: Processing -> Double -> Double -> (Graphics -> IO ()) -> IO ()
+withGraphics p x y f = do
+    g <- (toObject p %... "createGraphics") x y ("P3D"::JsString)
+    toObject g %% "beginDraw" :: IO ()
+    f g
+    toObject g %% "endDraw" :: IO ()
+    image p g
 
 runProcessing :: (Processing -> IO ()) -> JsString -> IO ()
 runProcessing f n = do
