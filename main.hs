@@ -8,6 +8,9 @@
 
 module Main where
 
+-- import Data.Colour
+-- import Data.Colour.Names
+
 import Foreign.JavaScript
 import Web.JQuery
 import Web.Graphics.Processing
@@ -17,6 +20,7 @@ import Haste.Showable(show_)
 import Data.Foldable
 import Data.Int
 import Data.Word
+import Unsafe.Coerce
 
 main = do
     -- testNew
@@ -188,20 +192,15 @@ testJQuery = do
     fadeInDuring 2000 c
 
 testProcessing = do
+    x <- object
     runProcessing handler "main-canvas"
     where
         handler p = do
             printRepr $! p
+            p `background` red
+            p `size` 400 400
             (toObject p %. "println") (str "This is Processing!") :: IO ()
             return ()
-
-
-
-
-
-
-
-
 
 
 

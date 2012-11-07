@@ -204,6 +204,16 @@ function aPrimCall2(f, t, a, b, _) {
         f.call(t, a, b)
     ];
 }
+function aPrimCall3(f, t, a, b, c, _) {
+    return [1, _,
+        f.call(t, a, b, c)
+    ];
+}
+function aPrimCall4(f, t, a, b, c, d, _) {
+    return [1, _,
+        f.call(t, a, b, c, d)
+    ];
+}
 
 function aPrimBind0(f, t, _) {
     return [1, _,
