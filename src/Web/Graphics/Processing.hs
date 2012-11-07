@@ -41,11 +41,9 @@ instance Applicative S where
     pure  = return
     (<*>) = ap
 instance Monad S where             
-    return      = S . const . return
-    s >>= f = join_ $ fmap f s
+    return    = S . const . return
+    S f >>= g = S $ \p -> fap p . getS . g =<< fap p f
         where
-            join_ :: S (S a) -> S a
-            join_ (S f) = S (\p -> fap p . getS =<< f p)
             fap x f = f x
 
 liftIO :: IO a -> S a
