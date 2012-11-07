@@ -169,7 +169,7 @@ module Foreign.JavaScript (
         JsFunction,
         arity,
         
-        JsArg,
+        JsArg(..),
 
         -- *** Safe
         -- **** Haskell calling JavaScript
@@ -1065,7 +1065,7 @@ new' f [JsArg a]           = new1 f a
 new' f [JsArg a, JsArg b]  = new2 f a b
 new' f _                   = error "new': Too many arguments"
 
-call' :: JsFunction -> [JsArg] -> IO JsObject
+call' :: JsVal a => JsFunction -> [JsArg] -> IO a
 call' f []                 = call f
 call' f [JsArg a]          = call1 f a
 call' f [JsArg a, JsArg b] = call2 f a b
@@ -1078,9 +1078,9 @@ foreign import ccall "aPrimCall0"     call#   :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1"     call1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall2"     call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
 
-foreign import ccall "aPrimCall0"     new#    :: Any# -> IO Any#
-foreign import ccall "aPrimCall1"     new1#   :: Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall2"     new2#   :: Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimNew0"      new#    :: Any# -> IO Any#
+foreign import ccall "aPrimNew1"      new1#   :: Any# -> Any# -> IO Any#
+foreign import ccall "aPrimNew2"      new2#   :: Any# -> Any# -> Any# -> IO Any#
 
 foreign import ccall "aPrimBind0"     bind#   :: Any# -> Any# -> Any#
 foreign import ccall "aPrimBind1"     bind1#  :: Any# -> Any# -> Any# -> Any#
@@ -1151,7 +1151,7 @@ callWith  f t     = pure fromAny# <*> call# (getJsFunction f) (toAny# t)
 callWith1 f t a   = pure fromAny# <*> call1# (getJsFunction f) (toAny# t) (toAny# a)
 callWith2 f t a b = pure fromAny# <*> call2# (getJsFunction f) (toAny# t) (toAny# a) (toAny# b)
 
-new f             = pure fromAny# <*> new# (getJsFunction f)
+new  f            = pure fromAny# <*> new# (getJsFunction f)
 new1 f a          = pure fromAny# <*> new1# (getJsFunction f) (toAny# a)
 new2 f a b        = pure fromAny# <*> new2# (getJsFunction f) (toAny# a) (toAny# b)
 

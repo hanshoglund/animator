@@ -4,6 +4,8 @@
     MultiParamTypeClasses, FlexibleInstances,
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving #-}
 
+{-# LANGUAGE ExistentialQuantification #-}
+
 module Main where
 
 import Foreign.JavaScript
@@ -14,16 +16,17 @@ import Data.Foldable
 import Data.Word
 
 main = do
+    testNew
     -- testUndefined
-    testFib
+    -- testFib
     -- testReadShow
     -- testBool
     -- testString
     -- testPrim
-    testJQuery
     -- testLift
     -- testLookup
     -- testPropertyLookup
+    testJQuery
 
 {-# NOINLINE testUndefined #-}
 {-# NOINLINE testFib #-}
@@ -36,6 +39,16 @@ main = do
 {-# NOINLINE testLookup #-}
 
 
+
+
+testNew = do
+    date1 <- mkDate []
+    date2 <- mkDate [JsArg ("Dec 26 1987"::JsString)]
+    printRepr $! date1
+    printRepr $! date2
+    where
+        mkDate = new' $ unsafeGlobalLookup ["Date"]
+    
 testReadShow = do
     printLog $ toJsString $ show_ (11232.12328::Double)
     printLog $ toJsString $ show  (11232.12328::Double)
