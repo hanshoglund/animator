@@ -3,6 +3,8 @@
     StandaloneDeriving, DeriveFunctor, DeriveFoldable, GeneralizedNewtypeDeriving,
     NoMonomorphismRestriction #-}
 
+{-# LANGUAGE ExistentialQuantification #-}
+
 -------------------------------------------------------------------------------------
 
 -- |
@@ -166,9 +168,12 @@ module Foreign.JavaScript (
         -- $functionLaws
         JsFunction,
         arity,
+        
+        JsArg,
 
         -- *** Safe
         -- **** Haskell calling JavaScript
+        call',
         call,
         call1,
         call2,
@@ -177,6 +182,12 @@ module Foreign.JavaScript (
         lift,
         lift1,
         lift2,
+
+        -- **** Object creation
+        new',
+        new,
+        new1,
+        new2,
 
         -- **** Method invocation
         invoke,
@@ -1043,6 +1054,23 @@ newtype JsFunction = JsFunction { getJsFunction :: Any# }
 --
 arity :: JsFunction -> Int
 arity x = toObject x !% "length"
+
+-- |
+-- Existential wrapper for 'JsVal'.
+data JsArg = forall a . JsVal a => JsArg a
+
+new' :: JsFunction -> [JsArg] -> IO JsObject
+new' f []                  = new f
+new' f [JsArg a]           = new1 f a
+new' f [JsArg a, JsArg b]  = new2 f a b
+new' f _                   = error "new': Too many arguments"
+
+call' :: JsFunction -> [JsArg] -> IO JsObject
+call' f []                 = call f
+call' f [JsArg a]          = call1 f a
+call' f [JsArg a, JsArg b] = call2 f a b
+call' f _                  = error "call': Too many arguments"
+
 
 -------------------------------------------------------------------------------------
 
