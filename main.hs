@@ -198,7 +198,7 @@ testProcessing = do
         handler p = do
             printRepr $! p
             p `background` red
-            p `size` 400 400
+            -- p `size` 400 400
             (toObject p %. "println") (str "This is Processing!") :: IO ()
             return ()
 

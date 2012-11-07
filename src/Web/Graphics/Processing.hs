@@ -38,6 +38,9 @@ instance JsRef Processing
 
 
 
+size :: Processing -> Double -> Double -> IO ()
+size p x y = (toObject p %.. "size") x y
+
 background :: Processing -> Color -> IO ()
 background p c = (toObject p %.... "background") r g b a
     where (r,g,b,a) = convertColor c

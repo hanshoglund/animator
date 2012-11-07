@@ -32,7 +32,7 @@ debug:  	post reload
 release: 	post minify reload
 
 install-deps:
-	$(JSINSTALL) containers semigroups vector-space
+	$(JSINSTALL) containers semigroups colour vector-space
 
 jspp:
 	$(JSPP) $(FLAGS) src-js/animator.js src-js/animator.jspp;

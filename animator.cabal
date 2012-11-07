@@ -7,7 +7,7 @@ author: Hans Hoglund
 synopsis: Interactive 2-D animation for the Web
 
 library
-  build-depends: base, containers, semigroups, vector-space
+  build-depends: base, containers, semigroups, colour, vector-space
   hs-source-dirs: src
   exposed-modules:
     Foreign.JavaScript
