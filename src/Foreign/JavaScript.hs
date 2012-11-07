@@ -823,7 +823,7 @@ sort x = toObject x %% "sort"
 -- splice
 
 -- |
--- Returns
+-- Returns a copy of @x@.
 --
 -- > x.slice()
 --
@@ -831,7 +831,7 @@ copy :: JsArray -> IO JsArray
 copy x = drop x 0
 
 -- |
--- Returns
+-- Returns the array @[ x[0],x[1] ... x[a] ]@, or equivalently
 --
 -- > x.slice(0,a)
 --
@@ -839,7 +839,7 @@ take :: JsArray -> Int -> IO JsArray
 take x = slice x 0
 
 -- |
--- Returns
+-- Returns the array @[ x[a],x[a+1] ... x[n] ]@, where @n@ is the length ox @x@, or equivalently
 --
 -- > x.slice(a)
 --
@@ -847,7 +847,7 @@ drop :: JsArray -> Int -> IO JsArray
 drop x = toObject x %. "slice"
 
 -- |
--- Returns
+-- Returns the array @[ x[a],x[a+1] ... x[b] ]@, or equivalently
 --
 -- > x.slice(a, b)
 --
