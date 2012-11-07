@@ -31,14 +31,33 @@ import Web.Document
 import Foreign.JavaScript -- hiding (take, drop, slice, length)
 
 
+
+
+
 data Processing
 instance JsVal Processing
 instance JsRef Processing
 
 
-println :: Processing -> JsString -> IO () 
-println p s = (toObject p %. "println") s
 
+
+
+
+
+-- runSignals :: (Signal a, Sink a) -> Processing -> IO ()
+-- runSignals = undefined
+
+ellipse :: Processing -> Double -> Double -> Double -> Double -> IO ()
+ellipse p x y w h = (toObject p %.... "ellipse") x y w h
+
+line2D :: Processing -> Double -> Double -> Double -> Double -> IO ()
+line2D p x1 y1 x2 y2 = (toObject p %.... "line") x1 y1 x2 y2
+
+point2D :: Processing -> Double -> Double -> IO ()
+point2D p x y = (toObject p %.. "point") x y 
+
+rect :: Processing -> Double -> Double -> Double -> Double -> IO ()
+rect p x y w h = (toObject p %.... "rect") x y w h
 
 
 
@@ -49,6 +68,10 @@ background :: Processing -> Color -> IO ()
 background p c = (toObject p %.... "background") r g b a
     where (r,g,b,a) = convertColor c
 
+fill :: Processing -> Color -> IO ()
+fill p c = (toObject p %.... "fill") r g b a
+    where (r,g,b,a) = convertColor c
+
 setMouseClicked :: Processing -> IO () -> IO ()
 setMouseClicked p f = set (toObject p) "mouseClicked" (lift f)
 
@@ -57,6 +80,9 @@ setMouseMoved p f = set (toObject p) "mouseMoved" (lift f)
 
 setDraw :: Processing -> IO () -> IO ()
 setDraw p f = set (toObject p) "draw" (lift f)
+
+println :: Processing -> JsString -> IO () 
+println p s = (toObject p %. "println") s
 
 
 runProcessing :: (Processing -> IO ()) -> JsString -> IO ()

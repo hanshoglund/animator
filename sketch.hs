@@ -14,8 +14,15 @@ main = do
     where
         handler p = do
             printRepr $! p
-            background p red
             size p 400 400
+            background p red
+
+            fill p blue
+            ellipse p 100 0 200 200
+
+            fill p green
+            rect p 30 110 100 100
+
             -- println p "This is Processing!"
             return ()
 
