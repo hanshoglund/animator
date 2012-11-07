@@ -245,6 +245,7 @@ import Data.Int
 import Data.Word
 import Data.String (IsString(..))
 import Data.Semigroup
+import Control.Applicative (pure, (<*>))
 
 import Unsafe.Coerce
 import System.IO.Unsafe
@@ -1049,16 +1050,20 @@ foreign import ccall "aPrimCall0"     call#   :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1"     call1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall2"     call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
 
+foreign import ccall "aPrimCall0"     new#    :: Any# -> IO Any#
+foreign import ccall "aPrimCall1"     new1#   :: Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall2"     new2#   :: Any# -> Any# -> Any# -> IO Any#
+
 foreign import ccall "aPrimBind0"     bind#   :: Any# -> Any# -> Any#
 foreign import ccall "aPrimBind1"     bind1#  :: Any# -> Any# -> Any# -> Any#
-
-foreign import ccall "aPrimLiftPure0" liftPure#  :: Any# -> Any#
-foreign import ccall "aPrimLiftPure1" liftPure1# :: Any# -> Any#
-foreign import ccall "aPrimLiftPure2" liftPure2# :: Any# -> Any#
 
 foreign import ccall "aPrimLift0"     lift#   :: Any# -> Any#
 foreign import ccall "aPrimLift1"     lift1#  :: Any# -> Any#
 foreign import ccall "aPrimLift2"     lift2#  :: Any# -> Any#
+
+foreign import ccall "aPrimLiftPure0" liftp#  :: Any# -> Any#
+foreign import ccall "aPrimLiftPure1" liftp1# :: Any# -> Any#
+foreign import ccall "aPrimLiftPure2" liftp2# :: Any# -> Any#
 
 --
 -- $functionLaws
@@ -1074,6 +1079,10 @@ foreign import ccall "aPrimLift2"     lift2#  :: Any# -> Any#
 call  :: JsVal a => JsFunction -> IO a
 call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
+
+new  :: JsVal a => JsFunction -> IO a
+new1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
+new2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
 
 lift  :: JsVal a => IO a -> JsFunction
 lift1 :: (JsVal a, JsVal b) => (a -> IO b) -> JsFunction
@@ -1105,50 +1114,29 @@ callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> 
 bindWith :: JsFunction -> JsObject -> JsFunction
 bindWith1 :: JsVal a => JsFunction -> JsObject -> a -> JsFunction
 
+call    = flip callWith  $ toObject ()
+call1   = flip callWith1 $ toObject ()
+call2   = flip callWith2 $ toObject ()
+bind    = flip bindWith1 $ toObject ()
 
-lift        = JsFunction . lift#      . toAny# . toPtr#
-lift1       = JsFunction . lift1#     . toAny# . toPtr#
-lift2       = JsFunction . lift2#     . toAny# . toPtr#
-unsafeLift  = JsFunction . liftPure#  . toAny# . toPtr#
-unsafeLift1 = JsFunction . liftPure1# . toAny# . toPtr#
-unsafeLift2 = JsFunction . liftPure2# . toAny# . toPtr#
+callWith  f t     = pure fromAny# <*> call# (getJsFunction f) (toAny# t)
+callWith1 f t a   = pure fromAny# <*> call1# (getJsFunction f) (toAny# t) (toAny# a)
+callWith2 f t a b = pure fromAny# <*> call2# (getJsFunction f) (toAny# t) (toAny# a) (toAny# b)
 
-callWith f t = do
-    r <- call# (h f) (p t)
-    return $ q r
-    where
-        h = getJsFunction
-        p = toAny#
-        q = fromAny#
+new f             = pure fromAny# <*> new# (getJsFunction f)
+new1 f a          = pure fromAny# <*> new1# (getJsFunction f) (toAny# a)
+new2 f a b        = pure fromAny# <*> new2# (getJsFunction f) (toAny# a) (toAny# b)
 
-callWith1 f t a = do
-    r <- call1# (h f) (p t) (p a)
-    return $ q r
-    where
-        h = getJsFunction
-        p = toAny#
-        q = fromAny#
+bindWith  f t     = fromAny# $ bind# (getJsFunction f) (toAny# t)
+bindWith1 f t a   = fromAny# $ bind1# (getJsFunction f) (toAny# t) (toAny# a)
 
-callWith2 f t a b = do
-    r <- call2# (h f) (p t) (p a) (p b)
-    return $ q r
-    where
-        h = getJsFunction
-        p = toAny#
-        q = fromAny#
+lift        = JsFunction . lift#   . toAny# . toPtr#
+lift1       = JsFunction . lift1#  . toAny# . toPtr#
+lift2       = JsFunction . lift2#  . toAny# . toPtr#
 
-bindWith f t = JsFunction $ bind# (getJsFunction f) (p t)
-    where p = toAny#
-
-bindWith1 f t a = JsFunction $ bind1# (getJsFunction f) (p t) (p a)
-    where
-        p = toAny#
-
-call  = flip callWith  $ toObject ()
-call1 = flip callWith1 $ toObject ()
-call2 = flip callWith2 $ toObject ()
-
-bind  = flip bindWith1 $ toObject ()
+unsafeLift  = JsFunction . liftp#  . toAny# . toPtr#
+unsafeLift1 = JsFunction . liftp1# . toAny# . toPtr#
+unsafeLift2 = JsFunction . liftp2# . toAny# . toPtr#
 
 
 
@@ -1203,6 +1191,7 @@ unsafeInvoke2 :: (JsVal a, JsVal b, JsVal c) => JsObject -> JsName -> a -> b -> 
 unsafeCall f          = unsafePerformIO $ call f
 unsafeCall1 f a       = unsafePerformIO $ call1 f a
 unsafeCall2 f a b     = unsafePerformIO $ call2 f a b
+
 unsafeInvoke  o n     = unsafePerformIO $ invoke  o n
 unsafeInvoke1 o n a   = unsafePerformIO $ invoke1 o n a
 unsafeInvoke2 o n a b = unsafePerformIO $ invoke2 o n a b
