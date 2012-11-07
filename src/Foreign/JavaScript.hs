@@ -178,6 +178,7 @@ module Foreign.JavaScript (
         call1,
         call2,
         call3,
+        call4,
 
         -- **** JavaScript calling Haskell 
         lift,
@@ -221,9 +222,13 @@ module Foreign.JavaScript (
         (%%),
         (%.),
         (%..),
+        (%...),
+        (%....),
         (!%%),
         (!%.),
         (!%..),
+        (!%...),
+        (!%....),
         -- apply,
         -- new,
 
@@ -1093,12 +1098,13 @@ call' f _                           = error "call': Too many arguments"
 foreign import ccall "aPrimCall0"     call#   :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall1"     call1#  :: Any# -> Any# -> Any# -> IO Any#
 foreign import ccall "aPrimCall2"     call2#  :: Any# -> Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimCall2"     call3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall3"     call3#  :: Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimCall4"     call4#  :: Any# -> Any# -> Any# -> Any# -> Any# -> Any# -> IO Any#
 
 foreign import ccall "aPrimNew0"      new#    :: Any# -> IO Any#
 foreign import ccall "aPrimNew1"      new1#   :: Any# -> Any# -> IO Any#
 foreign import ccall "aPrimNew2"      new2#   :: Any# -> Any# -> Any# -> IO Any#
-foreign import ccall "aPrimNew2"      new3#   :: Any# -> Any# -> Any# -> Any# -> IO Any#
+foreign import ccall "aPrimNew3"      new3#   :: Any# -> Any# -> Any# -> Any# -> IO Any#
 
 foreign import ccall "aPrimBind0"     bind#   :: Any# -> Any# -> Any#
 foreign import ccall "aPrimBind1"     bind1#  :: Any# -> Any# -> Any# -> Any#
@@ -1126,6 +1132,7 @@ call  :: JsVal a => JsFunction -> IO a
 call1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
 call2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> a -> b -> IO c
 call3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> a -> b -> c -> IO d
+call4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> a -> b -> c -> d -> IO e
 
 new  :: JsVal a => JsFunction -> IO a
 new1 :: (JsVal a, JsVal b) => JsFunction -> a -> IO b
@@ -1153,6 +1160,8 @@ bind :: JsVal a => JsFunction -> a -> JsFunction
 callWith :: JsVal a => JsFunction -> JsObject -> IO a
 callWith1 :: (JsVal a, JsVal b) => JsFunction -> JsObject -> a -> IO b
 callWith2 :: (JsVal a, JsVal b, JsVal c) => JsFunction -> JsObject -> a -> b -> IO c
+callWith3 :: (JsVal a, JsVal b, JsVal c, JsVal d) => JsFunction -> JsObject -> a -> b -> c -> IO d
+callWith4 :: (JsVal a, JsVal b, JsVal c, JsVal d, JsVal e) => JsFunction -> JsObject -> a -> b -> c -> d -> IO e
 
 -- |
 -- Partially apply the given function with the given @this@ value, or equivalently
@@ -1166,12 +1175,15 @@ call    = flip callWith  $ toObject ()
 call1   = flip callWith1 $ toObject ()
 call2   = flip callWith2 $ toObject ()
 call3   = flip callWith3 $ toObject ()
+call4   = flip callWith4 $ toObject ()
 bind    = flip bindWith1 $ toObject ()
 
 callWith  f t       = pure fromAny# <*> call# (getJsFunction f) (toAny# t)
 callWith1 f t a     = pure fromAny# <*> call1# (getJsFunction f) (toAny# t) (toAny# a)
 callWith2 f t a b   = pure fromAny# <*> call2# (getJsFunction f) (toAny# t) (toAny# a) (toAny# b)
 callWith3 f t a b c = pure fromAny# <*> call3# (getJsFunction f) (toAny# t) (toAny# a) (toAny# b) (toAny# c)
+callWith4 f t a b c d 
+                    = pure fromAny# <*> call4# (getJsFunction f) (toAny# t) (toAny# a) (toAny# b) (toAny# c) (toAny# d)
 
 new  f              = pure fromAny# <*> new# (getJsFunction f)
 new1 f a            = pure fromAny# <*> new1# (getJsFunction f) (toAny# a)
@@ -1226,6 +1238,14 @@ invoke2 o n a b = do
     f <- get o n
     callWith2 f o a b
 
+invoke3 o n a b c = do
+    f <- get o n
+    callWith3 f o a b c
+
+invoke4 o n a b c d = do
+    f <- get o n
+    callWith4 f o a b c d
+
 
 -------------------------------------------------------------------------------------
 
@@ -1246,6 +1266,8 @@ unsafeCall2 f a b     = unsafePerformIO $ call2 f a b
 unsafeInvoke  o n     = unsafePerformIO $ invoke  o n
 unsafeInvoke1 o n a   = unsafePerformIO $ invoke1 o n a
 unsafeInvoke2 o n a b = unsafePerformIO $ invoke2 o n a b
+unsafeInvoke3 o n a b c = unsafePerformIO $ invoke3 o n a b c 
+unsafeInvoke4 o n a b c d = unsafePerformIO $ invoke4 o n a b c d
 
 -------------------------------------------------------------------------------------
 
@@ -1256,6 +1278,8 @@ infixl 9 !%..
 infixl 9 %%
 infixl 9 %.
 infixl 9 %..
+infixl 9 %...
+infixl 9 %....
 infixl 9 %
 infixl 9 %?
 
@@ -1273,6 +1297,8 @@ infixl 9 %?
 -- Infix version of 'invoke2'.
 --
 (%..) = invoke2
+(%...) = invoke3
+(%....) = invoke4
 
 -- |
 -- Infix version of 'unsafeInvoke'.
@@ -1288,6 +1314,8 @@ infixl 9 %?
 -- Infix version of 'unsafeInvoke2'.
 --
 (!%..) = unsafeInvoke2
+(!%...) = unsafeInvoke3
+(!%....) = unsafeInvoke4
 
 -- |
 -- Infix version of 'get'.
