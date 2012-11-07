@@ -1059,7 +1059,7 @@ arity x = toObject x !% "length"
 -- Existential wrapper for 'JsVal'.
 data JsArg = forall a . JsVal a => JsArg a
 
-new' :: JsFunction -> [JsArg] -> IO JsObject
+new' :: JsVal a => JsFunction -> [JsArg] -> IO a
 new' f []                  = new f
 new' f [JsArg a]           = new1 f a
 new' f [JsArg a, JsArg b]  = new2 f a b
