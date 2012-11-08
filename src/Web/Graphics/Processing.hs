@@ -66,7 +66,7 @@ import Unsafe.Coerce
 import Foreign.JavaScript hiding (join)
 
 -- TODO make variable
-kSize = 600
+kSize      = 600
 kFrameRate = 15
 
 newtype Signal a = Signal { getSignal :: Processing -> IO a }

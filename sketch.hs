@@ -21,8 +21,8 @@ circle  = circleA
 oscCircle x c = 
     style . shape $ circle
         where
-            shape = scale (sin $ timeS / 600 * x * (mouseY/600) * tau)
-            style = fill (always $ c `withOpacity` 0.3)
+            shape = scale $ (sin $ timeS / 600 * x * tau) * (mouseY/600)
+            style = fill $ always $ c `withOpacity` 0.3
 
 mouseCircle x c = style . shape $ circle
     where
