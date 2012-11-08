@@ -76,10 +76,53 @@ instance Applicative Signal where
     pure  = return
     (<*>) = ap
 instance Monad Signal where
-    return    = Signal . const . return
-    Signal f >>= g = Signal $ \p -> fap p . getSignal . g =<< fap p f
-        where
-            fap x f = f x
+    return         = Signal . const . return
+    Signal f >>= g = Signal $ \p -> (f $ p) >>= \x -> (getSignal (g x) $ p)
+
+instance Num a => Num (Signal a) where
+    (+)         = liftA2 (+)
+    (*)         = liftA2 (*)
+    (-)         = liftA2 (-)
+    negate      = liftA negate
+    abs         = liftA abs
+    signum      = liftA signum
+    fromInteger = pure . fromInteger
+instance Fractional a => Fractional (Signal a) where
+    (/)         = liftA2 (/)
+    recip       = liftA recip
+    fromRational = pure . fromRational
+instance Floating a => Floating (Signal a) where
+    pi          = pure pi
+    exp         = liftA exp
+    sqrt        = liftA sqrt
+    log         = liftA log
+    (**)        = liftA2 (**)
+    logBase     = liftA2 logBase
+    sin         = liftA sin
+    tan         = liftA tan
+    cos         = liftA cos
+    asin        = liftA asin
+    atan        = liftA atan
+    acos        = liftA acos
+    sinh        = liftA sinh
+    tanh        = liftA tanh
+    cosh        = liftA cosh
+    asinh       = liftA asinh
+    atanh       = liftA atanh
+    acosh       = liftA acosh
+-- instance Integral a => Integral (Signal a) where
+    -- quot        = liftA2 quot
+    -- rem :: a -> a -> a
+    -- div :: a -> a -> a
+    -- mod :: a -> a -> a
+    -- quotRem :: a -> a -> (a, a)
+    -- divMod :: a -> a -> (a, a)
+    -- toInteger :: a -> Integer
+
+
+
+
+
 
 runSignal :: Signal a -> Processing -> IO a
 runSignal (Signal f) p = f p
