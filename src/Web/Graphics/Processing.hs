@@ -20,8 +20,40 @@
 
 -------------------------------------------------------------------------------------
 
-module Web.Graphics.Processing -- (
---  )
+module Web.Graphics.Processing (
+
+        -- ** Signals
+        Signal,
+        liftIO,
+        mouseS,
+        timeS,
+
+        -- ** Animation
+        Animation,
+        squareA,
+        circleA,
+        scaleA,
+        fillA,
+        strokeA,
+
+        -- ** Colors
+        Color,
+        red,
+        green,
+        blue,
+        black,
+        white,
+        transparent,
+        alpha,
+        atop,
+        withOpacity,
+
+        -- ** Math
+        tau,
+
+        -- ** Run
+        runAnimation,
+)
 where
 
 import Prelude hiding (lookup)
@@ -37,36 +69,36 @@ import Foreign.JavaScript hiding (join)
 kSize = 600
 kFrameRate = 15
 
-newtype S a = S { getS :: Processing -> IO a }
-instance Functor S where
-    fmap f (S s) = S (fmap f . s)
-instance Applicative S where
+newtype Signal a = Signal { getSignal :: Processing -> IO a }
+instance Functor Signal where
+    fmap f (Signal s) = Signal (fmap f . s)
+instance Applicative Signal where
     pure  = return
     (<*>) = ap
-instance Monad S where             
-    return    = S . const . return
-    S f >>= g = S $ \p -> fap p . getS . g =<< fap p f
+instance Monad Signal where
+    return    = Signal . const . return
+    Signal f >>= g = Signal $ \p -> fap p . getSignal . g =<< fap p f
         where
             fap x f = f x
 
-runS :: S a -> Processing -> IO a
-runS (S f) p = f p
+runSignal :: Signal a -> Processing -> IO a
+runSignal (Signal f) p = f p
 
-liftIO :: IO a -> S a
-liftIO f = S (\_ -> f)            
+liftIO :: IO a -> Signal a
+liftIO f = Signal (\_ -> f)
 
 
 
-mouseS :: S (Double, Double)
-mouseS = S mouse
+mouseS :: Signal (Double, Double)
+mouseS = Signal mouse
 
-timeS :: S Double
-timeS = S frame
+timeS :: Signal Double
+timeS = Signal frame
 
 newtype Animation = Animation { getAnimation :: [Layer] }
-data Layer 
+data Layer
     = Still DrawInstr
-    | Anim  (S DrawInstr)
+    | Anim  (Signal DrawInstr)
 anim :: Animation -> Animation
 anim = Animation . map animL . getAnimation
 animL :: Layer -> Layer
@@ -85,33 +117,34 @@ squareA = Animation [Still square]
 circleA :: Animation
 circleA = Animation [Still circle]
 
--- translateA :: S Double -> S Double -> Animation -> Animation
--- rotate :: S Double -> Animation -> Animation
+-- translateA :: Signal Double -> Signal Double -> Animation -> Animation
+-- rotate :: Signal Double -> Animation -> Animation
 
-scaleA :: S Double -> Animation -> Animation
+scaleA :: Signal Double -> Animation -> Animation
 scaleA x (Animation ls) = Animation $ fmap (scaleL x) ls
 
-scaleL :: S Double -> Layer -> Layer
+scaleL :: Signal Double -> Layer -> Layer
 scaleL x (Still d) = scaleL x (animL $ Still d)
 scaleL x (Anim d) = Anim $ liftA2 (\x d g -> scale g x >> d g) x d
 
 
--- scaleXY :: S Double -> S Double -> Animation -> Animation
--- scaleX :: S Double -> Animation -> Animation
--- scaleY :: S Double -> Animation -> Animation
+-- scaleXY :: Signal Double -> Signal Double -> Animation -> Animation
+-- scaleX :: Signal Double -> Animation -> Animation
+-- scaleY :: Signal Double -> Animation -> Animation
 
--- mirrorX :: Animation -> Animation
--- mirrorY :: Animation -> Animation
-
-fillA :: S Color -> Animation -> Animation
+fillA :: Signal Color -> Animation -> Animation
 fillA x (Animation ls) = Animation $ fmap (fillL x) ls
 
-fillL :: S Color -> Layer -> Layer
+fillL :: Signal Color -> Layer -> Layer
 fillL x (Still d) = fillL x (animL $ Still d)
 fillL x (Anim d) = Anim $ liftA2 (\x d g -> fill g x >> d g) x d
 
--- fillA :: Color -> Animation -> Animation
--- strokeA :: Color -> Animation -> Animation
+strokeA :: Signal Color -> Animation -> Animation
+strokeA x (Animation ls) = Animation $ fmap (strokeL x) ls
+
+strokeL :: Signal Color -> Layer -> Layer
+strokeL x (Still d) = strokeL x (animL $ Still d)
+strokeL x (Anim d) = Anim $ liftA2 (\x d g -> stroke g x >> d g) x d
 
 
 
@@ -130,7 +163,7 @@ fillL x (Anim d) = Anim $ liftA2 (\x d g -> fill g x >> d g) x d
 
 
 -- | Instructions to draw an image at size (1,1) with origin at (0,0)
-type DrawInstr = Graphics -> IO ()          
+type DrawInstr = Graphics -> IO ()
 
 -- TODO also flip Y
 renderDrawInstr :: Double -> DrawInstr -> DrawInstr
@@ -155,9 +188,8 @@ renderAnimation p (Animation ls) = do
 renderLayer :: Processing -> Layer -> IO ()
 renderLayer p (Still d) = do
     withGraphics p kSize kSize $ renderDrawInstr kSize d
-
-renderLayer p (Anim ds) = do                              
-    d <- runS ds p
+renderLayer p (Anim ds) = do
+    d <- runSignal ds p
     withGraphics p kSize kSize $ renderDrawInstr kSize d
 
 
@@ -187,7 +219,7 @@ image p x = (toObject p %... "image") x (0::Double) (0::Double)
 -- --------------------------------------------------------------------------------
 
 point :: HasGraphics a => a -> Double -> Double -> IO ()
-point p x y = (toObject p %.. "point") x y 
+point p x y = (toObject p %.. "point") x y
 
 line :: HasGraphics a => a -> Double -> Double -> Double -> Double -> IO ()
 line p x1 y1 x2 y2 = (toObject p %.... "line") x1 y1 x2 y2
@@ -259,12 +291,12 @@ transparent = Color 0.00 0.00 0.00 0
 alpha :: Double -> Color
 alpha x = Color 0 0 0 x
 
-withOpacity :: Color -> Double -> Color 
+withOpacity :: Color -> Double -> Color
 withOpacity (Color r g b a) x = Color r g b x
 
 atop :: Color -> Color -> Color
 atop (Color r1 g1 b1 a1) (Color r2 g2 b2 a2) = Color rx gx bx ax
-    where 
+    where
         ax = 1 - (1 - a1) * (1 - a2)
         rx = r1 * a1 / ax + r2 * a2 * (1 - a1) / ax
         gx = g1 * a1 / ax + g2 * a2 * (1 - a1) / ax
@@ -299,7 +331,7 @@ mouse p = do
     x <- mouseX p
     y <- mouseY p
     return (x,y)
-    
+
 mouseX :: Processing -> IO Double
 mouseX p = toObject p % "mouseX"
 
@@ -325,7 +357,7 @@ size p x y = (toObject p %.. "size") x y
 frameRate :: Processing -> Double -> IO ()
 frameRate p x = (toObject p %. "frameRate") x
 
-println :: Processing -> JsString -> IO () 
+println :: Processing -> JsString -> IO ()
 println p s = (toObject p %. "println") s
 
 withGraphics :: Processing -> Double -> Double -> (Graphics -> IO ()) -> IO ()

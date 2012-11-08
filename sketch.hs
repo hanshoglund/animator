@@ -11,16 +11,15 @@ import Control.Applicative
 import Foreign.JavaScript
 import Web.Graphics.Processing
 
-a = fillA (pure $ red `withOpacity` 0.2) 
-    . scaleA (fmap sin . fmap (*tau) . fmap (*13) 
+a x c = fillA (pure $ c `withOpacity` 0.2) 
+    . scaleA (fmap sin . fmap (*tau) . fmap (*x) 
     . fmap (/600) $ timeS) 
     $ circleA
 
 b = fillA (pure $ blue `withOpacity` 0.2) 
-    . scaleA (fmap ((/600) . fst) mouseS) 
+    . scaleA (fmap ((* (-1)) . (/600) . fst) mouseS) 
     $ circleA
 
-c = b <> a
+foobar = a 11 red <> a 12 green
 
-
-main = runAnimation c "main-canvas"
+main = runAnimation foobar "main-canvas"
