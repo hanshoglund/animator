@@ -11,21 +11,27 @@ import Control.Applicative
 import Foreign.JavaScript
 import Web.Graphics.Processing
 
-mouseX = fmap fst mouseS
-mouseY = fmap snd mouseS
+mouseX  = fmap fst mouseS
+mouseY  = fmap snd mouseS
 always  = pure
 fill    = fillA
 scale   = scaleA
 circle  = circleA
 
-a x c = fill (always $ c `withOpacity` 0.3) 
-    . scale (sin $ timeS / 600 * x * tau) 
-    $ circle
+oscCircle x c = 
+    style . shape $ circle
+        where
+            shape = scale (sin $ timeS / 600 * x * (mouseY/600) * tau)
+            style = fill (always $ c `withOpacity` 0.3)
 
-b x c = fill (always $ c `withOpacity` 0.3) 
-    . scale (negate $ mouseX / 600 * x) 
-    $ circle
+mouseCircle x c = style . shape $ circle
+    where
+        style = fill (always $ c `withOpacity` 0.3) 
+        shape = scale (negate $ mouseX / 600 * x) 
 
-foobar = a 11 red <> b 1 blue
+test = oscCircle 11 red <> mouseCircle 1 blue
 
-main = runAnimation foobar "main-canvas"
+
+
+
+main = runAnimation test "main-canvas"
